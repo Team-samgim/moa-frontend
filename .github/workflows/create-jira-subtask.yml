@@ -19,7 +19,7 @@ jobs:
       - id: issue-parser
         uses: stefanbuck/github-issue-parser@v3
         with:
-          template-path: ${{ github.workspace }}/.github/ISSUE_TEMPLATE/issue-form.yml
+          template-path: .github/ISSUE_TEMPLATE/issue-form.yml
 
       - name: Guard - parentKey required
         if: ${{ steps.issue-parser.outputs.issueparser_parentKey == '' }}
