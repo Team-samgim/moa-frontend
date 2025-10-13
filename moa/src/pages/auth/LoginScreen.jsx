@@ -1,51 +1,190 @@
-import { useNavigate } from 'react-router-dom'
-import catImage from '@/assets/images/cat.jpg'
-import { loggedOutNavigations } from '@/constants/navigations'
+import { useMemo, useState } from 'react'
+import logo from '@/assets/images/moa.webp'
 
 function LoginScreen() {
-  const navigate = useNavigate()
+  const [step, setStep] = useState('login')
+  const translate = useMemo(
+    () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
+    [step],
+  )
+
+  const [login, setLogin] = useState({ id: '', password: '' })
+  const [join, setJoin] = useState({
+    id: '',
+    email: '',
+    password: '',
+    password2: '',
+    name: '',
+  })
 
   return (
-    <div className='flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-100 to-sky-300'>
-      <div className='bg-white rounded-2xl shadow-xl p-10 max-w-sm w-full text-center'>
-        <img
-          src={catImage}
-          alt='고양이'
-          className='w-32 h-32 mx-auto rounded-full object-cover mb-6 ring-4 ring-sky-300'
-        />
+    <div className='min-h-screen flex items-center justify-center p-6'>
+      <div className='relative w-full max-w-5xl bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.08)] overflow-hidden'>
+        <div
+          className='w-[200%] flex transition-transform duration-500 ease-out'
+          style={{ transform: translate }}
+        >
+          <section className='w-1/2 flex'>
+            <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
+              <div className='mx-auto w-full max-w-md'>
+                <div className='flex justify-center'>
+                  <img src={logo} alt='moa logo' className='h-24 md:h-28 object-contain' />
+                </div>
 
-        <h1 className='text-2xl font-bold text-gray-800 mb-2'>Welcome Back 🐾</h1>
-        <p className='text-gray-500 mb-6'>로그인을 통해 냥이 세상으로 들어오세요.</p>
+                <div className='mt-10 space-y-8'>
+                  <div>
+                    <label className='block text-sm text-gray-700 mb-2'>아이디</label>
+                    <input
+                      value={login.id}
+                      onChange={(e) => setLogin((s) => ({ ...s, id: e.target.value }))}
+                      className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    />
+                  </div>
 
-        <form className='flex flex-col gap-3'>
-          <input
-            type='email'
-            placeholder='이메일'
-            className='border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-400 outline-none'
-            required={true}
-          />
-          <input
-            type='password'
-            placeholder='비밀번호'
-            className='border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-400 outline-none'
-            required={true}
-          />
-          <button
-            type='submit'
-            className='bg-sky-400 text-white py-2 rounded-lg hover:bg-sky-500 transition-all'
-          >
-            로그인
-          </button>
-          <button
-            type='button'
-            onClick={() => navigate(loggedOutNavigations.SIGNUP)}
-            className='bg-sky-400 text-white py-2 rounded-lg hover:bg-sky-500 transition-all'
-          >
-            회원가입
-          </button>
-        </form>
+                  <div>
+                    <label className='block text-sm text-gray-700 mb-2'>비밀번호</label>
+                    <input
+                      type='password'
+                      value={login.password}
+                      onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
+                      className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    />
+                  </div>
+
+                  <button
+                    type='button'
+                    className='w-full mt-2 rounded-md bg-[#3F72AF] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                  >
+                    로그인
+                  </button>
+
+                  <div className='flex justify-center gap-4 text-xs text-gray-500'>
+                    <button type='button'>아이디 찾기</button>
+                    <span aria-hidden={true}>|</span>
+                    <button type='button'>비밀번호 찾기</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className='w-1/2 relative'>
+              <div className='absolute inset-0 bg-[#3F72AF] rounded-bl-[200px] lg:rounded-bl-[200px] 2xl:rounded-bl-[200px] z-0' />
+              <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
+                <h3 className='text-2xl font-semibold'>아직 회원이 아니신가요?</h3>
+                <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
+                  Lorem ipsum dolor sit amet consectetur.
+                </p>
+                <button
+                  type='button'
+                  onClick={() => setStep('signup')}
+                  className='mt-8 rounded-md border border-white/90 text-white px-6 py-2 hover:bg-white/10'
+                >
+                  회원가입
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className='w-1/2 flex'>
+            <div className='w-1/2 relative'>
+              <div className='absolute inset-0 bg-[#3F72AF] rounded-br-[200px] lg:rounded-br-[200px] 2xl:rounded-br-[200px] z-0' />
+              <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
+                <h3 className='text-2xl font-semibold'>이미 회원이신가요?</h3>
+                <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
+                  Lorem ipsum dolor sit amet consectetur.
+                </p>
+                <button
+                  type='button'
+                  onClick={() => setStep('login')}
+                  className='mt-8 rounded-md bg-white text-[#3F72AF] px-6 py-2 hover:opacity-95'
+                >
+                  로그인
+                </button>
+              </div>
+            </div>
+
+            <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
+              <form
+                className='mx-auto w-full max-w-md space-y-7'
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>아이디</label>
+                  <div className='flex items-center gap-3'>
+                    <input
+                      value={join.id}
+                      onChange={(e) => setJoin((s) => ({ ...s, id: e.target.value }))}
+                      className='flex-1 border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    />
+                    <button
+                      type='button'
+                      className='shrink-0 rounded-md border border-[#3F72AF] text-[#3F72AF] px-3 py-1.5 text-sm hover:bg-[#3F72AF]/5'
+                    >
+                      중복확인
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>비밀번호</label>
+                  <input
+                    type='password'
+                    value={join.password}
+                    onChange={(e) => setJoin((s) => ({ ...s, password: e.target.value }))}
+                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                  />
+                </div>
+
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>비밀번호 확인</label>
+                  <input
+                    type='password'
+                    value={join.password2}
+                    onChange={(e) => setJoin((s) => ({ ...s, password2: e.target.value }))}
+                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                  />
+                </div>
+
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>이메일</label>
+                  <div className='flex items-center gap-3'>
+                    <input
+                      value={join.email}
+                      onChange={(e) => setJoin((s) => ({ ...s, email: e.target.value }))}
+                      className='flex-1 border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    />
+                    <button
+                      type='button'
+                      className='shrink-0 rounded-md border border-[#3F72AF] text-[#3F72AF] px-3 py-1.5 text-sm hover:bg-[#3F72AF]/5'
+                    >
+                      중복확인
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>이름</label>
+                  <input
+                    value={join.name}
+                    onChange={(e) => setJoin((s) => ({ ...s, name: e.target.value }))}
+                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                  />
+                </div>
+
+                <button
+                  type='submit'
+                  className='w-full mt-2 rounded-md bg-[#3F72AF] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                >
+                  회원가입
+                </button>
+              </form>
+            </div>
+          </section>
+        </div>
+
+        {/* 얇은 외곽선 */}
+        <div className='pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5' />
       </div>
-      <p className='mt-8 text-sm text-gray-600'>🐱 Tailwind 적용 테스트 중입니다.</p>
     </div>
   )
 }
