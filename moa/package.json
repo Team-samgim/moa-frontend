@@ -4,10 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prepare": "husky install",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -31,6 +38,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.23",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
     "prettier": "^3.6.2",
     "vite": "^7.1.7"
   }
