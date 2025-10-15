@@ -37,7 +37,7 @@ function LoginScreen() {
                     <input
                       value={login.id}
                       onChange={(e) => setLogin((s) => ({ ...s, id: e.target.value }))}
-                      className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                     />
                   </div>
 
@@ -47,13 +47,13 @@ function LoginScreen() {
                       type='password'
                       value={login.password}
                       onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
-                      className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                     />
                   </div>
 
                   <button
                     type='button'
-                    className='w-full mt-2 rounded-md bg-[#3F72AF] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                    className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
                   >
                     로그인
                   </button>
@@ -68,7 +68,7 @@ function LoginScreen() {
             </div>
 
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[#3F72AF] rounded-bl-[200px] lg:rounded-bl-[200px] 2xl:rounded-bl-[200px] z-0' />
+              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] lg:rounded-bl-[200px] 2xl:rounded-bl-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>아직 회원이 아니신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
@@ -87,7 +87,7 @@ function LoginScreen() {
 
           <section className='w-1/2 flex'>
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[#3F72AF] rounded-br-[200px] lg:rounded-br-[200px] 2xl:rounded-br-[200px] z-0' />
+              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] lg:rounded-br-[200px] 2xl:rounded-br-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>이미 회원이신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
@@ -96,7 +96,7 @@ function LoginScreen() {
                 <button
                   type='button'
                   onClick={() => setStep('login')}
-                  className='mt-8 rounded-md bg-white text-[#3F72AF] px-6 py-2 hover:opacity-95'
+                  className='mt-8 rounded-md bg-white text-[var(--color-blue)] px-6 py-2 hover:opacity-95'
                 >
                   로그인
                 </button>
@@ -114,11 +114,11 @@ function LoginScreen() {
                     <input
                       value={join.id}
                       onChange={(e) => setJoin((s) => ({ ...s, id: e.target.value }))}
-                      className='flex-1 border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                      className='flex-1 border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                     />
                     <button
                       type='button'
-                      className='shrink-0 rounded-md border border-[#3F72AF] text-[#3F72AF] px-3 py-1.5 text-sm hover:bg-[#3F72AF]/5'
+                      className='shrink-0 rounded-md border border-[var(--color-blue)] text-[var(--color-blue)] px-3 py-1.5 text-sm hover:bg-[var(--color-blue)]/5'
                     >
                       중복확인
                     </button>
@@ -131,7 +131,7 @@ function LoginScreen() {
                     type='password'
                     value={join.password}
                     onChange={(e) => setJoin((s) => ({ ...s, password: e.target.value }))}
-                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                   />
                 </div>
 
@@ -141,7 +141,7 @@ function LoginScreen() {
                     type='password'
                     value={join.password2}
                     onChange={(e) => setJoin((s) => ({ ...s, password2: e.target.value }))}
-                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                   />
                 </div>
 
@@ -151,11 +151,11 @@ function LoginScreen() {
                     <input
                       value={join.email}
                       onChange={(e) => setJoin((s) => ({ ...s, email: e.target.value }))}
-                      className='flex-1 border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                      className='flex-1 border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                     />
                     <button
                       type='button'
-                      className='shrink-0 rounded-md border border-[#3F72AF] text-[#3F72AF] px-3 py-1.5 text-sm hover:bg-[#3F72AF]/5'
+                      className='shrink-0 rounded-md border border-[var(--color-blue)] text-[var(--color-blue)] px-3 py-1.5 text-sm hover:bg-[var(--color-blue)]/5'
                     >
                       중복확인
                     </button>
@@ -167,13 +167,13 @@ function LoginScreen() {
                   <input
                     value={join.name}
                     onChange={(e) => setJoin((s) => ({ ...s, name: e.target.value }))}
-                    className='w-full border-b border-gray-300 focus:border-[#3F72AF] outline-none py-2'
+                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                   />
                 </div>
 
                 <button
                   type='submit'
-                  className='w-full mt-2 rounded-md bg-[#3F72AF] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                  className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
                 >
                   회원가입
                 </button>
