@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ErrorIcon from '@/assets/icons/error-msg.svg?react'
 import logo from '@/assets/images/moa.webp'
 
 function LoginScreen() {
@@ -7,8 +8,8 @@ function LoginScreen() {
     () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
     [step],
   )
-
   const [login, setLogin] = useState({ id: '', password: '' })
+  const [error, setError] = useState('')
   const [join, setJoin] = useState({
     id: '',
     email: '',
@@ -16,6 +17,15 @@ function LoginScreen() {
     password2: '',
     name: '',
   })
+
+  const handleLogin = () => {
+    if (!login.id || !login.password) {
+      setError('아이디와 비밀번호를 입력해주세요.')
+      return
+    }
+    // TODO: 로그인 로직 추가
+    setError('')
+  }
 
   return (
     <div className='min-h-screen flex items-center justify-center p-6'>
@@ -51,14 +61,22 @@ function LoginScreen() {
                     />
                   </div>
 
+                  {error && (
+                    <div className='flex items-center gap-2 text-[#FF5B35] text-sm mt-[-4px]'>
+                      <ErrorIcon className='w-4 h-4 text-[#FF5B35]' />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
                   <button
                     type='button'
+                    onClick={handleLogin}
                     className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
                   >
                     로그인
                   </button>
 
-                  <div className='flex justify-center gap-4 text-xs text-gray-500'>
+                  <div className='flex justify-end gap-4 text-xs text-gray-500'>
                     <button type='button'>아이디 찾기</button>
                     <span aria-hidden={true}>|</span>
                     <button type='button'>비밀번호 찾기</button>
@@ -182,7 +200,6 @@ function LoginScreen() {
           </section>
         </div>
 
-        {/* 얇은 외곽선 */}
         <div className='pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5' />
       </div>
     </div>
