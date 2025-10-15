@@ -37,7 +37,7 @@
     "vite-plugin-svgr": "^4.5.0"
   },
   "lint-staged": {
-    "moa/**/*.{js,jsx,ts,tsx}": [
+    "**/*.{js,jsx,ts,tsx}": [
       "eslint --fix",
       "prettier --write"
     ]
