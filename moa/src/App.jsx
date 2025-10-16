@@ -1,12 +1,7 @@
-import './App.css'
+import Router from '@/shared/Router'
 
 function App() {
-  return (
-    <>
-      <h1>Vite + React</h1>
-      <h3>MOA FE</h3>
-    </>
-  )
+  return <Router />
 }
 
 export default App
