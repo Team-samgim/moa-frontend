@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ErrorIcon from '@/assets/icons/error-msg.svg?react'
 import logo from '@/assets/images/moa.webp'
+import { loggedOutNavigations } from '@/constants/navigations'
 
-function LoginScreen() {
+const LoginScreen = () => {
+  const navigate = useNavigate()
+
   const [step, setStep] = useState('login')
   const translate = useMemo(
     () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
@@ -27,9 +31,19 @@ function LoginScreen() {
     setError('')
   }
 
+  const goToTestScreen = () => {
+    navigate(loggedOutNavigations.TEST)
+  }
+
+  const goToTestScreen2 = () => {
+    navigate(loggedOutNavigations.TEST_2)
+  }
+
   return (
     <div className='min-h-screen flex items-center justify-center p-6'>
       <div className='relative w-full max-w-5xl bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.08)] overflow-hidden'>
+        <button onClick={goToTestScreen}>피벗 라이브러리 테스트</button>
+        <button onClick={goToTestScreen2}>피벗 라이브러리 테스트 2</button>
         <div
           className='w-[200%] flex transition-transform duration-500 ease-out'
           style={{ transform: translate }}

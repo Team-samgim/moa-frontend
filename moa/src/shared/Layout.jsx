@@ -1,14 +1,14 @@
 import { Outlet } from 'react-router-dom'
 
-function Header() {
+const Header = () => {
   return <h1>Header</h1>
 }
 
-function Footer() {
+const Footer = () => {
   return <h1>Footer</h1>
 }
 
-function Layout() {
+const Layout = () => {
   return (
     <div>
       <Header />
