@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ErrorIcon from '@/assets/icons/error-msg.svg?react'
 import logo from '@/assets/images/moa.webp'
+import MsgRow from '@/components/common/MsgRow'
+import IdEmailField from '@/components/features/auth/IdEmailField'
+import PasswordConfirmField from '@/components/features/auth/PasswordConfirmField'
+import PasswordField from '@/components/features/auth/PasswordField'
 import { loggedOutNavigations } from '@/constants/navigations'
+import useEmailField from '@/hooks/useEmailField'
+import useIdField from '@/hooks/useIdField'
+import usePasswordMatch from '@/hooks/usePasswordMatch'
 
-const LoginScreen = () => {
+const LoginPage = () => {
   const navigate = useNavigate()
 
   const [step, setStep] = useState('login')
@@ -12,42 +18,86 @@ const LoginScreen = () => {
     () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
     [step],
   )
+
   const [login, setLogin] = useState({ id: '', password: '' })
-  const [error, setError] = useState('')
-  const [join, setJoin] = useState({
-    id: '',
-    email: '',
-    password: '',
-    password2: '',
-    name: '',
-  })
+  const [loginError, setLoginError] = useState('')
 
   const handleLogin = () => {
     if (!login.id || !login.password) {
-      setError('아이디와 비밀번호를 입력해주세요.')
+      setLoginError('아이디와 비밀번호를 입력해주세요.')
       return
     }
-    // TODO: 로그인 로직 추가
-    setError('')
+    setLoginError('')
+    // TODO: 실제 로그인 API 연결
   }
 
-  const goToTestScreen = () => {
-    navigate(loggedOutNavigations.TEST)
+  const id = useIdField() // { value, onChange, status, msg, runCheck }
+  const email = useEmailField() // { value, onChange, status, msg, runCheck }
+  const pw = usePasswordMatch() // { password, setPassword, password2, setPassword2, lenOk, mixOk, mismatch }
+
+  const [name, setName] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({ id: '', email: '', name: '' })
+
+  const onChangeName = (v) => {
+    setName(v)
+    if (v.trim().length > 0 && fieldErrors.name) {
+      setFieldErrors((prev) => ({ ...prev, name: '' }))
+    }
   }
 
-  const goToTestScreen2 = () => {
-    navigate(loggedOutNavigations.TEST_2)
+  const handleJoinSubmit = (e) => {
+    e.preventDefault()
+
+    let hasError = false
+    const next = { id: '', email: '', name: '' }
+
+    if (id.status !== 'valid') {
+      next.id = '아이디 중복확인을 완료해주세요.'
+      hasError = true
+    }
+    if (email.status !== 'valid') {
+      next.email = '이메일 인증(중복확인)을 완료해주세요.'
+      hasError = true
+    }
+
+    if (!name.trim()) {
+      next.name = '이름을 입력해주세요.'
+      hasError = true
+    }
+
+    if (!pw.password || !pw.password2 || pw.mismatch) {
+      hasError = true
+    }
+
+    setFieldErrors(next)
+    if (hasError) return
+
+    // TODO: 실제 회원가입 API 연결
+    alert('회원가입 완료 (임시)')
+    setStep('login')
   }
+
+  /* ------------------ 라우팅 테스트 ------------------ */
+  const goToTestScreen = () => navigate(loggedOutNavigations.TEST)
+  const goToTestScreen2 = () => navigate(loggedOutNavigations.TEST_2)
 
   return (
     <div className='min-h-screen flex items-center justify-center p-6'>
       <div className='relative w-full max-w-5xl bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.08)] overflow-hidden'>
-        <button onClick={goToTestScreen}>피벗 라이브러리 테스트</button>
-        <button onClick={goToTestScreen2}>피벗 라이브러리 테스트 2</button>
+        <div className='flex gap-3 p-3'>
+          <button onClick={goToTestScreen} className='px-3 py-1.5 rounded border'>
+            피벗 라이브러리 테스트
+          </button>
+          <button onClick={goToTestScreen2} className='px-3 py-1.5 rounded border'>
+            피벗 라이브러리 테스트 2
+          </button>
+        </div>
+
         <div
           className='w-[200%] flex transition-transform duration-500 ease-out'
           style={{ transform: translate }}
         >
+          {/* ------------------ 로그인 섹션 ------------------ */}
           <section className='w-1/2 flex'>
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <div className='mx-auto w-full max-w-md'>
@@ -65,22 +115,17 @@ const LoginScreen = () => {
                     />
                   </div>
 
-                  <div>
+                  <div className='relative'>
                     <label className='block text-sm text-gray-700 mb-2'>비밀번호</label>
                     <input
                       type='password'
                       value={login.password}
                       onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
-                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
+                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2 pr-8'
                     />
                   </div>
 
-                  {error && (
-                    <div className='flex items-center gap-2 text-[#FF5B35] text-sm mt-[-4px]'>
-                      <ErrorIcon className='w-4 h-4 text-[#FF5B35]' />
-                      <span>{error}</span>
-                    </div>
-                  )}
+                  {loginError && <MsgRow type='error'>{loginError}</MsgRow>}
 
                   <button
                     type='button'
@@ -100,7 +145,7 @@ const LoginScreen = () => {
             </div>
 
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] lg:rounded-bl-[200px] 2xl:rounded-bl-[200px] z-0' />
+              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>아직 회원이 아니신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
@@ -117,9 +162,10 @@ const LoginScreen = () => {
             </div>
           </section>
 
+          {/* ------------------ 회원가입 섹션 ------------------ */}
           <section className='w-1/2 flex'>
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] lg:rounded-br-[200px] 2xl:rounded-br-[200px] z-0' />
+              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>이미 회원이신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
@@ -136,71 +182,53 @@ const LoginScreen = () => {
             </div>
 
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
-              <form
-                className='mx-auto w-full max-w-md space-y-7'
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <div>
-                  <label className='block text-sm text-gray-700 mb-2'>아이디</label>
-                  <div className='flex items-center gap-3'>
-                    <input
-                      value={join.id}
-                      onChange={(e) => setJoin((s) => ({ ...s, id: e.target.value }))}
-                      className='flex-1 border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
-                    />
-                    <button
-                      type='button'
-                      className='shrink-0 rounded-md border border-[var(--color-blue)] text-[var(--color-blue)] px-3 py-1.5 text-sm hover:bg-[var(--color-blue)]/5'
-                    >
-                      중복확인
-                    </button>
-                  </div>
-                </div>
+              <form className='mx-auto w-full max-w-md space-y-7' onSubmit={handleJoinSubmit}>
+                {/* 아이디 */}
+                <IdEmailField
+                  label='아이디'
+                  value={id.value}
+                  onChange={id.onChange}
+                  onClickCheck={id.runCheck}
+                  status={id.status}
+                  inlineMsg={id.msg}
+                  fieldError={fieldErrors.id}
+                  successText='사용할 수 있는 아이디입니다.'
+                />
 
-                <div>
-                  <label className='block text-sm text-gray-700 mb-2'>비밀번호</label>
-                  <input
-                    type='password'
-                    value={join.password}
-                    onChange={(e) => setJoin((s) => ({ ...s, password: e.target.value }))}
-                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
-                  />
-                </div>
+                {/* 비밀번호 */}
+                <PasswordField value={pw.password} onChange={pw.setPassword} />
 
-                <div>
-                  <label className='block text-sm text-gray-700 mb-2'>비밀번호 확인</label>
-                  <input
-                    type='password'
-                    value={join.password2}
-                    onChange={(e) => setJoin((s) => ({ ...s, password2: e.target.value }))}
-                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
-                  />
-                </div>
+                {/* 비밀번호 확인 */}
+                <PasswordConfirmField
+                  value={pw.password2}
+                  onChange={pw.setPassword2}
+                  original={pw.password}
+                />
 
-                <div>
-                  <label className='block text-sm text-gray-700 mb-2'>이메일</label>
-                  <div className='flex items-center gap-3'>
-                    <input
-                      value={join.email}
-                      onChange={(e) => setJoin((s) => ({ ...s, email: e.target.value }))}
-                      className='flex-1 border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
-                    />
-                    <button
-                      type='button'
-                      className='shrink-0 rounded-md border border-[var(--color-blue)] text-[var(--color-blue)] px-3 py-1.5 text-sm hover:bg-[var(--color-blue)]/5'
-                    >
-                      중복확인
-                    </button>
-                  </div>
-                </div>
+                {/* 이메일 */}
+                <IdEmailField
+                  label='이메일'
+                  value={email.value}
+                  onChange={email.onChange}
+                  onClickCheck={email.runCheck}
+                  status={email.status}
+                  inlineMsg={email.msg}
+                  fieldError={fieldErrors.email}
+                  successText='사용할 수 있는 이메일입니다.'
+                  buttonLabelIdle='이메일 중복 확인'
+                  buttonLabelChecking='확인 중...'
+                  buttonLabelDone='확인 완료'
+                />
 
+                {/* 이름 */}
                 <div>
                   <label className='block text-sm text-gray-700 mb-2'>이름</label>
                   <input
-                    value={join.name}
-                    onChange={(e) => setJoin((s) => ({ ...s, name: e.target.value }))}
+                    value={name}
+                    onChange={(e) => onChangeName(e.target.value)}
                     className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
                   />
+                  {fieldErrors.name && <MsgRow type='error'>{fieldErrors.name}</MsgRow>}
                 </div>
 
                 <button
@@ -220,4 +248,4 @@ const LoginScreen = () => {
   )
 }
 
-export default LoginScreen
+export default LoginPage
