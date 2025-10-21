@@ -60,9 +60,18 @@ export default defineConfig([
           alphabetize: { order: 'asc' },
         },
       ],
+
+      // Component Definition
+      'react/function-component-definition': [
+        'error',
+        {
+          namedComponents: 'arrow-function',
+          unnamedComponents: 'arrow-function',
+        },
+      ],
+
       'import/namespace': 'off',
       'import/no-named-as-default': 'off',
-
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',

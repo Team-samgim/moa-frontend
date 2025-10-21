@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@webdatarocks/webdatarocks/webdatarocks.css';
 
 @font-face {
   font-family: 'Pretendard Variable';
@@ -9,6 +10,7 @@
 
 @theme {
   --font-sans: 'Pretendard Variable', sans-serif;
+  /* colors */
   --color-blue: #3f72af;
 }
 
