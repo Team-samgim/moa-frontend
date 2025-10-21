@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import tanstackQuery from '@tanstack/eslint-plugin-query'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import configPrettier from 'eslint-config-prettier'
 import importPlugin from 'eslint-plugin-import'
@@ -35,6 +36,7 @@ export default defineConfig([
       react,
       prettier,
       import: importPlugin,
+      '@tanstack/query': tanstackQuery,
     },
     rules: {
       // React
@@ -47,6 +49,9 @@ export default defineConfig([
       // React Hooks
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+
+      // TanStack Query
+      '@tanstack/query/exhaustive-deps': 'warn',
 
       // Import
       'import/order': [
