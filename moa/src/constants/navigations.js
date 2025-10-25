@@ -6,7 +6,9 @@ const loggedOutNavigations = {
 }
 
 const userNavigations = {
-  // 추후 추가
+  DASHBOARD: 'dashboard',
+  SEARCH: 'search',
+  PIVOT: 'pivot',
 }
 
 export { loggedOutNavigations, userNavigations }
