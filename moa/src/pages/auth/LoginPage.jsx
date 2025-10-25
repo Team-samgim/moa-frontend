@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
 import MsgRow from '@/components/common/MsgRow'
-import IdEmailField from '@/components/features/auth/IdEmailField'
+import IdField from '@/components/features/auth/IdField'
 import PasswordConfirmField from '@/components/features/auth/PasswordConfirmField'
 import PasswordField from '@/components/features/auth/PasswordField'
-import { loggedOutNavigations } from '@/constants/navigations'
-import useEmailField from '@/hooks/useEmailField'
+import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
+import { useLogin, useSignup } from '@/hooks/queries/useAuth'
 import useIdField from '@/hooks/useIdField'
 import usePasswordMatch from '@/hooks/usePasswordMatch'
+import { isValidEmail } from '@/utils/validators'
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -22,21 +23,42 @@ const LoginPage = () => {
   const [login, setLogin] = useState({ id: '', password: '' })
   const [loginError, setLoginError] = useState('')
 
+  const loginMutation = useLogin({
+    onSuccess: () => {
+      setLoginError('')
+      navigate(userNavigations.DASHBOARD)
+    },
+    onError: () => {
+      setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.')
+    },
+  })
+
   const handleLogin = () => {
     if (!login.id || !login.password) {
       setLoginError('아이디와 비밀번호를 입력해주세요.')
       return
     }
-    setLoginError('')
-    // TODO: 실제 로그인 API 연결
+
+    loginMutation.mutate({
+      loginId: login.id,
+      password: login.password,
+    })
   }
 
   const id = useIdField() // { value, onChange, status, msg, runCheck }
-  const email = useEmailField() // { value, onChange, status, msg, runCheck }
+  // const email = useEmailField() // { value, onChange, status, msg, runCheck }
   const pw = usePasswordMatch() // { password, setPassword, password2, setPassword2, lenOk, mixOk, mismatch }
 
+  const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [fieldErrors, setFieldErrors] = useState({ id: '', email: '', name: '' })
+
+  const onChangeEmail = (v) => {
+    setEmail(v)
+    if (v.trim().length > 0 && fieldErrors.email) {
+      setFieldErrors((prev) => ({ ...prev, email: '' }))
+    }
+  }
 
   const onChangeName = (v) => {
     setName(v)
@@ -44,6 +66,17 @@ const LoginPage = () => {
       setFieldErrors((prev) => ({ ...prev, name: '' }))
     }
   }
+
+  const signupMutation = useSignup({
+    onSuccess: () => {
+      alert('회원가입이 완료되었습니다.')
+      setStep('login')
+    },
+    onError: (error) => {
+      console.error(error)
+      alert('회원가입에 실패했습니다. 다시 시도해주세요.')
+    },
+  })
 
   const handleJoinSubmit = (e) => {
     e.preventDefault()
@@ -55,8 +88,9 @@ const LoginPage = () => {
       next.id = '아이디 중복확인을 완료해주세요.'
       hasError = true
     }
-    if (email.status !== 'valid') {
-      next.email = '이메일 인증(중복확인)을 완료해주세요.'
+
+    if (!email.trim() || !isValidEmail(email)) {
+      next.email = '올바른 이메일 형식이 아닙니다.'
       hasError = true
     }
 
@@ -72,9 +106,14 @@ const LoginPage = () => {
     setFieldErrors(next)
     if (hasError) return
 
-    // TODO: 실제 회원가입 API 연결
-    alert('회원가입 완료 (임시)')
-    setStep('login')
+    const payload = {
+      loginId: id.value,
+      email,
+      password: pw.password,
+      nickname: name,
+    }
+
+    signupMutation.mutate(payload)
   }
 
   /* ------------------ 라우팅 테스트 ------------------ */
@@ -184,7 +223,7 @@ const LoginPage = () => {
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <form className='mx-auto w-full max-w-md space-y-7' onSubmit={handleJoinSubmit}>
                 {/* 아이디 */}
-                <IdEmailField
+                <IdField
                   label='아이디'
                   value={id.value}
                   onChange={id.onChange}
@@ -206,7 +245,7 @@ const LoginPage = () => {
                 />
 
                 {/* 이메일 */}
-                <IdEmailField
+                {/* <IdEmailField
                   label='이메일'
                   value={email.value}
                   onChange={email.onChange}
@@ -218,7 +257,18 @@ const LoginPage = () => {
                   buttonLabelIdle='이메일 중복 확인'
                   buttonLabelChecking='확인 중...'
                   buttonLabelDone='확인 완료'
-                />
+                /> */}
+
+                {/* 이메일 */}
+                <div>
+                  <label className='block text-sm text-gray-700 mb-2'>이메일</label>
+                  <input
+                    value={email}
+                    onChange={(e) => onChangeEmail(e.target.value)}
+                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
+                  />
+                  {fieldErrors.email && <MsgRow type='error'>{fieldErrors.email}</MsgRow>}
+                </div>
 
                 {/* 이름 */}
                 <div>
