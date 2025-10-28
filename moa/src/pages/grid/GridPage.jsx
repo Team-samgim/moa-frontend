@@ -2,15 +2,17 @@ import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
+import CustomCheckboxFilter from '@/components/features/grid/CustomCheckboxFilter'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const GridPage = () => {
   const [columns, setColumns] = useState([])
   const [ready, setReady] = useState(false)
+  const [activeFilters, setActiveFilters] = useState({})
   const gridRef = useRef(null)
   const navigate = useNavigate()
-  const [currentLayer, setCurrentLayer] = useState(null)
+  const [currentLayer, setCurrentLayer] = useState('ethernet')
   const token = localStorage.getItem('accessToken')
 
   /** 컬럼 정보 로드 */
@@ -28,8 +30,6 @@ const GridPage = () => {
           {
             headerName: 'No',
             valueGetter: (params) => params.node.rowIndex + 1,
-            sortable: false,
-            filter: false,
             resizable: true,
             cellStyle: {
               textAlign: 'center',
@@ -37,14 +37,17 @@ const GridPage = () => {
               backgroundColor: '#fafafa',
               color: '#555',
             },
-            headerClass: 'no-column-header',
           },
 
           ...data.columns.map((col) => ({
             field: col,
             sortable: true,
-            filter: true,
+            filter: CustomCheckboxFilter,
+            filterParams: {
+              layer: currentLayer || 'ethernet',
+            },
             resizable: true,
+            floatingFilter: false,
             valueFormatter: (p) =>
               typeof p.value === 'object' ? (p.value?.value ?? '') : (p.value ?? ''),
           })),
@@ -53,54 +56,73 @@ const GridPage = () => {
         setReady(true)
       })
       .catch((err) => console.error('컬럼 로드 오류:', err))
-  }, [])
+  }, [token, currentLayer])
+
+  /** 무한 스크롤용 데이터소스 */
+  const datasource = useMemo(
+    () => ({
+      getRows: (params) => {
+        const { startRow, endRow, sortModel } = params
+        const offset = startRow
+        const limit = endRow - startRow
+
+        const sortField = sortModel?.[0]?.colId || null
+        const sortDirection = sortModel?.[0]?.sort || null
+
+        let url = `http://localhost:8080/api/mock-search?offset=${offset}&limit=${limit}`
+        if (sortField) url += `&sortField=${sortField}&sortDirection=${sortDirection}`
+
+        if (Object.keys(activeFilters).length > 0) {
+          const filterModel = {}
+          Object.entries(activeFilters).forEach(([key, vals]) => {
+            if (vals.length > 0) filterModel[key] = { type: 'set', values: vals }
+          })
+          if (Object.keys(filterModel).length > 0) {
+            url += `&filterModel=${encodeURIComponent(JSON.stringify(filterModel))}`
+          }
+        }
+
+        fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const rows = data.rows || []
+            const lastRow = rows.length < limit ? offset + rows.length : -1
+            params.successCallback(rows, lastRow)
+            if (data.layer) setCurrentLayer(data.layer)
+          })
+          .catch((err) => {
+            console.error('데이터 로드 실패:', err)
+            params.failCallback()
+          })
+      },
+    }),
+    [activeFilters, token],
+  )
+
+  useEffect(() => {
+    if (!ready) return
+    const api = gridRef.current?.api
+    if (api && datasource) {
+      api.setGridOption('datasource', datasource)
+    }
+  }, [activeFilters, ready, datasource])
+
+  const defaultColDef = useMemo(() => ({ flex: 1, minWidth: 120 }), [])
+
+  const onGridReady = (params) => {
+    params.api.setGridOption('datasource', datasource)
+  }
 
   const goToPivotPage = () => {
     navigate('/pivot', {
       state: {
         layer: currentLayer,
         columns: columns.map((c) => c.field),
-        filters: {},
+        filters: activeFilters,
       },
     })
-  }
-
-  /** 무한 스크롤용 데이터소스 */
-  const datasource = {
-    getRows: (params) => {
-      const { startRow, endRow, sortModel } = params
-      const offset = startRow
-      const limit = endRow - startRow
-
-      const sortField = sortModel?.[0]?.colId || null
-      const sortDirection = sortModel?.[0]?.sort || null
-
-      let url = `http://localhost:8080/api/mock-search?offset=${offset}&limit=${limit}`
-      if (sortField) url += `&sortField=${sortField}&sortDirection=${sortDirection}`
-
-      fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          const rows = data.rows || []
-          const lastRow = rows.length < limit ? offset + rows.length : -1
-          params.successCallback(rows, lastRow)
-          if (data.layer) setCurrentLayer(data.layer)
-        })
-        .catch((err) => {
-          console.error('데이터 로드 실패:', err)
-          params.failCallback()
-        })
-    },
-  }
-
-  const defaultColDef = useMemo(() => ({ flex: 1, minWidth: 120 }), [])
-
-  const onGridReady = (params) => {
-    params.api.setGridOption('datasource', datasource)
   }
 
   return (
@@ -132,6 +154,15 @@ const GridPage = () => {
             animateRows={true}
             pagination={false}
             onGridReady={onGridReady}
+            context={{
+              updateFilter: (field, values) => {
+                setActiveFilters((prev) => ({
+                  ...prev,
+                  [field]: values,
+                }))
+              },
+              currentLayer,
+            }}
           />
         </div>
       ) : (
