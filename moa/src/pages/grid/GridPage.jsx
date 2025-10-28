@@ -17,7 +17,7 @@ const GridPage = () => {
 
   /** 컬럼 정보 로드 */
   useEffect(() => {
-    fetch(`http://localhost:8080/api/mock-search?offset=0&limit=1`, {
+    fetch(`http://localhost:8080/api/randering?offset=0&limit=1`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -69,7 +69,7 @@ const GridPage = () => {
         const sortField = sortModel?.[0]?.colId || null
         const sortDirection = sortModel?.[0]?.sort || null
 
-        let url = `http://localhost:8080/api/mock-search?offset=${offset}&limit=${limit}`
+        let url = `http://localhost:8080/api/randering?offset=${offset}&limit=${limit}`
         if (sortField) url += `&sortField=${sortField}&sortDirection=${sortDirection}`
 
         if (Object.keys(activeFilters).length > 0) {
