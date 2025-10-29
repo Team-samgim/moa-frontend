@@ -191,7 +191,7 @@ const GridPage = () => {
       {ready ? (
         <div className='ag-theme-quartz' style={{ height: '80vh', width: '100%' }}>
           <AgGridReact
-            key={JSON.stringify(activeFilters)} // ✅ 중요: 리렌더링 강제
+            key={JSON.stringify(activeFilters)} // 중요: 리렌더링 강제
             ref={gridRef}
             columnDefs={columns}
             defaultColDef={defaultColDef}
