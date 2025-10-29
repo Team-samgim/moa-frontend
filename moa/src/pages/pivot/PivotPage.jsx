@@ -135,24 +135,22 @@ const PivotPage = () => {
 
         {/* 피벗 카드 전체 */}
         <section className='rounded-lg border border-gray-200 bg-white shadow-sm'>
-          {/* 카드 헤더 */}
-          <div className='flex flex-col gap-2 border-b border-gray-200 p-4 md:flex-row md:items-start md:justify-between'>
-            <div className='text-base font-semibold text-gray-900'>피벗 테이블 구성</div>
-
-            <div className='flex flex-wrap items-center gap-3 text-sm text-blue-600'>
-              <button className='hover:underline'>프리셋 저장</button>
-              <button className='hover:underline'>프리셋 불러오기</button>
-            </div>
-          </div>
-
           {/* 본문 영역 */}
-          <div className='flex flex-col gap-6 p-4 lg:flex-row'>
+          <div className='flex flex-row gap-6 p-5 lg:flex-row'>
             {/* 왼쪽 패널: 조회 계층 / 조회 기간 */}
             <div className='w-full max-w-xs flex-shrink-0 space-y-6'>
+              <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
+                <div className='text-base font-semibold text-gray-900'>피벗 테이블 구성</div>
+
+                <div className='flex flex-wrap items-center gap-3 text-xs font-medium text-[#2263AC]'>
+                  <button className='hover:underline'>프리셋 저장</button>
+                  <button className='hover:underline'>프리셋 불러오기</button>
+                </div>
+              </div>
               {/* 조회 계층 */}
               <div>
-                <div className='mb-2 text-sm font-medium text-gray-800'>조회 계층</div>
-                <div className='flex flex-wrap gap-2'>
+                <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
+                <div className='flex flex-wrap justify-between w-full'>
                   {LAYER_OPTIONS.map((opt) => (
                     <button
                       key={opt}
@@ -160,8 +158,8 @@ const PivotPage = () => {
                       className={[
                         'rounded border px-3 py-2 text-xs font-medium',
                         layer === opt
-                          ? 'bg-blue-100 text-blue-700 border-blue-400'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                          ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
+                          : 'bg-[#F5F5F7] text-gray-700 border-gray-300 hover:bg-gray-50',
                       ].join(' ')}
                     >
                       {opt}
@@ -172,7 +170,7 @@ const PivotPage = () => {
 
               {/* 조회 기간 */}
               <div>
-                <div className='mb-2 flex items-center gap-2 text-sm font-medium text-gray-800'>
+                <div className='mb-3 flex justify-between items-center gap-2 text-sm font-medium text-gray-800'>
                   <span>조회 기간</span>
                   <button
                     className='rounded border border-gray-300 bg-white p-1 hover:bg-gray-50'
@@ -183,11 +181,11 @@ const PivotPage = () => {
                       }
                     }}
                   >
-                    <ResetIcon className='h-4 w-4 text-gray-500' />
+                    <ResetIcon className='h-3.5 w-3.5 text-gray-500' />
                   </button>
                 </div>
 
-                <div className='flex flex-wrap gap-2'>
+                <div className='grid grid-cols-4 gap-2.5 w-full'>
                   {TIME_PRESETS.map((p) => (
                     <button
                       key={p.value}
@@ -195,8 +193,8 @@ const PivotPage = () => {
                       className={[
                         'rounded border px-3 py-2 text-xs font-medium',
                         timeRange?.value === p.value
-                          ? 'bg-blue-100 text-blue-700 border-blue-400'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                          ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
+                          : 'bg-[#F5F5F7] text-gray-700 border-gray-300 hover:bg-gray-50',
                       ].join(' ')}
                     >
                       {p.label}
@@ -205,10 +203,10 @@ const PivotPage = () => {
                 </div>
 
                 {/* TODO: 직접 설정 기능 추가*/}
-                <div className='mt-3'>
-                  <button className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50'>
+                <div className='mt-2'>
+                  <button className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50'>
                     <span>직접 설정</span>
-                    <ArrowDownIcon className='h-4 w-4 text-gray-500' />
+                    <ArrowDownIcon className='h-3 w-3 text-gray-500' />
                   </button>
                 </div>
               </div>
@@ -218,7 +216,7 @@ const PivotPage = () => {
 
             <div className='flex flex-1 flex-col gap-4 lg:flex-row'>
               {/* Column 카드 */}
-              <div className='flex-1 rounded border border-gray-200'>
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ColumnIcon className='h-4 w-4 text-gray-600' />열 (Column)
@@ -256,7 +254,7 @@ const PivotPage = () => {
               </div>
 
               {/* Rows 카드 */}
-              <div className='flex-1 rounded border border-gray-200'>
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
@@ -302,7 +300,7 @@ const PivotPage = () => {
               </div>
 
               {/* Values 카드 */}
-              <div className='flex-1 rounded border border-gray-200'>
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)
