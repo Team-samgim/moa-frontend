@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import PivotFieldModalShell from './PivotFieldModalShell'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
+import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import CloseIcon from '@/assets/icons/delete.svg?react'
+import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import { usePivotFields } from '@/hooks/queries/usePivot'
 
 const AGG_OPTIONS = [
@@ -22,17 +24,10 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
 
   const filteredList = useMemo(() => {
     let base = fieldNames
+    if (searchValue) base = base.filter((n) => n.toLowerCase().includes(searchValue.toLowerCase()))
 
-    if (searchValue) {
-      base = base.filter((n) => n.toLowerCase().includes(searchValue.toLowerCase()))
-    }
-
-    if (sortOrder === 'asc') {
-      base = [...base].sort((a, b) => a.localeCompare(b))
-    } else if (sortOrder === 'desc') {
-      base = [...base].sort((a, b) => b.localeCompare(a))
-    }
-
+    if (sortOrder === 'asc') base = [...base].sort((a, b) => a.localeCompare(b))
+    else if (sortOrder === 'desc') base = [...base].sort((a, b) => b.localeCompare(a))
     return base
   }, [fieldNames, sortOrder, searchValue])
 
@@ -70,16 +65,14 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
         alias: `${aggLabel}: ${v.field}`,
       }
     })
-
     onApplyValues(finalValues)
   }
 
   return (
     <PivotFieldModalShell
       title='값 선택'
-      headerRight={null}
       tokensArea={
-        <div className='mb-3 flex flex-wrap gap-2'>
+        <div className='flex flex-wrap gap-2'>
           {valuesState.map((v) => {
             const aggMeta = AGG_OPTIONS.find((o) => o.value === v.agg)
             const aggLabel = aggMeta ? aggMeta.label : v.agg
@@ -88,13 +81,13 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
                 key={v.field}
                 className='flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
               >
-                <span className='text-gray-500'>⋮⋮⋮</span>
+                <SideKickIcon className='h-4 w-4' />
                 <span>
                   {aggLabel}: {v.field}
                 </span>
                 <button
                   onClick={() => removeToken(v.field)}
-                  className='text-gray-400 hover:text-red-500'
+                  className='text-gray-400 hover:text-red-500 pl-1'
                 >
                   <CloseIcon className='h-3 w-3' />
                 </button>
@@ -111,8 +104,30 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
       onSearchChange={setSearchValue}
     >
       {/* 리스트 헤더 */}
-      <div className='flex items-center justify-between border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700'>
-        <span>전체 {fieldNames.length}개</span>
+      <div className='flex items-center justify-between border border-gray-200 bg-gray-50 px-3 py-2 text-[14px] text-gray-700'>
+        <span>필드 목록</span>
+        <div className='flex items-center gap-1 text-xs'>
+          <button
+            onClick={() => setSortOrder('asc')}
+            className={`rounded border px-2 py-1 ${
+              sortOrder === 'asc'
+                ? 'border-blue-light bg-blue-light text-white'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            오름차순
+          </button>
+          <button
+            onClick={() => setSortOrder('desc')}
+            className={`rounded border px-2 py-1 ${
+              sortOrder === 'desc'
+                ? 'border-blue-light bg-blue-light text-white'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            내림차순
+          </button>
+        </div>
       </div>
 
       {/* 리스트 */}
@@ -129,23 +144,24 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
             return (
               <div
                 key={fieldName}
-                className='flex flex-col border-t border-gray-200 px-3 py-2 text-sm text-gray-800'
+                className='flex flex-col border-t border-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50'
               >
                 <div className='flex items-center justify-between'>
-                  <label className='flex cursor-pointer items-center gap-2'>
-                    <input
-                      type='checkbox'
-                      className='h-4 w-4 text-blue-600'
-                      checked={selected}
-                      onChange={() => toggleField(fieldName)}
-                    />
-                    <div className='flex items-center gap-2'>
-                      <span className='text-gray-400 text-xs'>⋮⋮⋮</span>
-                      <span>{fieldName}</span>
+                  <div
+                    className='flex cursor-pointer items-center gap-2'
+                    onClick={() => toggleField(fieldName)}
+                  >
+                    <div
+                      className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                        selected ? 'border-blue-light bg-blue-light' : 'border-gray-300 bg-white'
+                      }`}
+                    >
+                      {selected && <CheckIcon className='h-4 w-4 text-white' />}
                     </div>
-                  </label>
+                    <span>{fieldName}</span>
+                  </div>
 
-                  {/* agg 드롭다운 */}
+                  {/* 집계(agg) 드롭다운 */}
                   {selected && (
                     <div className='relative'>
                       <button
@@ -155,7 +171,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
                         }
                       >
                         <span>{AGG_OPTIONS.find((o) => o.value === agg)?.label ?? agg}</span>
-                        <ArrowDownIcon className='h-3 w-3 text-gray-500' />
+                        <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
                       </button>
 
                       {openAggForField === fieldName && (

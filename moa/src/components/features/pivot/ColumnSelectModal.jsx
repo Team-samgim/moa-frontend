@@ -54,8 +54,30 @@ const ColumnSelectModal = ({
       searchValue={searchValue}
       onSearchChange={setSearchValue}
     >
-      <div className='flex items-center justify-between border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700'>
+      <div className='flex rounded items-center justify-between border border-gray-200 bg-gray-50 px-3 py-2 text-[14px] text-gray-700'>
         <span>필드 목록</span>
+        <div className='flex items-center gap-1 text-xs'>
+          <button
+            onClick={() => setSortOrder('asc')}
+            className={`rounded border px-2 py-1 ${
+              sortOrder === 'asc'
+                ? 'border-blue-light bg-blue-light text-white'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            오름차순
+          </button>
+          <button
+            onClick={() => setSortOrder('desc')}
+            className={`rounded border px-2 py-1 ${
+              sortOrder === 'desc'
+                ? 'border-blue-light bg-blue-light text-white'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            내림차순
+          </button>
+        </div>
       </div>
 
       <div className='border border-t-0 border-gray-200'>

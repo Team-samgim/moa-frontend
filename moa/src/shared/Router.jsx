@@ -16,7 +16,7 @@ const Router = () => {
       <Routes>
         <Route element={<Layout />}>
           {/* 비로그인 상태 */}
-          <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
+          <Route path='/' element={<LoginPage />} />
           <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
           <Route path={loggedOutNavigations.TEST} element={<TestPage />} />
           <Route path={loggedOutNavigations.TEST_2} element={<TestPage2 />} />

@@ -12,6 +12,8 @@
   --font-sans: 'Pretendard Variable', sans-serif;
   /* colors */
   --color-blue: #3f72af;
+  --color-blue-light: #3877be;
+  --color-blue-dark: #2c619c;
 }
 
 body {
