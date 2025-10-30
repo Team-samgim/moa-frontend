@@ -1,5 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './Layout'
+import ProtectedRoute from './ProtedtedRoute'
+
+import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import PivotPage from '@/pages/pivot/PivotPage'
@@ -12,13 +15,18 @@ const Router = () => {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path='/' element={<LoginPage />} />
-          <Route path='login' element={<LoginPage />} />
-          <Route path='dashboard' element={<DashboardPage />} />
-          <Route path='search' element={<SearchPage />} />
-          <Route path='pivot' element={<PivotPage />} />
-          <Route path='test' element={<TestPage />} />
-          <Route path='test2' element={<TestPage2 />} />
+          {/* 비로그인 상태 */}
+          <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
+          <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
+          <Route path={loggedOutNavigations.TEST} element={<TestPage />} />
+          <Route path={loggedOutNavigations.TEST_2} element={<TestPage2 />} />
+
+          {/* 로그인 상태: 보호 영역 */}
+          <Route element={<ProtectedRoute />}>
+            <Route path={userNavigations.DASHBOARD} element={<DashboardPage />} />
+            <Route path={userNavigations.SEARCH} element={<SearchPage />} />
+            <Route path={userNavigations.PIVOT} element={<PivotPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

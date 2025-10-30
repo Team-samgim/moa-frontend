@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
 import MsgRow from '@/components/common/MsgRow'
 import IdField from '@/components/features/auth/IdField'
@@ -13,16 +13,32 @@ import { isValidEmail } from '@/utils/validators'
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const [step, setStep] = useState('login')
+  const searchParams = new URLSearchParams(location.search)
+  const modeFromQuery = searchParams.get('mode') // 'signup' | 'login' | null
+
+  // 'login' | 'signup'
+  const [step, setStep] = useState(modeFromQuery === 'signup' ? 'signup' : 'login')
+
+  useEffect(() => {
+    if (modeFromQuery === 'signup') {
+      setStep('signup')
+    } else {
+      setStep('login')
+    }
+  }, [modeFromQuery])
+
   const translate = useMemo(
     () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
     [step],
   )
 
+  // 로그인 입력 상태
   const [login, setLogin] = useState({ id: '', password: '' })
   const [loginError, setLoginError] = useState('')
 
+  // 로그인 mutation
   const loginMutation = useLogin({
     onSuccess: () => {
       setLoginError('')
@@ -33,6 +49,7 @@ const LoginPage = () => {
     },
   })
 
+  // 실제 로그인 트리거 함수
   const handleLogin = () => {
     if (!login.id || !login.password) {
       setLoginError('아이디와 비밀번호를 입력해주세요.')
@@ -45,8 +62,14 @@ const LoginPage = () => {
     })
   }
 
+  // 엔터키 제출 지원: form onSubmit에서 handleLogin 호출
+  const handleLoginSubmit = (e) => {
+    e.preventDefault()
+    handleLogin()
+  }
+
+  // 회원가입 입력 상태
   const id = useIdField() // { value, onChange, status, msg, runCheck }
-  // const email = useEmailField() // { value, onChange, status, msg, runCheck }
   const pw = usePasswordMatch() // { password, setPassword, password2, setPassword2, lenOk, mixOk, mismatch }
 
   const [email, setEmail] = useState('')
@@ -67,6 +90,7 @@ const LoginPage = () => {
     }
   }
 
+  // 회원가입 mutation
   const signupMutation = useSignup({
     onSuccess: () => {
       alert('회원가입이 완료되었습니다.')
@@ -78,6 +102,7 @@ const LoginPage = () => {
     },
   })
 
+  // 회원가입 submit
   const handleJoinSubmit = (e) => {
     e.preventDefault()
 
@@ -132,19 +157,21 @@ const LoginPage = () => {
           </button>
         </div>
 
+        {/* 슬라이드 영역 */}
         <div
           className='w-[200%] flex transition-transform duration-500 ease-out'
           style={{ transform: translate }}
         >
           {/* ------------------ 로그인 섹션 ------------------ */}
           <section className='w-1/2 flex'>
+            {/* 왼쪽: 로그인 폼 */}
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <div className='mx-auto w-full max-w-md'>
                 <div className='flex justify-center'>
                   <img src={logo} alt='moa logo' className='h-24 md:h-28 object-contain' />
                 </div>
 
-                <div className='mt-10 space-y-8'>
+                <form onSubmit={handleLoginSubmit} className='mt-10 space-y-8'>
                   <div>
                     <label className='block text-sm text-gray-700 mb-2'>아이디</label>
                     <input
@@ -161,17 +188,24 @@ const LoginPage = () => {
                       value={login.password}
                       onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
                       className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2 pr-8'
+                      // 엔터 눌렀을 때도 form submit 되지만, 추가로 안전하게 onKeyDown으로 처리해도 OK
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          // 기본 submit과 중복 방지하려면 여기서 그냥 return만 해도 되고
+                          // 또는 e.preventDefault(); handleLogin();
+                        }
+                      }}
                     />
                   </div>
 
                   {loginError && <MsgRow type='error'>{loginError}</MsgRow>}
 
                   <button
-                    type='button'
-                    onClick={handleLogin}
+                    type='submit'
                     className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                    disabled={loginMutation.isLoading}
                   >
-                    로그인
+                    {loginMutation.isLoading ? '로그인 중...' : '로그인'}
                   </button>
 
                   <div className='flex justify-end gap-4 text-xs text-gray-500'>
@@ -179,10 +213,11 @@ const LoginPage = () => {
                     <span aria-hidden={true}>|</span>
                     <button type='button'>비밀번호 찾기</button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
 
+            {/* 오른쪽: 회원가입 CTA */}
             <div className='w-1/2 relative'>
               <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
@@ -203,6 +238,7 @@ const LoginPage = () => {
 
           {/* ------------------ 회원가입 섹션 ------------------ */}
           <section className='w-1/2 flex'>
+            {/* 왼쪽: 로그인으로 돌아가기 CTA */}
             <div className='w-1/2 relative'>
               <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
@@ -220,6 +256,7 @@ const LoginPage = () => {
               </div>
             </div>
 
+            {/* 오른쪽: 실제 회원가입 폼 */}
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <form className='mx-auto w-full max-w-md space-y-7' onSubmit={handleJoinSubmit}>
                 {/* 아이디 */}
@@ -243,21 +280,6 @@ const LoginPage = () => {
                   onChange={pw.setPassword2}
                   original={pw.password}
                 />
-
-                {/* 이메일 */}
-                {/* <IdEmailField
-                  label='이메일'
-                  value={email.value}
-                  onChange={email.onChange}
-                  onClickCheck={email.runCheck}
-                  status={email.status}
-                  inlineMsg={email.msg}
-                  fieldError={fieldErrors.email}
-                  successText='사용할 수 있는 이메일입니다.'
-                  buttonLabelIdle='이메일 중복 확인'
-                  buttonLabelChecking='확인 중...'
-                  buttonLabelDone='확인 완료'
-                /> */}
 
                 {/* 이메일 */}
                 <div>
@@ -284,8 +306,9 @@ const LoginPage = () => {
                 <button
                   type='submit'
                   className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                  disabled={signupMutation.isLoading}
                 >
-                  회원가입
+                  {signupMutation.isLoading ? '가입 중...' : '회원가입'}
                 </button>
               </form>
             </div>
