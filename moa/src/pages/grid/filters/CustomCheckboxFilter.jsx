@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react'
+// src/components/filters/CustomCheckboxFilter.jsx
+import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import axiosInstance from '@/api/axios'
+import { fetchFilterValues as apiFetchFilterValues } from '@/components/features/grid/gridService'
+import { OPERATOR_OPTIONS } from '@/constants/filterOperators'
 
 const CustomCheckboxFilter = (props) => {
   const [uniqueValues, setUniqueValues] = useState([])
@@ -24,51 +26,13 @@ const CustomCheckboxFilter = (props) => {
   const fieldType = props?.colDef?.filterParams?.type || 'string'
   const field = props.colDef.field
 
-  /** 타입별 연산자 목록 */
-  const operatorOptions = {
-    string: [
-      { label: '포함', value: 'contains' },
-      { label: '일치', value: 'equals' },
-      { label: '시작', value: 'startsWith' },
-      { label: '끝', value: 'endsWith' },
-    ],
-    number: [
-      { label: '=', value: '=' },
-      { label: '>', value: '>' },
-      { label: '<', value: '<' },
-      { label: '≥', value: '>=' },
-      { label: '≤', value: '<=' },
-    ],
-    date: [
-      { label: '같음', value: 'equals' },
-      { label: '이전', value: 'before' },
-      { label: '이후', value: 'after' },
-      { label: '사이(between)', value: 'between' },
-    ],
-    ip: [
-      { label: '일치', value: 'equals' },
-      { label: '시작', value: 'startsWith' },
-      { label: '끝', value: 'endsWith' },
-    ],
-    mac: [
-      { label: '일치', value: 'equals' },
-      { label: '시작', value: 'startsWith' },
-      { label: '끝', value: 'endsWith' },
-    ],
-  }
-
-  /** ✅ 서버에서 필터 값 로드 (조건필터 반영 포함) */
   const fetchFilterValues = async (overrideFilterModel) => {
     try {
-      const res = await axiosInstance.get('/filtering', {
-        params: {
-          layer,
-          field,
-          filterModel: JSON.stringify(overrideFilterModel || getAF()),
-          __ts: Date.now(),
-        },
+      const values = await apiFetchFilterValues({
+        layer,
+        field,
+        filterModel: overrideFilterModel || getAF(),
       })
-      const values = res.data.values || []
       setUniqueValues(values)
       setFilteredValues(values)
     } catch (err) {
@@ -78,9 +42,10 @@ const CustomCheckboxFilter = (props) => {
 
   useEffect(() => {
     fetchFilterValues()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layer, field])
 
-  /** ✅ 필터 복원 */
+  // 필터 복원
   useEffect(() => {
     if (restoredRef.current || uniqueValues.length === 0) return
     const prevFilter = props.context?.activeFilters?.[field]
@@ -95,9 +60,10 @@ const CustomCheckboxFilter = (props) => {
     }
 
     restoredRef.current = true
-  }, [uniqueValues, props.context?.activeFilters, field])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniqueValues])
 
-  /** 검색 */
+  // 검색
   const handleSearch = (e) => {
     const keyword = e.target.value.toLowerCase()
     setSearch(keyword)
@@ -105,30 +71,25 @@ const CustomCheckboxFilter = (props) => {
     setFilteredValues(filtered)
   }
 
-  /** 체크박스 토글 */
+  // 체크박스 토글
   const toggleValue = (val) => {
     setSelected((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]))
   }
 
-  /** ✅ 필터 적용 (핵심 수정) */
-  // ✅ CustomCheckboxFilter.jsx - applyFilter 교체본
+  // 필터 적용
   const applyFilter = async () => {
-    // 1) UI에서 최신 값 수집
     const latestConditions = conditions.map((c, i) => {
       const ref = inputRefs.current[i] || {}
       const base = { ...c }
-      // 단일 입력값(contains/equals/before/after 등)
       base.val = ref.val?.value ?? c.val ?? ''
-      // between일 때는 두 칸
       if (c.op === 'between' && ref.val1 && ref.val2) {
         base.val = `${ref.val1.value || ''},${ref.val2.value || ''}`
       }
       return base
     })
-    const hasCondition = latestConditions.some((c) => c.val.trim() !== '')
+    const hasCondition = latestConditions.some((c) => (c.val || '').trim() !== '')
     const hasSelected = selected.length > 0
 
-    // 2) 현재 필드의 새로운 필터 객체 생성
     let newFilter = null
     if (hasCondition) {
       newFilter = { mode: 'condition', type: fieldType, conditions: latestConditions, logicOps }
@@ -136,29 +97,20 @@ const CustomCheckboxFilter = (props) => {
       newFilter = { mode: 'checkbox', values: selected }
     }
 
-    // 3) 컨텍스트(그리드 전역 상태) 먼저 갱신
     props.context?.updateFilter?.(field, newFilter)
 
-    // 4) 서버로 보낼 전체 필터 모델 구성 (null이면 키 제거)
-    const nextFilters = JSON.parse(JSON.stringify(getAF())) // 최신 스냅샷
+    const nextFilters = JSON.parse(JSON.stringify(getAF()))
     if (newFilter) nextFilters[field] = newFilter
     else delete nextFilters[field]
 
-    // 5) UI 닫기 + 메뉴 닫기
     setShowConditionPanel(false)
     getApi()?.hidePopupMenu?.()
 
-    // 6) 필터 후보 재조회 (조건이 반영된 값만 받기)
-    await fetchFilterValues(nextFilters)
-
-    // 7) 데이터 재조회
-    getApi()?.refreshInfiniteCache?.()
-
-    // 8) 검색창 초기화
+    await fetchFilterValues(nextFilters) // 체크박스 후보 갱신
+    getApi()?.refreshInfiniteCache?.() // 데이터 재조회
     setSearch('')
   }
 
-  /** 조건 추가/삭제 */
   const addCondition = () => {
     setConditions((prev) => [...prev, { op: 'contains', val: '', val1: '', val2: '' }])
     setLogicOps((prev) => [...prev, 'AND'])
@@ -170,15 +122,11 @@ const CustomCheckboxFilter = (props) => {
     inputRefs.current.splice(index, 1)
   }
 
-  /** 조건 패널 열기 */
   const handleShowConditionPanel = () => {
     setShowConditionPanel((prev) => {
       const next = !prev
       if (!prev) {
-        // 이제 "열리는" 순간임
         const currentFilters = getAF()
-
-        // 1) 현재 필드의 기존 조건을 UI에 복원
         const prevFilter = currentFilters[field]
         if (prevFilter?.mode === 'checkbox') {
           setSelected(prevFilter.values || [])
@@ -190,24 +138,18 @@ const CustomCheckboxFilter = (props) => {
           setConditions([{ op: 'contains', val: '' }])
           setLogicOps([])
         }
-
-        // 2) 현재 조건으로 서버에서 체크박스 목록 재조회
-        fetchFilterValues(currentFilters).then(() => {
-          // 검색어 초기화 + 화면 목록 동기화
-          setSearch('')
-        })
+        fetchFilterValues(currentFilters).then(() => setSearch(''))
       }
       return next
     })
 
-    // 위치 계산은 그대로
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setPanelPos({ top: rect.top + window.scrollY - 10, left: rect.right + 12 })
     }
   }
 
-  /** 외부 클릭 닫기 */
+  // 외부 클릭으로 패널 닫기
   useEffect(() => {
     if (!showConditionPanel) return
     const handleClickOutside = (e) => {
@@ -223,53 +165,28 @@ const CustomCheckboxFilter = (props) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showConditionPanel])
 
-  /** 조건 패널 */
+  // 패널 UI (포털)
   const ConditionPanel = () =>
     createPortal(
       <div
         ref={panelRef}
         onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          top: `${panelPos.top}px`,
-          left: `${panelPos.left}px`,
-          zIndex: 10000,
-          width: 280,
-          background: '#fff',
-          borderRadius: 10,
-          boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
-          border: '1px solid #ddd',
-        }}
+        className='fixed z-[10000] w-[280px] rounded-xl border border-gray-300 bg-white shadow-2xl'
+        style={{ top: panelPos.top, left: panelPos.left }}
       >
-        <div
-          style={{
-            background: '#fff',
-            padding: '8px 12px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
+        <div className='flex items-center justify-between bg-white px-3 py-2 text-[13px] font-medium'>
           <span>{`조건별 필터 (${fieldType})`}</span>
           <button
             onClick={() => setShowConditionPanel(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: 16,
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
+            className='cursor-pointer text-[16px] font-semibold'
           >
             ×
           </button>
         </div>
 
-        <div style={{ padding: 10, maxHeight: 400, overflowY: 'auto' }}>
+        <div className='max-h-[400px] overflow-y-auto p-2.5'>
           {conditions.map((cond, idx) => (
-            <div key={idx} style={{ marginBottom: 10 }}>
+            <div key={idx} className='mb-2.5'>
               {idx > 0 && (
                 <select
                   value={logicOps[idx - 1] || 'AND'}
@@ -280,21 +197,15 @@ const CustomCheckboxFilter = (props) => {
                       return updated
                     })
                   }
-                  style={{
-                    width: '100%',
-                    marginBottom: 6,
-                    padding: 4,
-                    fontSize: 12,
-                    background: '#f9f9f9',
-                  }}
+                  className='mb-1.5 w-full bg-gray-50 p-1 text-[12px]'
                 >
                   <option value='AND'>AND (그리고)</option>
                   <option value='OR'>OR (또는)</option>
                 </select>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ flex: 1 }}>
+              <div className='flex items-center gap-1.5'>
+                <div className='flex-1'>
                   <select
                     value={cond.op}
                     onChange={(e) =>
@@ -302,9 +213,9 @@ const CustomCheckboxFilter = (props) => {
                         prev.map((c, i) => (i === idx ? { ...c, op: e.target.value } : c)),
                       )
                     }
-                    style={{ width: '100%', marginBottom: 4, padding: 4, fontSize: 12 }}
+                    className='mb-1 w-full p-1 text-[12px]'
                   >
-                    {operatorOptions[fieldType]?.map((opt) => (
+                    {OPERATOR_OPTIONS[fieldType]?.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
@@ -323,19 +234,13 @@ const CustomCheckboxFilter = (props) => {
                         fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'
                       }
                       placeholder='값 입력...'
-                      style={{
-                        width: '100%',
-                        padding: 5,
-                        fontSize: 12,
-                        borderRadius: 4,
-                        border: '1px solid #ccc',
-                      }}
+                      className='w-full rounded border border-gray-300 p-1 text-[12px]'
                     />
                   )}
 
-                  {/* 날짜 between: 시작/종료 2칸 */}
+                  {/* 날짜 between */}
                   {fieldType === 'date' && cond.op === 'between' && (
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div className='flex gap-1.5'>
                       <input
                         ref={(el) => {
                           inputRefs.current[idx] = inputRefs.current[idx] || {}
@@ -344,13 +249,7 @@ const CustomCheckboxFilter = (props) => {
                         defaultValue={cond.val1}
                         type='date'
                         placeholder='시작일'
-                        style={{
-                          flex: 1,
-                          padding: 5,
-                          fontSize: 12,
-                          borderRadius: 4,
-                          border: '1px solid #ccc',
-                        }}
+                        className='flex-1 rounded border border-gray-300 p-1 text-[12px]'
                       />
                       <input
                         ref={(el) => {
@@ -360,31 +259,15 @@ const CustomCheckboxFilter = (props) => {
                         defaultValue={cond.val2}
                         type='date'
                         placeholder='종료일'
-                        style={{
-                          flex: 1,
-                          padding: 5,
-                          fontSize: 12,
-                          borderRadius: 4,
-                          border: '1px solid #ccc',
-                        }}
+                        className='flex-1 rounded border border-gray-300 p-1 text-[12px]'
                       />
                     </div>
                   )}
-                </div>{' '}
-                {/* ← 이 닫힘이 꼭 필요! */}
+                </div>
+
                 <button
                   onClick={() => removeCondition(idx)}
-                  style={{
-                    border: '1px solid #ccc',
-                    borderRadius: 4,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: '#000',
-                    cursor: 'pointer',
-                    padding: '0 6px',
-                    height: 24,
-                    background: '#f7f7f7',
-                  }}
+                  className='h-6 cursor-pointer rounded border border-gray-300 bg-gray-100 px-1.5 text-[13px] font-semibold'
                 >
                   ✕
                 </button>
@@ -394,32 +277,15 @@ const CustomCheckboxFilter = (props) => {
 
           <button
             onClick={addCondition}
-            style={{
-              width: '100%',
-              background: '#f6f8fa',
-              border: '1px solid #ccc',
-              borderRadius: 4,
-              fontSize: 12,
-              padding: '4px 0',
-              cursor: 'pointer',
-            }}
+            className='w-full cursor-pointer rounded border border-gray-300 bg-gray-50 py-1 text-[12px]'
           >
             ➕ 조건 추가
           </button>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <div className='mt-2.5 flex gap-2'>
             <button
               onClick={applyFilter}
-              style={{
-                flex: 1,
-                background: '#3877BE',
-                color: 'white',
-                border: 'none',
-                borderRadius: 5,
-                padding: '5px 0',
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
+              className='flex-1 cursor-pointer rounded bg-[#3877BE] py-1 text-[12px] text-white'
             >
               적용
             </button>
@@ -429,74 +295,37 @@ const CustomCheckboxFilter = (props) => {
       document.body,
     )
 
-  /** ✅ UI 렌더 */
+  // 메인 렌더
   return (
     <>
-      <div
-        style={{
-          position: 'relative',
-          width: 200,
-          padding: 8,
-          fontSize: 13,
-          border: '1px solid #e0e0e0',
-          borderRadius: 6,
-          backgroundColor: '#fff',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-        }}
-      >
+      <div className='relative w-[200px] rounded-md border border-gray-200 bg-white p-2 text-[13px] shadow-sm'>
         <input
           type='text'
           placeholder='검색...'
           value={search}
           onChange={handleSearch}
-          style={{
-            width: '100%',
-            padding: '6px 8px',
-            borderRadius: 4,
-            border: '1px solid #ccc',
-            marginBottom: 8,
-            fontSize: 12,
-          }}
+          className='mb-2 w-full rounded border border-gray-300 px-2 py-1 text-[12px]'
         />
 
         <button
           ref={buttonRef}
           onClick={handleShowConditionPanel}
-          style={{
-            width: '100%',
-            background: '#f6f8fa',
-            border: '1px solid #ddd',
-            borderRadius: 4,
-            fontSize: 12,
-            padding: '4px 0',
-            cursor: 'pointer',
-          }}
+          className='w-full cursor-pointer rounded border border-gray-300 bg-gray-50 py-1 text-[12px]'
         >
           조건별 필터
         </button>
 
-        <div
-          style={{
-            maxHeight: 180,
-            overflowY: 'auto',
-            borderTop: '1px solid #eee',
-            borderBottom: '1px solid #eee',
-            marginTop: 6,
-            padding: '4px 0',
-          }}
-        >
+        <div className='mt-1 max-h-[180px] overflow-y-auto border-y border-gray-100 py-1'>
           {filteredValues.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#aaa', fontSize: 12, padding: '8px 0' }}>
-              결과 없음
-            </div>
+            <div className='py-2 text-center text-[12px] text-gray-400'>결과 없음</div>
           ) : (
             filteredValues.map((val) => (
-              <label key={val} style={{ display: 'block', fontSize: 12, padding: '2px 4px' }}>
+              <label key={val} className='block cursor-pointer px-1.5 py-0.5 text-[12px]'>
                 <input
                   type='checkbox'
                   checked={selected.includes(val)}
                   onChange={() => toggleValue(val)}
-                  style={{ marginRight: 6 }}
+                  className='mr-1.5'
                 />
                 {val}
               </label>
@@ -504,19 +333,10 @@ const CustomCheckboxFilter = (props) => {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <div className='mt-2 flex gap-1.5'>
           <button
             onClick={applyFilter}
-            style={{
-              flex: 1,
-              background: '#3877BE',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 4,
-              padding: '4px 0',
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
+            className='flex-1 cursor-pointer rounded bg-[#3877BE] py-1 text-[12px] text-white'
           >
             적용
           </button>
