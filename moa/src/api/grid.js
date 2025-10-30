@@ -25,12 +25,7 @@ export const fetchRows = async ({
 
 export const fetchFilterValues = async ({ layer, field, filterModel }) => {
   const { data } = await axiosInstance.get('/filtering', {
-    params: {
-      layer,
-      field,
-      filterModel: JSON.stringify(filterModel || {}),
-      __ts: Date.now(),
-    },
+    params: { layer, field, filterModel: JSON.stringify(filterModel || {}), __ts: Date.now() },
   })
   return data?.values || []
 }

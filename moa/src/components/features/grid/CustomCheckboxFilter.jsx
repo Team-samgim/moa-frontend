@@ -1,7 +1,8 @@
 // src/components/filters/CustomCheckboxFilter.jsx
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { fetchFilterValues as apiFetchFilterValues } from '@/components/features/grid/gridService'
+// ✅ 서비스 제거: api 경로로 교체
+import { fetchFilterValues as apiFetchFilterValues } from '@/api/grid'
 import { OPERATOR_OPTIONS } from '@/constants/filterOperators'
 
 const CustomCheckboxFilter = (props) => {
@@ -26,6 +27,7 @@ const CustomCheckboxFilter = (props) => {
   const fieldType = props?.colDef?.filterParams?.type || 'string'
   const field = props.colDef.field
 
+  // 서버에서 체크박스 후보 로드
   const fetchFilterValues = async (overrideFilterModel) => {
     try {
       const values = await apiFetchFilterValues({
@@ -45,7 +47,7 @@ const CustomCheckboxFilter = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layer, field])
 
-  // 필터 복원
+  // 기존 필터 복원
   useEffect(() => {
     if (restoredRef.current || uniqueValues.length === 0) return
     const prevFilter = props.context?.activeFilters?.[field]
@@ -65,7 +67,7 @@ const CustomCheckboxFilter = (props) => {
 
   // 검색
   const handleSearch = (e) => {
-    const keyword = e.target.value.toLowerCase()
+    const keyword = (e.target.value || '').toLowerCase()
     setSearch(keyword)
     const filtered = uniqueValues.filter((v) => v?.toString().toLowerCase().includes(keyword))
     setFilteredValues(filtered)
@@ -97,16 +99,19 @@ const CustomCheckboxFilter = (props) => {
       newFilter = { mode: 'checkbox', values: selected }
     }
 
+    // 전역 상태 갱신
     props.context?.updateFilter?.(field, newFilter)
 
+    // 최신 스냅샷 구성
     const nextFilters = JSON.parse(JSON.stringify(getAF()))
     if (newFilter) nextFilters[field] = newFilter
     else delete nextFilters[field]
 
+    // 닫고 갱신
     setShowConditionPanel(false)
     getApi()?.hidePopupMenu?.()
 
-    await fetchFilterValues(nextFilters) // 체크박스 후보 갱신
+    await fetchFilterValues(nextFilters) // 후보 갱신
     getApi()?.refreshInfiniteCache?.() // 데이터 재조회
     setSearch('')
   }
@@ -215,7 +220,7 @@ const CustomCheckboxFilter = (props) => {
                     }
                     className='mb-1 w-full p-1 text-[12px]'
                   >
-                    {OPERATOR_OPTIONS[fieldType]?.map((opt) => (
+                    {(OPERATOR_OPTIONS[fieldType] || OPERATOR_OPTIONS.string).map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { fetchRows } from '@/components/features/grid/gridService'
+import { fetchRows } from '@/api/grid'
 import { makeFilterModel } from '@/utils/makeFilterModel'
 
 export default function useInfiniteDatasource({ currentLayer, activeFiltersRef }) {
