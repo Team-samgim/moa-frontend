@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
+import { loggedOutNavigations } from '@/constants/navigations'
+import { useAuthStore } from '@/stores/authStore'
 
 const navItems = [
   { label: '대시보드', to: '/dashboard' },
@@ -11,6 +13,11 @@ const navItems = [
 ]
 
 const Header = () => {
+  const navigate = useNavigate()
+
+  const isLogin = useAuthStore((s) => s.isLogin)
+  const clearTokens = useAuthStore((s) => s.clearTokens)
+
   const [isScrolled, setIsScrolled] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
 
@@ -27,6 +34,11 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScrollY])
+
+  const handleLogout = () => {
+    clearTokens()
+    navigate(loggedOutNavigations.LOGIN, { replace: true })
+  }
 
   return (
     <header className='w-full flex justify-center items-end bg-transparent h-[90px] fixed top-0 left-0 right-0 z-50 px-6 lg:px-8'>
@@ -68,31 +80,69 @@ const Header = () => {
         </nav>
 
         <div className='flex items-center gap-2 lg:gap-3 flex-shrink-0'>
-          <button
-            type='button'
-            className='
-              text-white text-[13px] lg:text-[14px] font-semibold
-              bg-[var(--color-blue,#1c4fd7)]
-              hover:brightness-95 active:scale-[0.98]
-              rounded-full h-[37px] px-4 lg:px-6
-              transition whitespace-nowrap
-            '
-          >
-            로그아웃
-          </button>
-          <button
-            type='button'
-            className='
-              text-[var(--color-blue,#1c4fd7)] text-[13px] lg:text-[14px] font-semibold
-              bg-transparent border border-[var(--color-blue,#1c4fd7)]
-              hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
-              active:scale-[0.98]
-              rounded-full h-[37px] px-4 lg:px-6
-              transition whitespace-nowrap
-            '
-          >
-            마이페이지
-          </button>
+          {isLogin ? (
+            <>
+              <button
+                type='button'
+                className='
+                  text-white text-[13px] lg:text-[14px] font-semibold
+                  bg-[var(--color-blue,#1c4fd7)]
+                  hover:brightness-95 active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={handleLogout}
+              >
+                로그아웃
+              </button>
+
+              <button
+                type='button'
+                className='
+                  text-[var(--color-blue,#1c4fd7)] text-[13px] lg:text-[14px] font-semibold
+                  bg-transparent border border-[var(--color-blue,#1c4fd7)]
+                  hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
+                  active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => navigate('/mypage')}
+              >
+                마이페이지
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type='button'
+                className='
+                  text-white text-[13px] lg:text-[14px] font-semibold
+                  bg-[var(--color-blue,#1c4fd7)]
+                  hover:brightness-95 active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => navigate('/login')}
+              >
+                로그인
+              </button>
+
+              <button
+                type='button'
+                className='
+                  text-[var(--color-blue,#1c4fd7)] text-[13px] lg:text-[14px] font-semibold
+                  bg-transparent border border-[var(--color-blue,#1c4fd7)]
+                  hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
+                  active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => navigate('/signup')}
+              >
+                회원가입
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

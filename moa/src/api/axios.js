@@ -9,8 +9,11 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState()
+  if (!config.headers) config.headers = {}
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
+  } else {
+    delete config.headers.Authorization
   }
   return config
 })
