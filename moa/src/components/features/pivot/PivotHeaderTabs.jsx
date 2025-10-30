@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { userNavigations } from '@/constants/navigations'
 
 const TabButton = ({ to, active, children }) => {
   return (
@@ -21,10 +22,10 @@ const PivotHeaderTabs = () => {
 
   return (
     <div className='flex items-center gap-2'>
-      <TabButton to='/search' active={pathname.startsWith('/search')}>
+      <TabButton to={userNavigations.SEARCH} active={pathname.startsWith('/search')}>
         검색
       </TabButton>
-      <TabButton to='/pivot' active={pathname.startsWith('/pivot')}>
+      <TabButton to={userNavigations.PivotHeaderTabs} active={pathname.startsWith('/pivot')}>
         피벗 테이블
       </TabButton>
     </div>

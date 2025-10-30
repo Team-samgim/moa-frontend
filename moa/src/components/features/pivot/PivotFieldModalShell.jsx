@@ -32,7 +32,7 @@ const PivotFieldModalShell = ({
           </div>
         </div>
 
-        {/* 이미 선택된 필드 토큰 영역 (필요 없으면 안 넘김) */}
+        {/* 선택된 필드 토큰 */}
         {tokensArea && <div className='px-4'>{tokensArea}</div>}
 
         {/* 검색 + 정렬 */}
@@ -68,9 +68,6 @@ const PivotFieldModalShell = ({
             </div>
           </div>
         </div>
-
-        {/* 리스트 헤더 라인: 예를 들어 "전체 선택 3/11" / "선택한 필드: src_ip" 등을 여기 children 위에 그려도 되고,
-           각 모달에서 따로 넣어도 돼. 지금은 children 쪽에서 그리게 할게. */}
 
         {/* 스크롤 영역 */}
         <div className='mt-4 flex-1 overflow-y-auto px-4 pb-4'>{children}</div>

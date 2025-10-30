@@ -18,7 +18,6 @@ const LoginPage = () => {
   const searchParams = new URLSearchParams(location.search)
   const modeFromQuery = searchParams.get('mode') // 'signup' | 'login' | null
 
-  // 'login' | 'signup'
   const [step, setStep] = useState(modeFromQuery === 'signup' ? 'signup' : 'login')
 
   useEffect(() => {
@@ -34,11 +33,9 @@ const LoginPage = () => {
     [step],
   )
 
-  // 로그인 입력 상태
   const [login, setLogin] = useState({ id: '', password: '' })
   const [loginError, setLoginError] = useState('')
 
-  // 로그인 mutation
   const loginMutation = useLogin({
     onSuccess: () => {
       setLoginError('')
@@ -49,7 +46,6 @@ const LoginPage = () => {
     },
   })
 
-  // 실제 로그인 트리거 함수
   const handleLogin = () => {
     if (!login.id || !login.password) {
       setLoginError('아이디와 비밀번호를 입력해주세요.')
@@ -62,13 +58,11 @@ const LoginPage = () => {
     })
   }
 
-  // 엔터키 제출 지원: form onSubmit에서 handleLogin 호출
   const handleLoginSubmit = (e) => {
     e.preventDefault()
     handleLogin()
   }
 
-  // 회원가입 입력 상태
   const id = useIdField() // { value, onChange, status, msg, runCheck }
   const pw = usePasswordMatch() // { password, setPassword, password2, setPassword2, lenOk, mixOk, mismatch }
 
@@ -90,7 +84,6 @@ const LoginPage = () => {
     }
   }
 
-  // 회원가입 mutation
   const signupMutation = useSignup({
     onSuccess: () => {
       alert('회원가입이 완료되었습니다.')
@@ -102,7 +95,6 @@ const LoginPage = () => {
     },
   })
 
-  // 회원가입 submit
   const handleJoinSubmit = (e) => {
     e.preventDefault()
 
@@ -141,7 +133,7 @@ const LoginPage = () => {
     signupMutation.mutate(payload)
   }
 
-  /* ------------------ 라우팅 테스트 ------------------ */
+  /* TODO: 라우팅 테스트 페이지 추후 삭제 */
   const goToTestScreen = () => navigate(loggedOutNavigations.TEST)
   const goToTestScreen2 = () => navigate(loggedOutNavigations.TEST_2)
 
@@ -188,13 +180,6 @@ const LoginPage = () => {
                       value={login.password}
                       onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
                       className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2 pr-8'
-                      // 엔터 눌렀을 때도 form submit 되지만, 추가로 안전하게 onKeyDown으로 처리해도 OK
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          // 기본 submit과 중복 방지하려면 여기서 그냥 return만 해도 되고
-                          // 또는 e.preventDefault(); handleLogin();
-                        }
-                      }}
                     />
                   </div>
 
@@ -256,7 +241,7 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* 오른쪽: 실제 회원가입 폼 */}
+            {/* 오른쪽: 회원가입 폼 */}
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <form className='mx-auto w-full max-w-md space-y-7' onSubmit={handleJoinSubmit}>
                 {/* 아이디 */}
