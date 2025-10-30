@@ -8,7 +8,7 @@ const CustomCheckboxFilter = (props) => {
   const [selected, setSelected] = useState([])
   const [search, setSearch] = useState('')
   const [showConditionPanel, setShowConditionPanel] = useState(false)
-  const [conditions, setConditions] = useState([{ op: 'contains', val: '' }])
+  const [conditions, setConditions] = useState([{ op: 'contains', val: '', val1: '', val2: '' }])
   const [logicOps, setLogicOps] = useState([])
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 })
 
@@ -114,10 +114,17 @@ const CustomCheckboxFilter = (props) => {
   // ✅ CustomCheckboxFilter.jsx - applyFilter 교체본
   const applyFilter = async () => {
     // 1) UI에서 최신 값 수집
-    const latestConditions = conditions.map((c, i) => ({
-      ...c,
-      val: inputRefs.current[i]?.value || '',
-    }))
+    const latestConditions = conditions.map((c, i) => {
+      const ref = inputRefs.current[i] || {}
+      const base = { ...c }
+      // 단일 입력값(contains/equals/before/after 등)
+      base.val = ref.val?.value ?? c.val ?? ''
+      // between일 때는 두 칸
+      if (c.op === 'between' && ref.val1 && ref.val2) {
+        base.val = `${ref.val1.value || ''},${ref.val2.value || ''}`
+      }
+      return base
+    })
     const hasCondition = latestConditions.some((c) => c.val.trim() !== '')
     const hasSelected = selected.length > 0
 
@@ -151,20 +158,9 @@ const CustomCheckboxFilter = (props) => {
     setSearch('')
   }
 
-  /** 필터 초기화 */
-  const clearFilter = () => {
-    setSelected([])
-    setConditions([{ op: 'contains', val: '' }])
-    setLogicOps([])
-    props.context?.updateFilter?.(field, null)
-    fetchFilterValues(getAF())
-    getApi()?.hidePopupMenu?.()
-    getApi()?.refreshInfiniteCache?.()
-  }
-
   /** 조건 추가/삭제 */
   const addCondition = () => {
-    setConditions((prev) => [...prev, { op: 'contains', val: '' }])
+    setConditions((prev) => [...prev, { op: 'contains', val: '', val1: '', val2: '' }])
     setLogicOps((prev) => [...prev, 'AND'])
   }
 
@@ -315,23 +311,67 @@ const CustomCheckboxFilter = (props) => {
                     ))}
                   </select>
 
-                  <input
-                    ref={(el) => (inputRefs.current[idx] = el)}
-                    defaultValue={cond.val}
-                    type={
-                      fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'
-                    }
-                    placeholder='값 입력...'
-                    style={{
-                      width: '100%',
-                      padding: 5,
-                      fontSize: 12,
-                      borderRadius: 4,
-                      border: '1px solid #ccc',
-                    }}
-                  />
-                </div>
+                  {/* 단일값 입력 */}
+                  {!(fieldType === 'date' && cond.op === 'between') && (
+                    <input
+                      ref={(el) => {
+                        inputRefs.current[idx] = inputRefs.current[idx] || {}
+                        inputRefs.current[idx].val = el
+                      }}
+                      defaultValue={cond.val}
+                      type={
+                        fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'
+                      }
+                      placeholder='값 입력...'
+                      style={{
+                        width: '100%',
+                        padding: 5,
+                        fontSize: 12,
+                        borderRadius: 4,
+                        border: '1px solid #ccc',
+                      }}
+                    />
+                  )}
 
+                  {/* 날짜 between: 시작/종료 2칸 */}
+                  {fieldType === 'date' && cond.op === 'between' && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        ref={(el) => {
+                          inputRefs.current[idx] = inputRefs.current[idx] || {}
+                          inputRefs.current[idx].val1 = el
+                        }}
+                        defaultValue={cond.val1}
+                        type='date'
+                        placeholder='시작일'
+                        style={{
+                          flex: 1,
+                          padding: 5,
+                          fontSize: 12,
+                          borderRadius: 4,
+                          border: '1px solid #ccc',
+                        }}
+                      />
+                      <input
+                        ref={(el) => {
+                          inputRefs.current[idx] = inputRefs.current[idx] || {}
+                          inputRefs.current[idx].val2 = el
+                        }}
+                        defaultValue={cond.val2}
+                        type='date'
+                        placeholder='종료일'
+                        style={{
+                          flex: 1,
+                          padding: 5,
+                          fontSize: 12,
+                          borderRadius: 4,
+                          border: '1px solid #ccc',
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>{' '}
+                {/* ← 이 닫힘이 꼭 필요! */}
                 <button
                   onClick={() => removeCondition(idx)}
                   style={{
@@ -382,21 +422,6 @@ const CustomCheckboxFilter = (props) => {
               }}
             >
               적용
-            </button>
-            <button
-              onClick={() => setShowConditionPanel(false)}
-              style={{
-                flex: 1,
-                background: '#fff',
-                border: '1px solid #3877BE',
-                color: '#3877BE',
-                borderRadius: 5,
-                padding: '5px 0',
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
-            >
-              닫기
             </button>
           </div>
         </div>
@@ -494,21 +519,6 @@ const CustomCheckboxFilter = (props) => {
             }}
           >
             적용
-          </button>
-          <button
-            onClick={clearFilter}
-            style={{
-              flex: 1,
-              background: '#fff',
-              color: '#3877BE',
-              border: '1px solid #3877BE',
-              borderRadius: 4,
-              padding: '4px 0',
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
-            초기화
           </button>
         </div>
       </div>

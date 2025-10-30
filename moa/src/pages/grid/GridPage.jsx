@@ -2,8 +2,13 @@ import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone'
+import utc from 'dayjs/plugin/utc'
 import axiosInstance from '@/api/axios'
 import CustomCheckboxFilter from '@/components/features/grid/CustomCheckboxFilter'
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -26,10 +31,13 @@ const GridPage = () => {
   useEffect(() => {
     const fetchColumns = async () => {
       try {
-        const res = await axiosInstance.get('/randering', { params: { offset: 0, limit: 1 } })
+        const res = await axiosInstance.get('/randering', {
+          params: { layer: currentLayer, offset: 0, limit: 1 },
+        })
         const data = res.data
         if (!data?.columns) return
 
+        // 컬럼 매핑할 때(type === 'date')만 포매터 부여
         const colDefs = [
           {
             headerName: 'No',
@@ -42,15 +50,23 @@ const GridPage = () => {
               color: '#555',
             },
           },
-          ...data.columns.map((col, idx) => ({
-            field: col.name,
-            colId: `${col.name}-${col.type}-${idx}`,
-            sortable: true,
-            filter: CustomCheckboxFilter,
-            filterParams: { layer: currentLayer || 'ethernet', type: col.type },
-            resizable: true,
-            floatingFilter: false,
-          })),
+          ...data.columns.map((col, idx) => {
+            const isDate = col.type === 'date'
+            return {
+              field: col.name,
+              colId: `${col.name}-${col.type}-${idx}`,
+              sortable: true,
+              filter: CustomCheckboxFilter,
+              filterParams: { layer: currentLayer || 'ethernet', type: col.type },
+              resizable: true,
+              floatingFilter: false,
+              ...(isDate && {
+                // 원본은 UTC로 저장된 'timestamp without time zone'
+                valueFormatter: ({ value }) =>
+                  value ? dayjs.utc(value).tz('Asia/Seoul').format('YYYY-MM-DD HH:mm:ss') : '',
+              }),
+            }
+          }),
         ]
         setColumns(colDefs)
         setReady(true)
@@ -87,7 +103,7 @@ const GridPage = () => {
       const sortField = sortModel?.[0]?.colId?.split('-')[0] || null
       const sortDirection = sortModel?.[0]?.sort || null
 
-      const query = { offset, limit }
+      const query = { layer: currentLayer, offset, limit }
       if (sortField) query.sortField = sortField
       if (sortDirection) query.sortDirection = sortDirection
 
