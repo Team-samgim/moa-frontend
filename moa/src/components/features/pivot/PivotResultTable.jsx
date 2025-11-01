@@ -34,6 +34,7 @@ const PivotResultTable = ({ pivotResult }) => {
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
+                    colSpan={header.colSpan}
                     className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap'
                   >
                     {header.isPlaceholder

@@ -24,30 +24,21 @@ export function buildPivotColumns(pivotResult) {
     },
   }
 
-  const dynamicCols = []
-  for (const colVal of columnField.values) {
-    for (const metric of columnField.metrics) {
-      dynamicCols.push({
-        id: `${colVal}__${metric.alias}`, // unique id
-        header: () => (
-          <div className='text-center'>
-            <div className='font-medium'>{colVal}</div>
-            <div className='text-xs text-gray-500'>{metric.alias}</div>
-          </div>
-        ),
-        accessorFn: (row) => {
-          // row.cells["ip_num_1"]["합계: total"]
-          return row.cells?.[colVal]?.[metric.alias] ?? null
-        },
-        cell: ({ getValue }) => {
-          const v = getValue()
-          return (
-            <div className='text-right tabular-nums'>{v === null || v === undefined ? '' : v}</div>
-          )
-        },
-      })
-    }
-  }
+  const groupedCols = columnField.values.map((colVal) => ({
+    id: colVal || '(empty)',
+    header: colVal || '(empty)',
+    columns: columnField.metrics.map((metric) => ({
+      id: `${colVal}__${metric.alias}`,
+      header: metric.alias,
+      accessorFn: (row) => row.cells?.[colVal]?.[metric.alias] ?? null,
+      cell: ({ getValue }) => {
+        const v = getValue()
+        return (
+          <div className='text-right tabular-nums'>{v === null || v === undefined ? '' : v}</div>
+        )
+      },
+    })),
+  }))
 
-  return [firstCol, ...dynamicCols]
+  return [firstCol, ...groupedCols]
 }
