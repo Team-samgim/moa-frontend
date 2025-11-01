@@ -9,41 +9,80 @@ import { buildPivotColumns } from '@/utils/buildPivotColumns.jsx'
 import { buildPivotRows } from '@/utils/buildPivotRows.js'
 
 const PivotResultTable = ({ pivotResult }) => {
-  const columns = useMemo(() => buildPivotColumns(pivotResult), [pivotResult])
   const data = useMemo(() => buildPivotRows(pivotResult), [pivotResult])
 
   const table = useReactTable({
     data,
-    columns,
-
+    columns: [],
     getSubRows: (row) => row.subRows ?? [],
-
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
-
     getRowCanExpand: (row) => (row.original?.subRows?.length ?? 0) > 0,
   })
+
+  const columns = useMemo(() => {
+    return buildPivotColumns(pivotResult, table)
+  }, [pivotResult, table])
+
+  table.setOptions((prev) => ({
+    ...prev,
+    data,
+    columns,
+  }))
 
   return (
     <div className='rounded-lg border border-gray-300'>
       <div className='overflow-x-auto w-full'>
         <table className='min-w-max border-collapse text-sm text-gray-800'>
           <thead className='bg-gray-50 text-gray-700 text-left align-bottom'>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className='border-b border-gray-200'>
-                {headerGroup.headers.map((header) => (
+            {/* === 첫 번째 줄 === */}
+            <tr className='border-b border-gray-200'>
+              {/* index, rowLabel 컬럼: rowSpan = 2 */}
+              <th
+                rowSpan={2}
+                className='px-3 py-2 font-medium text-gray-700 align-middle border-r border-gray-200 whitespace-nowrap text-left'
+              ></th>
+              <th
+                rowSpan={2}
+                className='px-3 py-2 font-medium text-gray-700 align-middle border-r border-gray-200 whitespace-nowrap text-left'
+              >
+                {pivotResult?.columnField?.name ?? ''}
+              </th>
+
+              {/* 나머지 그룹 헤더 */}
+              {table
+                .getHeaderGroups()[0]
+                .headers.slice(2) // 0: rowNumber(#), 1: rowLabel, 나머지는 grouped column headers
+                .map((header) => (
                   <th
                     key={header.id}
                     colSpan={header.colSpan}
-                    className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap'
+                    className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
                   >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
-              </tr>
-            ))}
+            </tr>
+
+            {/* === 두 번째 줄 === */}
+            <tr className='border-b border-gray-200'>
+              {table
+                .getHeaderGroups()[1]
+                .headers.slice(2)
+                .map((header) => (
+                  <th
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+            </tr>
           </thead>
 
           <tbody className='bg-white'>

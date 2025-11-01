@@ -1,8 +1,26 @@
+import ArrowDownIcon from '@/assets/icons/arrow-down-bold.svg?react'
+import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
+
 export function buildPivotColumns(pivotResult) {
   if (!pivotResult) return []
 
   const { columnField } = pivotResult
   if (!columnField) return []
+
+  const indexCol = {
+    id: 'rowNumber',
+    header: '#',
+    size: 50,
+    minSize: 50,
+    maxSize: 60,
+    cell: ({ row, table }) => {
+      const visibleRows = table.getRowModel().rows
+      const idx = visibleRows.findIndex((r) => r.id === row.id)
+      const n = idx === -1 ? '' : idx + 1
+
+      return <div className='text-right text-gray-500 tabular-nums w-full'>{n}</div>
+    },
+  }
 
   const firstCol = {
     id: 'rowLabel',
@@ -15,7 +33,11 @@ export function buildPivotColumns(pivotResult) {
         <div className='flex items-center gap-1'>
           {canExpand && (
             <button onClick={row.getToggleExpandedHandler()} className='text-gray-600'>
-              {isExpanded ? '▼' : '▶'}
+              {isExpanded ? (
+                <ArrowDownIcon className='w-4.5 h-4.5' />
+              ) : (
+                <ArrowRightIcon className='w-4.5 h-4.5' />
+              )}
             </button>
           )}
           <span>{getValue()}</span>
@@ -40,5 +62,5 @@ export function buildPivotColumns(pivotResult) {
     })),
   }))
 
-  return [firstCol, ...groupedCols]
+  return [indexCol, firstCol, ...groupedCols]
 }
