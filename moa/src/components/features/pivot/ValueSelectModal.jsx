@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import PivotFieldModalShell from './PivotFieldModalShell'
+import AddIcon from '@/assets/icons/add.svg?react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
-import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import CloseIcon from '@/assets/icons/delete.svg?react'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import { usePivotFields } from '@/hooks/queries/usePivot'
+import { usePivotStore } from '@/stores/pivotStore'
 
 const AGG_OPTIONS = [
   { value: 'sum', label: '합계' },
@@ -17,42 +18,77 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
   const { data, isLoading } = usePivotFields()
   const fieldNames = (data?.fields || []).map((f) => f.name)
 
-  const [valuesState, setValuesState] = useState(initialSelected)
-  const [openAggForField, setOpenAggForField] = useState(null)
+  const { column: globalColumn, rows: globalRows } = usePivotStore()
+
+  const blockedForValues = useMemo(() => {
+    const s = new Set()
+    if (globalColumn?.field) {
+      s.add(globalColumn.field)
+    }
+    for (const r of globalRows) {
+      s.add(r.field)
+    }
+    return s
+  }, [globalColumn, globalRows])
+
+  const [valuesState, setValuesState] = useState(
+    initialSelected.map((v) => ({
+      id: `${v.field}#${v.agg}`,
+      field: v.field,
+      agg: v.agg,
+    })),
+  )
+
+  const [openAggForId, setOpenAggForId] = useState(null)
+
   const [sortOrder, setSortOrder] = useState(null)
   const [searchValue, setSearchValue] = useState('')
 
   const filteredList = useMemo(() => {
     let base = fieldNames
-    if (searchValue) base = base.filter((n) => n.toLowerCase().includes(searchValue.toLowerCase()))
-
-    if (sortOrder === 'asc') base = [...base].sort((a, b) => a.localeCompare(b))
-    else if (sortOrder === 'desc') base = [...base].sort((a, b) => b.localeCompare(a))
+    if (searchValue) {
+      base = base.filter((n) => n.toLowerCase().includes(searchValue.toLowerCase()))
+    }
+    if (sortOrder === 'asc') {
+      base = [...base].sort((a, b) => a.localeCompare(b))
+    } else if (sortOrder === 'desc') {
+      base = [...base].sort((a, b) => b.localeCompare(a))
+    }
     return base
   }, [fieldNames, sortOrder, searchValue])
 
-  const isSelected = (fieldName) => valuesState.some((v) => v.field === fieldName)
+  const addField = (fieldName) => {
+    if (blockedForValues.has(fieldName)) return
 
-  const getAggFor = (fieldName) => {
-    const found = valuesState.find((v) => v.field === fieldName)
-    return found ? found.agg : null
+    const defaultAgg = 'sum'
+    const newId = `${fieldName}#${defaultAgg}`
+
+    setValuesState((prev) => [
+      ...prev,
+      {
+        id: newId,
+        field: fieldName,
+        agg: defaultAgg,
+      },
+    ])
   }
 
-  const setAggFor = (fieldName, agg) => {
-    setValuesState((prev) => prev.map((v) => (v.field === fieldName ? { ...v, agg } : v)))
+  const removeValueItem = (id) => {
+    setValuesState((prev) => prev.filter((v) => v.id !== id))
   }
 
-  const toggleField = (fieldName) => {
-    setValuesState((prev) => {
-      if (prev.some((v) => v.field === fieldName)) {
-        return prev.filter((v) => v.field !== fieldName)
-      }
-      return [...prev, { field: fieldName, agg: 'sum' }]
-    })
-  }
-
-  const removeToken = (fieldName) => {
-    setValuesState((prev) => prev.filter((v) => v.field !== fieldName))
+  const updateAggForItem = (id, nextAgg) => {
+    setValuesState((prev) =>
+      prev.map((v) =>
+        v.id === id
+          ? {
+              ...v,
+              agg: nextAgg,
+              id: `${v.field}#${nextAgg}`,
+            }
+          : v,
+      ),
+    )
   }
 
   const handleApply = () => {
@@ -73,25 +109,60 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
       title='값 선택'
       tokensArea={
         <div className='flex flex-wrap gap-2'>
+          {valuesState.length === 0 && (
+            <span className='text-xs text-gray-400'>
+              선택된 값이 없습니다. 아래에서 추가하세요.
+            </span>
+          )}
+
           {valuesState.map((v) => {
             const aggMeta = AGG_OPTIONS.find((o) => o.value === v.agg)
             const aggLabel = aggMeta ? aggMeta.label : v.agg
             return (
-              <span
-                key={v.field}
-                className='flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
+              <div
+                key={v.id}
+                className='relative flex items-center gap-2 rounded-2xl border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
               >
                 <SideKickIcon className='h-4 w-4' />
-                <span>
-                  {aggLabel}: {v.field}
-                </span>
+                <div className='flex flex-row gap-2.5 leading-tight'>
+                  <span className='font-medium text-gray-800'>
+                    {aggLabel}: {v.field}
+                  </span>
+
+                  {/* agg 변경 드롭다운 트리거 */}
+                  <button
+                    className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50'
+                    onClick={() => setOpenAggForId(openAggForId === v.id ? null : v.id)}
+                  >
+                    <span>{aggLabel}</span>
+                    <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
+                  </button>
+
+                  {openAggForId === v.id && (
+                    <div className='absolute z-10 mt-7 ml-20 w-24 rounded border border-gray-200 bg-white text-xs shadow'>
+                      {AGG_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          className='block w-full px-3 py-2 text-left hover:bg-gray-50'
+                          onClick={() => {
+                            updateAggForItem(v.id, opt.value)
+                            setOpenAggForId(null)
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
-                  onClick={() => removeToken(v.field)}
-                  className='text-gray-400 hover:text-red-500 pl-1'
+                  onClick={() => removeValueItem(v.id)}
+                  className='text-gray-400 hover:text-red-500'
                 >
                   <CloseIcon className='h-3 w-3' />
                 </button>
-              </span>
+              </div>
             )
           })}
         </div>
@@ -138,67 +209,35 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
           <div className='px-3 py-4 text-center text-xs text-gray-400'>필드가 없습니다</div>
         ) : (
           filteredList.map((fieldName) => {
-            const selected = isSelected(fieldName)
-            const agg = getAggFor(fieldName)
+            const isDisabledOutside = blockedForValues.has(fieldName)
 
             return (
               <div
                 key={fieldName}
-                className='flex flex-col border-t border-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50'
+                className={[
+                  'flex items-center justify-between border-t border-gray-200 px-3 py-2 text-sm',
+                  isDisabledOutside
+                    ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                    : 'text-gray-800 hover:bg-gray-50 cursor-pointer',
+                ].join(' ')}
               >
-                <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  {/* 왼쪽 동그라미 박스 */}
                   <div
-                    className='flex cursor-pointer items-center gap-2'
-                    onClick={() => toggleField(fieldName)}
+                    className={[
+                      'flex h-4 w-4 items-center justify-center rounded bg-[#BABBBC] text-gray-700',
+                      isDisabledOutside ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-300',
+                    ].join(' ')}
+                    onClick={() => {
+                      if (!isDisabledOutside) addField(fieldName)
+                    }}
                   >
-                    <div
-                      className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-                        selected ? 'border-blue-light bg-blue-light' : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      {selected && <CheckIcon className='h-4 w-4 text-white' />}
-                    </div>
-                    <span>{fieldName}</span>
+                    {!isDisabledOutside && <AddIcon className='h-3.5 w-3.5 text-white' />}
+                    {isDisabledOutside && null /* 회색 배경만, 아이콘 없음 */}
                   </div>
 
-                  {/* 집계(agg) 드롭다운 */}
-                  {selected && (
-                    <div className='relative'>
-                      <button
-                        className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50'
-                        onClick={() =>
-                          setOpenAggForField(openAggForField === fieldName ? null : fieldName)
-                        }
-                      >
-                        <span>{AGG_OPTIONS.find((o) => o.value === agg)?.label ?? agg}</span>
-                        <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
-                      </button>
-
-                      {openAggForField === fieldName && (
-                        <div className='absolute right-0 z-10 mt-1 w-28 rounded border border-gray-200 bg-white text-xs shadow'>
-                          {AGG_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              className='block w-full px-3 py-2 text-left hover:bg-gray-50'
-                              onClick={() => {
-                                setAggFor(fieldName, opt.value)
-                                setOpenAggForField(null)
-                              }}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <span>{fieldName}</span>
                 </div>
-
-                {selected && (
-                  <div className='pl-6 text-[11px] text-gray-500'>
-                    {AGG_OPTIONS.find((o) => o.value === agg)?.label} • {fieldName}
-                  </div>
-                )}
               </div>
             )
           })

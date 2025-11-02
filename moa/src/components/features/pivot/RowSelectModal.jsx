@@ -4,10 +4,24 @@ import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import CloseIcon from '@/assets/icons/delete.svg?react'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import { usePivotFields } from '@/hooks/queries/usePivot'
+import { usePivotStore } from '@/stores/pivotStore'
 
 const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
   const { data, isLoading } = usePivotFields()
   const fieldNames = (data?.fields || []).map((f) => f.name)
+
+  const { column: globalColumn, values: globalValues } = usePivotStore()
+
+  const blockedForRows = useMemo(() => {
+    const s = new Set()
+    if (globalColumn?.field) {
+      s.add(globalColumn.field)
+    }
+    for (const v of globalValues) {
+      s.add(v.field)
+    }
+    return s
+  }, [globalColumn, globalValues])
 
   const [selected, setSelected] = useState(initialSelected)
   const [sortOrder, setSortOrder] = useState(null)
@@ -20,10 +34,13 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
 
     if (sortOrder === 'asc') base = [...base].sort((a, b) => a.localeCompare(b))
     else if (sortOrder === 'desc') base = [...base].sort((a, b) => b.localeCompare(a))
+
     return base
   }, [fieldNames, sortOrder, searchValue])
 
-  const toggleField = (fieldName) => {
+  const toggleField = (fieldName, isDisabled) => {
+    if (isDisabled) return
+
     setSelected((prev) =>
       prev.includes(fieldName) ? prev.filter((f) => f !== fieldName) : [...prev, fieldName],
     )
@@ -104,18 +121,39 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
         ) : (
           filteredList.map((fieldName) => {
             const isChecked = selected.includes(fieldName)
+
+            const isDisabledOutside = blockedForRows.has(fieldName) && !isChecked
+
+            let boxClass = ''
+            let iconColorClass = ''
+            if (isChecked) {
+              boxClass = 'border-blue-light bg-blue-light'
+              iconColorClass = 'text-white'
+            } else if (isDisabledOutside) {
+              boxClass = 'border-gray-300 bg-gray-300'
+              iconColorClass = 'text-white'
+            } else {
+              boxClass = 'border-gray-300 bg-white'
+              iconColorClass = 'text-white'
+            }
+
             return (
               <label
                 key={fieldName}
-                className='flex cursor-pointer items-center gap-2 border-t border-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50'
-                onClick={() => toggleField(fieldName)}
+                className={[
+                  'flex items-center gap-2 border-t border-gray-200 px-3 py-2 text-sm',
+                  isDisabledOutside
+                    ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                    : 'text-gray-800 hover:bg-gray-50 cursor-pointer',
+                ].join(' ')}
+                onClick={() => toggleField(fieldName, isDisabledOutside)}
               >
                 <div
-                  className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-                    isChecked ? 'border-blue-light bg-blue-light' : 'border-gray-300 bg-white'
-                  }`}
+                  className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${boxClass}`}
                 >
-                  {isChecked && <CheckIcon className='h-4 w-4 text-white' />}
+                  {(isChecked || isDisabledOutside) && (
+                    <CheckIcon className={`h-4 w-4 ${iconColorClass}`} />
+                  )}
                 </div>
                 <span>{fieldName}</span>
               </label>

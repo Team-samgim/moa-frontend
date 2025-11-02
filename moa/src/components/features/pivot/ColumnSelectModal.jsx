@@ -1,16 +1,25 @@
 import { useState, useMemo } from 'react'
 import PivotFieldModalShell from './PivotFieldModalShell'
 import { usePivotFields } from '@/hooks/queries/usePivot'
+import { usePivotStore } from '@/stores/pivotStore'
 
-const ColumnSelectModal = ({
-  initialSelected,
-  onApplyColumn, // function
-  onClose,
-}) => {
-  const { data, isLoading } = usePivotFields() // 필드 목록
+const ColumnSelectModal = ({ initialSelected, onApplyColumn, onClose }) => {
+  const { data, isLoading } = usePivotFields()
   const fieldNames = (data?.fields || []).map((f) => f.name)
 
-  const [selected, setSelected] = useState(initialSelected || '') // 선택 값
+  const { rows: globalRows, values: globalValues } = usePivotStore()
+
+  const usedInRows = useMemo(() => new Set(globalRows.map((r) => r.field)), [globalRows])
+  const usedInValues = useMemo(() => new Set(globalValues.map((v) => v.field)), [globalValues])
+
+  const blockedForColumn = useMemo(() => {
+    const s = new Set()
+    usedInRows.forEach((f) => s.add(f))
+    usedInValues.forEach((f) => s.add(f))
+    return s
+  }, [usedInRows, usedInValues])
+
+  const [selected, setSelected] = useState(initialSelected || '')
   const [sortOrder, setSortOrder] = useState(null)
   const [searchValue, setSearchValue] = useState('')
 
@@ -86,20 +95,37 @@ const ColumnSelectModal = ({
         ) : filteredList.length === 0 ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>필드가 없습니다</div>
         ) : (
-          filteredList.map((fieldName) => (
-            <label
-              key={fieldName}
-              className='flex cursor-pointer items-center gap-2 border-t border-gray-200 px-3 py-3 text-sm text-gray-800'
-            >
-              <input
-                type='radio'
-                className='h-4 w-4 text-blue-600'
-                checked={selected === fieldName}
-                onChange={() => setSelected(fieldName)}
-              />
-              <span>{fieldName}</span>
-            </label>
-          ))
+          filteredList.map((fieldName) => {
+            const isDisabled = blockedForColumn.has(fieldName) && selected !== fieldName
+
+            return (
+              <label
+                key={fieldName}
+                className={[
+                  'flex items-center gap-2 border-t border-gray-200 px-3 py-3 text-sm',
+                  isDisabled
+                    ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                    : 'text-gray-800 hover:bg-gray-50 cursor-pointer',
+                ].join(' ')}
+              >
+                <input
+                  type='radio'
+                  className={[
+                    'h-4 w-4',
+                    isDisabled
+                      ? 'accent-gray-300 cursor-not-allowed'
+                      : 'accent-blue cursor-pointer',
+                  ].join(' ')}
+                  disabled={isDisabled}
+                  checked={selected === fieldName}
+                  onChange={() => {
+                    if (!isDisabled) setSelected(fieldName)
+                  }}
+                />
+                <span>{fieldName}</span>
+              </label>
+            )
+          })
         )}
       </div>
     </PivotFieldModalShell>
