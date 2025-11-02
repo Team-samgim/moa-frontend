@@ -1,10 +1,50 @@
 import { useState, useMemo } from 'react'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import PivotFieldModalShell from './PivotFieldModalShell'
+import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import CloseIcon from '@/assets/icons/delete.svg?react'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import { usePivotFields } from '@/hooks/queries/usePivot'
 import { usePivotStore } from '@/stores/pivotStore'
+
+const RowToken = ({ id, onRemove }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className='flex items-center gap-2 rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
+    >
+      <button
+        className='text-gray-500 cursor-grab active:cursor-grabbing'
+        {...attributes}
+        {...listeners}
+      >
+        <SideKickIcon className='h-4 w-4' />
+      </button>
+
+      <span className='font-medium text-gray-800'>{id}</span>
+
+      <button onClick={() => onRemove(id)} className='text-gray-400 hover:text-red-500 pl-1'>
+        <CloseIcon className='h-3 w-3' />
+      </button>
+    </div>
+  )
+}
 
 const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
   const { data, isLoading } = usePivotFields()
@@ -27,6 +67,27 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
   const [sortOrder, setSortOrder] = useState(null)
   const [searchValue, setSearchValue] = useState('')
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  )
+
+  const handleRemoveToken = (fieldName) => {
+    setSelected((prev) => prev.filter((f) => f !== fieldName))
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setSelected((prev) => {
+      const oldIndex = prev.indexOf(active.id)
+      const newIndex = prev.indexOf(over.id)
+      return arrayMove(prev, oldIndex, newIndex)
+    })
+  }
+
   const filteredList = useMemo(() => {
     let base = fieldNames
     if (searchValue)
@@ -46,10 +107,6 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
     )
   }
 
-  const removeToken = (fieldName) => {
-    setSelected((prev) => prev.filter((f) => f !== fieldName))
-  }
-
   const handleApply = () => {
     const rowsPayload = selected.map((f) => ({ field: f }))
     onApplyRows(rowsPayload)
@@ -60,23 +117,20 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
       title='행 선택'
       headerRight={null}
       tokensArea={
-        <div className='flex flex-wrap gap-2'>
-          {selected.map((field) => (
-            <span
-              key={field}
-              className='flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
-            >
-              <SideKickIcon className='h-4 w-4' />
-              {field}
-              <button
-                onClick={() => removeToken(field)}
-                className='text-gray-400 hover:text-red-500 pl-1'
-              >
-                <CloseIcon className='h-3 w-3' />
-              </button>
-            </span>
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={selected} strategy={horizontalListSortingStrategy}>
+            <div className='flex flex-wrap items-center gap-2'>
+              {selected.map((field, idx) => (
+                <div key={field} className='flex items-center gap-2'>
+                  <RowToken id={field} onRemove={handleRemoveToken} />
+                  {idx !== selected.length - 1 && (
+                    <ArrowRightIcon className='h-3.5 w-3.5 text-gray-500' />
+                  )}
+                </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       }
       onApply={handleApply}
       onClose={onClose}

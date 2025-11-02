@@ -1,9 +1,20 @@
 import { useState, useMemo } from 'react'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import PivotFieldModalShell from './PivotFieldModalShell'
+
 import AddIcon from '@/assets/icons/add.svg?react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
+import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
 import CloseIcon from '@/assets/icons/delete.svg?react'
-import SideKickIcon from '@/assets/icons/side-kick.svg?react'
+import DragHandleIcon from '@/assets/icons/side-kick.svg?react'
+
 import { usePivotFields } from '@/hooks/queries/usePivot'
 import { usePivotStore } from '@/stores/pivotStore'
 
@@ -13,6 +24,77 @@ const AGG_OPTIONS = [
   { value: 'avg', label: '평균' },
   { value: 'max', label: '최대' },
 ]
+
+const ValueToken = ({ item, openAggForId, setOpenAggForId, updateAggForItem, removeValueItem }) => {
+  const { id, field, agg } = item
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const aggMeta = AGG_OPTIONS.find((o) => o.value === agg)
+  const aggLabel = aggMeta ? aggMeta.label : agg
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className='relative flex items-center gap-2 rounded-2xl border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
+    >
+      <button
+        className='text-gray-500 cursor-grab active:cursor-grabbing'
+        {...attributes}
+        {...listeners}
+      >
+        <DragHandleIcon className='h-4 w-4' />
+      </button>
+
+      <div className='flex flex-row gap-2.5 leading-tight'>
+        <span className='font-medium text-gray-800'>
+          {aggLabel}: {field}
+        </span>
+
+        {/* agg 변경 드롭다운 트리거 */}
+        <button
+          className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50'
+          onClick={() => {
+            setOpenAggForId(openAggForId === id ? null : id)
+          }}
+        >
+          <span>{aggLabel}</span>
+          <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
+        </button>
+
+        {openAggForId === id && (
+          <div className='absolute z-10 mt-7 ml-20 w-24 rounded border border-gray-200 bg-white text-xs shadow'>
+            {AGG_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className='block w-full px-3 py-2 text-left hover:bg-gray-50'
+                onClick={() => {
+                  updateAggForItem(id, opt.value)
+                  setOpenAggForId(null)
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 삭제 버튼 */}
+      <button onClick={() => removeValueItem(id)} className='text-gray-400 hover:text-red-500'>
+        <CloseIcon className='h-3 w-3' />
+      </button>
+    </div>
+  )
+}
 
 const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
   const { data, isLoading } = usePivotFields()
@@ -41,19 +123,28 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
 
   const [openAggForId, setOpenAggForId] = useState(null)
 
-  const [sortOrder, setSortOrder] = useState(null)
+  const [sortOrder, setSortOrder] = useState(null) // 'asc' | 'desc' | null
   const [searchValue, setSearchValue] = useState('')
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  )
 
   const filteredList = useMemo(() => {
     let base = fieldNames
+
     if (searchValue) {
       base = base.filter((n) => n.toLowerCase().includes(searchValue.toLowerCase()))
     }
+
     if (sortOrder === 'asc') {
       base = [...base].sort((a, b) => a.localeCompare(b))
     } else if (sortOrder === 'desc') {
       base = [...base].sort((a, b) => b.localeCompare(a))
     }
+
     return base
   }, [fieldNames, sortOrder, searchValue])
 
@@ -63,14 +154,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
     const defaultAgg = 'sum'
     const newId = `${fieldName}#${defaultAgg}`
 
-    setValuesState((prev) => [
-      ...prev,
-      {
-        id: newId,
-        field: fieldName,
-        agg: defaultAgg,
-      },
-    ])
+    setValuesState((prev) => [...prev, { id: newId, field: fieldName, agg: defaultAgg }])
   }
 
   const removeValueItem = (id) => {
@@ -79,22 +163,25 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
 
   const updateAggForItem = (id, nextAgg) => {
     setValuesState((prev) =>
-      prev.map((v) =>
-        v.id === id
-          ? {
-              ...v,
-              agg: nextAgg,
-              id: `${v.field}#${nextAgg}`,
-            }
-          : v,
-      ),
+      prev.map((v) => (v.id === id ? { ...v, agg: nextAgg, id: `${v.field}#${nextAgg}` } : v)),
     )
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setValuesState((prev) => {
+      const oldIndex = prev.findIndex((item) => item.id === active.id)
+      const newIndex = prev.findIndex((item) => item.id === over.id)
+      return arrayMove(prev, oldIndex, newIndex)
+    })
   }
 
   const handleApply = () => {
     const finalValues = valuesState.map((v) => {
-      const aggMeta = AGG_OPTIONS.find((o) => o.value === v.agg)
-      const aggLabel = aggMeta ? aggMeta.label : v.agg
+      const opt = AGG_OPTIONS.find((o) => o.value === v.agg)
+      const aggLabel = opt ? opt.label : v.agg
       return {
         field: v.field,
         agg: v.agg,
@@ -108,64 +195,35 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
     <PivotFieldModalShell
       title='값 선택'
       tokensArea={
-        <div className='flex flex-wrap gap-2'>
-          {valuesState.length === 0 && (
-            <span className='text-xs text-gray-400'>
-              선택된 값이 없습니다. 아래에서 추가하세요.
-            </span>
-          )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={valuesState.map((v) => v.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            <div className='flex flex-wrap items-center gap-2'>
+              {valuesState.length === 0 && (
+                <span className='text-xs text-gray-400'>
+                  선택된 값이 없습니다. 아래에서 추가하세요.
+                </span>
+              )}
 
-          {valuesState.map((v) => {
-            const aggMeta = AGG_OPTIONS.find((o) => o.value === v.agg)
-            const aggLabel = aggMeta ? aggMeta.label : v.agg
-            return (
-              <div
-                key={v.id}
-                className='relative flex items-center gap-2 rounded-2xl border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-800'
-              >
-                <SideKickIcon className='h-4 w-4' />
-                <div className='flex flex-row gap-2.5 leading-tight'>
-                  <span className='font-medium text-gray-800'>
-                    {aggLabel}: {v.field}
-                  </span>
-
-                  {/* agg 변경 드롭다운 트리거 */}
-                  <button
-                    className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50'
-                    onClick={() => setOpenAggForId(openAggForId === v.id ? null : v.id)}
-                  >
-                    <span>{aggLabel}</span>
-                    <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
-                  </button>
-
-                  {openAggForId === v.id && (
-                    <div className='absolute z-10 mt-7 ml-20 w-24 rounded border border-gray-200 bg-white text-xs shadow'>
-                      {AGG_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          className='block w-full px-3 py-2 text-left hover:bg-gray-50'
-                          onClick={() => {
-                            updateAggForItem(v.id, opt.value)
-                            setOpenAggForId(null)
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
+              {valuesState.map((item, idx) => (
+                <div key={item.id} className='flex items-center gap-2'>
+                  <ValueToken
+                    item={item}
+                    openAggForId={openAggForId}
+                    setOpenAggForId={setOpenAggForId}
+                    updateAggForItem={updateAggForItem}
+                    removeValueItem={removeValueItem}
+                  />
+                  {idx !== valuesState.length - 1 && (
+                    <ArrowRightIcon className='h-3.5 w-3.5 text-gray-500' />
                   )}
                 </div>
-
-                <button
-                  onClick={() => removeValueItem(v.id)}
-                  className='text-gray-400 hover:text-red-500'
-                >
-                  <CloseIcon className='h-3 w-3' />
-                </button>
-              </div>
-            )
-          })}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       }
       onApply={handleApply}
       onClose={onClose}
@@ -201,7 +259,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
         </div>
       </div>
 
-      {/* 리스트 */}
+      {/* 필드 목록 */}
       <div className='border border-t-0 border-gray-200'>
         {isLoading ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>로딩중...</div>
@@ -222,18 +280,18 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
                 ].join(' ')}
               >
                 <div className='flex items-center gap-2'>
-                  {/* 왼쪽 동그라미 박스 */}
                   <div
                     className={[
                       'flex h-4 w-4 items-center justify-center rounded bg-[#BABBBC] text-gray-700',
-                      isDisabledOutside ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-300',
+                      isDisabledOutside
+                        ? 'opacity-70 cursor-not-allowed'
+                        : 'hover:bg-gray-300 cursor-pointer',
                     ].join(' ')}
                     onClick={() => {
                       if (!isDisabledOutside) addField(fieldName)
                     }}
                   >
                     {!isDisabledOutside && <AddIcon className='h-3.5 w-3.5 text-white' />}
-                    {isDisabledOutside && null /* 회색 배경만, 아이콘 없음 */}
                   </div>
 
                   <span>{fieldName}</span>

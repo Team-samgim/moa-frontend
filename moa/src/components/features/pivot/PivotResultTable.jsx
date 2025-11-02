@@ -20,15 +20,27 @@ const PivotResultTable = ({ pivotResult }) => {
     getRowCanExpand: (row) => (row.original?.subRows?.length ?? 0) > 0,
   })
 
+  const visibleIndexMap = useMemo(() => {
+    const map = {}
+    table.getRowModel().rows.forEach((r, i) => {
+      map[r.id] = i + 1
+    })
+    return map
+  }, [table])
+
   const columns = useMemo(() => {
-    return buildPivotColumns(pivotResult, table)
-  }, [pivotResult, table])
+    return buildPivotColumns(pivotResult, table, visibleIndexMap)
+  }, [pivotResult, table, visibleIndexMap])
 
   table.setOptions((prev) => ({
     ...prev,
     data,
     columns,
   }))
+
+  const headerGroups = table.getHeaderGroups()
+  const topGroup = headerGroups[0] ?? { headers: [] }
+  const subGroup = headerGroups[1] ?? { headers: [] }
 
   return (
     <div className='rounded-lg border border-gray-300'>
@@ -37,7 +49,6 @@ const PivotResultTable = ({ pivotResult }) => {
           <thead className='bg-gray-50 text-gray-700 text-left align-bottom'>
             {/* === 첫 번째 줄 === */}
             <tr className='border-b border-gray-200'>
-              {/* index, rowLabel 컬럼: rowSpan = 2 */}
               <th
                 rowSpan={2}
                 className='px-3 py-2 font-medium text-gray-700 align-middle border-r border-gray-200 whitespace-nowrap text-left'
@@ -48,40 +59,32 @@ const PivotResultTable = ({ pivotResult }) => {
               >
                 {pivotResult?.columnField?.name ?? ''}
               </th>
-
-              {/* 나머지 그룹 헤더 */}
-              {table
-                .getHeaderGroups()[0]
-                .headers.slice(2) // 0: rowNumber(#), 1: rowLabel, 나머지는 grouped column headers
-                .map((header) => (
-                  <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
+              {topGroup.headers.slice(2).map((header) => (
+                <th
+                  key={header.id}
+                  colSpan={header.colSpan}
+                  className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </th>
+              ))}
             </tr>
 
             {/* === 두 번째 줄 === */}
             <tr className='border-b border-gray-200'>
-              {table
-                .getHeaderGroups()[1]
-                .headers.slice(2)
-                .map((header) => (
-                  <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    className='px-3 py-2 font-medium text-gray-700 align-bottom border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
+              {subGroup.headers.slice(2).map((header) => (
+                <th
+                  key={header.id}
+                  colSpan={header.colSpan}
+                  className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left'
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -101,6 +104,7 @@ const PivotResultTable = ({ pivotResult }) => {
           </tbody>
         </table>
       </div>
+
       {pivotResult?.summary?.rowCountText && (
         <div className='border-t border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-600'>
           {pivotResult.summary.rowCountText}

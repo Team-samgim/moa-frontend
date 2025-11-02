@@ -1,5 +1,13 @@
 import { useCallback } from 'react'
 
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import DeleteIcon from '@/assets/icons/delete.svg?react'
@@ -15,6 +23,7 @@ import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
 import PivotResultTable from '@/components/features/pivot/PivotResultTable'
 import RowSelectModal from '@/components/features/pivot/RowSelectModal'
 import ValueSelectModal from '@/components/features/pivot/ValueSelectModal'
+
 import { usePivotQuery } from '@/hooks/queries/usePivot'
 import { usePivotModalStore } from '@/stores/pivotModalStore'
 import { usePivotStore } from '@/stores/pivotStore'
@@ -27,6 +36,86 @@ const TIME_PRESETS = [
   { label: '24시간', value: '24h' },
   { label: '1주일', value: '1w' },
 ]
+
+const SortableRowItem = ({ item, onRemove }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: item.field,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className='flex items-center justify-between px-3 py-2 text-sm text-gray-800 bg-white border-t first:border-t-0 border-gray-200'
+    >
+      <span className='flex items-center gap-2'>
+        <button
+          className='text-gray-500 cursor-grab active:cursor-grabbing shrink-0'
+          {...attributes}
+          {...listeners}
+        >
+          <SideKickIcon className='h-4 w-4 text-gray-500' />
+        </button>
+        {item.field}
+      </span>
+
+      <div className='flex items-center gap-2 text-gray-400'>
+        <button className='p-1 hover:text-red-500' onClick={() => onRemove(item.field)}>
+          <DeleteIcon className='h-4 w-4' />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const SortableValueItem = ({ item, onRemove }) => {
+  const sortableId = item.field + '::' + item.agg
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: sortableId,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className='flex items-center justify-between px-3 py-2 text-sm text-gray-800 bg-white border-t first:border-t-0 border-gray-200'
+    >
+      <div className='flex flex-col'>
+        <span className='flex items-center gap-2'>
+          <button
+            className='text-gray-500 cursor-grab active:cursor-grabbing shrink-0'
+            {...attributes}
+            {...listeners}
+          >
+            <SideKickIcon className='h-4 w-4 text-gray-500' />
+          </button>
+
+          {item.alias ?? item.field}
+        </span>
+        <span className='pl-6 text-[11px] text-gray-500'>
+          {item.agg?.toUpperCase()} • {item.field}
+        </span>
+      </div>
+
+      <div className='flex items-center gap-2 text-gray-400'>
+        <button className='p-1 hover:text-red-500' onClick={() => onRemove(item.field, item.agg)}>
+          <DeleteIcon className='h-4 w-4' />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const PivotPage = () => {
   const {
@@ -45,33 +134,45 @@ const PivotPage = () => {
   const { isOpen, mode, openModal, closeModal, draftRows, draftColumn, draftValues } =
     usePivotModalStore()
 
+  const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  const runQueryNow = useCallback(() => {
+    const cfg = usePivotStore.getState()
+    executeQuery(cfg)
+  }, [executeQuery])
+
   const handleRemoveRowField = useCallback(
     (fieldName) => {
       const newRows = rows.filter((r) => r.field !== fieldName)
       setRows(newRows)
+      runQueryNow()
     },
-    [rows, setRows],
+    [rows, setRows, runQueryNow],
   )
 
   const handleRemoveColumn = useCallback(() => {
-    // column은 단일: null
     setColumnField(null)
-  }, [setColumnField])
+    runQueryNow()
+  }, [setColumnField, runQueryNow])
 
   const handleRemoveValueField = useCallback(
     (fieldName, agg) => {
       const newValues = values.filter((v) => !(v.field === fieldName && v.agg === agg))
       setValues(newValues)
+      runQueryNow()
     },
-    [values, setValues],
+    [values, setValues, runQueryNow],
   )
 
   const applyRows = useCallback(
     (newRows) => {
       setRows(newRows)
       closeModal()
+      runQueryNow()
     },
-    [setRows, closeModal],
+    [setRows, closeModal, runQueryNow],
   )
 
   const applyColumn = useCallback(
@@ -82,16 +183,18 @@ const PivotPage = () => {
         setColumnField(null)
       }
       closeModal()
+      runQueryNow()
     },
-    [setColumnField, closeModal],
+    [setColumnField, closeModal, runQueryNow],
   )
 
   const applyValues = useCallback(
     (newValues) => {
       setValues(newValues)
       closeModal()
+      runQueryNow()
     },
-    [setValues, closeModal],
+    [setValues, closeModal, runQueryNow],
   )
 
   const openRowsModal = useCallback(() => {
@@ -118,12 +221,98 @@ const PivotPage = () => {
     })
   }, [openModal, rows, column, values])
 
-  const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
-
   const handleRunQuery = useCallback(() => {
-    const cfg = usePivotStore.getState()
-    executeQuery(cfg)
-  }, [executeQuery])
+    runQueryNow()
+  }, [runQueryNow])
+
+  const handleDragEndRows = useCallback(
+    (event) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      const oldIndex = rows.findIndex((r) => r.field === active.id)
+      const newIndex = rows.findIndex((r) => r.field === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const reordered = arrayMove(rows, oldIndex, newIndex)
+      setRows(reordered)
+      runQueryNow()
+    },
+    [rows, setRows, runQueryNow],
+  )
+
+  const handleDragEndValues = useCallback(
+    (event) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      const getId = (v) => v.field + '::' + v.agg
+
+      const oldIndex = values.findIndex((v) => getId(v) === active.id)
+      const newIndex = values.findIndex((v) => getId(v) === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const reordered = arrayMove(values, oldIndex, newIndex)
+      setValues(reordered)
+      runQueryNow()
+    },
+    [values, setValues, runQueryNow],
+  )
+
+  const RenderSortableRows = ({ rows, sensors, handleDragEndRows, handleRemoveRowField }) => {
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEndRows}
+      >
+        <SortableContext items={rows.map((r) => r.field)} strategy={verticalListSortingStrategy}>
+          {rows.length > 0 ? (
+            rows.map((r) => (
+              <SortableRowItem key={r.field} item={r} onRemove={handleRemoveRowField} />
+            ))
+          ) : (
+            <div className='px-3 py-6 text-center text-xs text-gray-400'>행을 선택하세요</div>
+          )}
+        </SortableContext>
+      </DndContext>
+    )
+  }
+
+  const RenderSortableValues = ({
+    values,
+    sensors,
+    handleDragEndValues,
+    handleRemoveValueField,
+  }) => {
+    const getId = (v) => v.field + '::' + v.agg
+
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEndValues}
+      >
+        <SortableContext items={values.map((v) => getId(v))} strategy={verticalListSortingStrategy}>
+          {values.length > 0 ? (
+            values.map((v) => (
+              <SortableValueItem key={getId(v)} item={v} onRemove={handleRemoveValueField} />
+            ))
+          ) : (
+            <div className='px-3 py-6 text-center text-xs text-gray-400'>값을 선택하세요</div>
+          )}
+        </SortableContext>
+      </DndContext>
+    )
+  }
+
+  const handleSelectTimePreset = useCallback(
+    (value) => {
+      setTimePreset(value)
+      runQueryNow()
+    },
+    [setTimePreset, runQueryNow],
+  )
 
   return (
     <>
@@ -138,7 +327,7 @@ const PivotPage = () => {
           {/* 본문 영역 */}
           <div className='flex flex-row gap-6 p-5 lg:flex-row'>
             {/* 왼쪽 패널: 조회 계층 / 조회 기간 */}
-            <div className='w-full max-w-xs flex-shrink-0 space-y-6'>
+            <div className='w-full max-w-xs shrink-0 space-y-6'>
               <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
                 <div className='text-base font-semibold text-gray-900'>피벗 테이블 구성</div>
 
@@ -147,6 +336,7 @@ const PivotPage = () => {
                   <button className='hover:underline'>프리셋 불러오기</button>
                 </div>
               </div>
+
               {/* 조회 계층 */}
               <div>
                 <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
@@ -154,7 +344,10 @@ const PivotPage = () => {
                   {LAYER_OPTIONS.map((opt) => (
                     <button
                       key={opt}
-                      onClick={() => setLayer(opt)}
+                      onClick={() => {
+                        setLayer(opt)
+                        runQueryNow()
+                      }}
                       className={[
                         'rounded border px-3 py-2 text-xs font-medium',
                         layer === opt
@@ -177,7 +370,7 @@ const PivotPage = () => {
                     title='시간 새로고침'
                     onClick={() => {
                       if (timeRange?.type === 'preset' && timeRange?.value) {
-                        setTimePreset(timeRange.value)
+                        handleSelectTimePreset(timeRange.value)
                       }
                     }}
                   >
@@ -189,7 +382,7 @@ const PivotPage = () => {
                   {TIME_PRESETS.map((p) => (
                     <button
                       key={p.value}
-                      onClick={() => setTimePreset(p.value)}
+                      onClick={() => handleSelectTimePreset(p.value)}
                       className={[
                         'rounded border px-3 py-2 text-xs font-medium',
                         timeRange?.value === p.value
@@ -202,7 +395,7 @@ const PivotPage = () => {
                   ))}
                 </div>
 
-                {/* TODO: 직접 설정 기능 추가*/}
+                {/* TODO: 직접 설정 기능 추가 */}
                 <div className='mt-2'>
                   <button className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50'>
                     <span>직접 설정</span>
@@ -214,8 +407,9 @@ const PivotPage = () => {
 
             <div className='hidden w-px bg-gray-200 lg:block' />
 
+            {/* 오른쪽 패널: Column / Rows / Values */}
             <div className='flex flex-1 flex-col gap-4 lg:flex-row'>
-              {/* Column 카드 */}
+              {/* Column 카드 (단일이라 dnd 불필요) */}
               <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
@@ -234,7 +428,8 @@ const PivotPage = () => {
                   {column && column.field ? (
                     <div className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'>
                       <span className='flex items-center gap-2'>
-                        <span className='text-gray-400'>⋮⋮⋮</span>
+                        {/* column은 단일이라 그냥 아이콘만 시각적으로 두자 */}
+                        <SideKickIcon className='h-4 w-4 text-gray-500' />
                         {column.field}
                       </span>
 
@@ -253,7 +448,7 @@ const PivotPage = () => {
                 </div>
               </div>
 
-              {/* Rows 카드 */}
+              {/* Rows 카드 (dnd 가능) */}
               <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
@@ -265,41 +460,18 @@ const PivotPage = () => {
                   </button>
                 </div>
 
+                {/* DnD 정렬 가능한 리스트 */}
                 <div className='divide-y divide-gray-200'>
-                  {rows && rows.length > 0 ? (
-                    rows.map((r) => (
-                      <div
-                        key={r.field}
-                        className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'
-                      >
-                        <span className='flex items-center gap-2'>
-                          <span className='text-gray-400'>⋮⋮⋮</span>
-                          {r.field}
-                        </span>
-
-                        <div className='flex items-center gap-2 text-gray-400'>
-                          {/* TODO: 개별 row 설정 (정렬 옵션 등) */}
-                          {/* <button className="p-1 hover:text-gray-600">
-                            <SettingIcon className="h-4 w-4" />
-                          </button> */}
-                          <button
-                            className='p-1 hover:text-red-500'
-                            onClick={() => handleRemoveRowField(r.field)}
-                          >
-                            <DeleteIcon className='h-4 w-4' />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className='px-3 py-6 text-center text-xs text-gray-400'>
-                      행을 선택하세요
-                    </div>
-                  )}
+                  <RenderSortableRows
+                    rows={rows}
+                    sensors={sensors}
+                    handleDragEndRows={handleDragEndRows}
+                    handleRemoveRowField={handleRemoveRowField}
+                  />
                 </div>
               </div>
 
-              {/* Values 카드 */}
+              {/* Values 카드 (dnd 가능) */}
               <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
@@ -314,42 +486,14 @@ const PivotPage = () => {
                   </button>
                 </div>
 
+                {/* DnD 정렬 가능한 리스트 */}
                 <div className='divide-y divide-gray-200'>
-                  {values && values.length > 0 ? (
-                    values.map((v) => (
-                      <div
-                        key={v.field + v.agg}
-                        className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'
-                      >
-                        <div className='flex flex-col'>
-                          <span className='flex items-center gap-2'>
-                            <span className='text-gray-400'>⋮⋮⋮</span>
-                            {v.alias ?? v.field}
-                          </span>
-                          <span className='pl-6 text-[11px] text-gray-500'>
-                            {v.agg?.toUpperCase()} • {v.field}
-                          </span>
-                        </div>
-
-                        <div className='flex items-center gap-2 text-gray-400'>
-                          {/* TODO: 개별 값 설정 */}
-                          {/* <button className="p-1 hover:text-gray-600">
-                            <SettingIcon className="h-4 w-4" />
-                          </button> */}
-                          <button
-                            className='p-1 hover:text-red-500'
-                            onClick={() => handleRemoveValueField(v.field, v.agg)}
-                          >
-                            <DeleteIcon className='h-4 w-4' />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className='px-3 py-6 text-center text-xs text-gray-400'>
-                      값을 선택하세요
-                    </div>
-                  )}
+                  <RenderSortableValues
+                    values={values}
+                    sensors={sensors}
+                    handleDragEndValues={handleDragEndValues}
+                    handleRemoveValueField={handleRemoveValueField}
+                  />
                 </div>
               </div>
             </div>
