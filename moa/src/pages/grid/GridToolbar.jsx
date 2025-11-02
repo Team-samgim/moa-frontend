@@ -1,6 +1,6 @@
 import React from 'react'
 import { useMutation } from '@tanstack/react-query'
-import axios from '@/api/axios'
+import { exportGrid } from '@/api/grid' // <-- API 호출 분리(권장)
 
 function nowForFilename() {
   const iso = new Date().toISOString()
@@ -13,27 +13,23 @@ const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilter
       const api = gridApis?.api
       if (!api) throw new Error('그리드가 아직 준비되지 않았습니다.')
 
-      // 1) 실제 "화면에 표시 중" 컬럼 순서 -> 'field' 로 추출(별칭/colId X)
-      const displayedFields = api
+      const columns = api
         .getAllDisplayedColumns()
-        .map((c) => c.getColDef()?.field)
-        .filter((f) => !!f && f !== '__rowNo') // 화면 전용 번호 컬럼 제외
-      const columns = displayedFields
+        .map((c) => c.getColDef())
+        .map((def) => def?.field ?? def?.colId)
+        .filter((f) => !!f && f !== '__rowNo')
 
-      // 2) 정렬(단일만)
       const sortModel = api.getSortModel?.()[0] || null
       const sortField = sortModel
-        ? api.getColumnDef(sortModel.colId)?.field || sortModel.colId // field 우선
+        ? api.getColumnDef(sortModel.colId)?.field || sortModel.colId
         : null
-      const sortDirection = sortModel ? sortModel.sort : null
+      const sortDirection = sortModel?.sort ?? null
 
-      // 3) 필터
       const filterModel = getActiveFilters ? getActiveFilters() : {}
-
-      // 4) 파일명
       const fileName = `grid_export_${nowForFilename()}.csv`
 
-      const { data } = await axios.post('/exports/grid', {
+      // axios.post를 여기서 직접 써도 되지만, exportGrid로 감싸두면 더 깔끔
+      const data = await exportGrid({
         layer: currentLayer,
         columns,
         filterModelJson: JSON.stringify(filterModel),
@@ -41,16 +37,15 @@ const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilter
         sortDirection,
         fileName,
       })
-
       return data
     },
     onSuccess: (data) => {
       alert('CSV 저장 완료!')
-      if (data?.httpUrl) window.open(data.httpUrl, '_blank')
+      if (data?.httpUrl) window.open(data.httpUrl, '_blank', 'noopener,noreferrer')
     },
     onError: (e) => {
       console.error(e)
-      alert(`CSV 저장 실패: ${e?.response?.status ?? ''}`)
+      alert(`CSV 저장 실패: ${e?.response?.status ?? e?.message ?? ''}`)
     },
   })
 
