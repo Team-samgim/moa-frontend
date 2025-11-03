@@ -67,6 +67,7 @@ const GridPage = () => {
             const isDate = col.type === 'date'
             return {
               field: col.name,
+              headerName: col.labelKo || col.name,
               colId: `${col.name}-${col.type}-${idx}`,
               sortable: true,
               filter: CustomCheckboxFilter, // ✅ 커스텀 필터 그대로 사용
