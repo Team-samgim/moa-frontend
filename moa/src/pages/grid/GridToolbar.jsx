@@ -26,7 +26,7 @@ const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilter
       const sortDirection = sortModel?.sort ?? null
 
       const filterModel = getActiveFilters ? getActiveFilters() : {}
-      const fileName = `grid_export_${nowForFilename()}.csv`
+      const fileName = `grid_export_${nowForFilename()}`
 
       // axios.post를 여기서 직접 써도 되지만, exportGrid로 감싸두면 더 깔끔
       const data = await exportGrid({

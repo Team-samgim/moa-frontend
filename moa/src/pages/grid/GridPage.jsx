@@ -20,6 +20,20 @@ const GridPage = () => {
   const [filterResetKey, setFilterResetKey] = useState(0)
   const [currentLayer] = useState('ethernet')
   const [gridApis, setGridApis] = useState(null)
+  const filterOpenSubsRef = useRef(new Map())
+
+  const subscribeFilterMenuOpen = (field, cb) => {
+    const m = filterOpenSubsRef.current
+    const list = m.get(field) || []
+    m.set(field, [...list, cb])
+    return () => {
+      const cur = filterOpenSubsRef.current.get(field) || []
+      filterOpenSubsRef.current.set(
+        field,
+        cur.filter((fn) => fn !== cb),
+      )
+    }
+  }
 
   const gridRef = useRef(null)
   const navigate = useNavigate()
@@ -56,7 +70,12 @@ const GridPage = () => {
               colId: `${col.name}-${col.type}-${idx}`,
               sortable: true,
               filter: CustomCheckboxFilter, // ✅ 커스텀 필터 그대로 사용
-              filterParams: { layer: currentLayer, type: col.type },
+              filterParams: {
+                layer: currentLayer,
+                type: col.type,
+                pageLimit: 200,
+                debounceMs: 250,
+              },
               resizable: true,
               floatingFilter: false,
               ...(isDate && {
@@ -82,9 +101,19 @@ const GridPage = () => {
       getActiveFilters: () => activeFiltersRef.current,
       getApi: () => gridRef.current?.api,
       activeFilters,
+      subscribeFilterMenuOpen,
     }),
-    [],
+    [activeFilters, updateFilter, subscribeFilterMenuOpen],
   )
+
+  const onFilterOpened = (e) => {
+    const field = e?.column?.getColDef?.()?.field
+    if (!field) return
+    const subs = filterOpenSubsRef.current.get(field) || []
+    subs.forEach((fn) => {
+      if (typeof fn === 'function') fn()
+    })
+  }
 
   // 데이터소스 등록
   const onGridReady = (params) => {
@@ -173,6 +202,7 @@ const GridPage = () => {
             onGridReady={onGridReady}
             context={gridContext}
             getRowStyle={getRowStyle}
+            onFilterOpened={onFilterOpened}
           />
         </div>
       ) : (

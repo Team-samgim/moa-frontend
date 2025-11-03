@@ -1,76 +1,172 @@
 // src/components/filters/CustomCheckboxFilter.jsx
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-// ✅ 서비스 제거: api 경로로 교체
 import { fetchFilterValues as apiFetchFilterValues } from '@/api/grid'
 import { OPERATOR_OPTIONS } from '@/constants/filterOperators'
 
 const CustomCheckboxFilter = (props) => {
-  const [uniqueValues, setUniqueValues] = useState([])
-  const [filteredValues, setFilteredValues] = useState([])
+  const [values, setValues] = useState([]) // 누적된 후보 값
   const [selected, setSelected] = useState([])
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const inflightRef = useRef(null)
+  const lastSigRef = useRef('')
+
+  const makeSig = (afFromCaller, includeSelf) => {
+    const af = afFromCaller ?? (props.context?.getActiveFilters?.() || {})
+    const { [field]: _, ...afWithoutSelf } = af
+    const key = {
+      layer,
+      field,
+      search,
+      filters: afWithoutSelf,
+      includeSelf,
+    }
+    return JSON.stringify(key, Object.keys(key).sort())
+  }
+
+  // 페이징 상태
+  const [hasMore, setHasMore] = useState(false)
+  const nextOffsetRef = useRef(null)
+
+  // 조건 패널
   const [showConditionPanel, setShowConditionPanel] = useState(false)
   const [conditions, setConditions] = useState([{ op: 'contains', val: '', val1: '', val2: '' }])
   const [logicOps, setLogicOps] = useState([])
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 })
 
-  const getAF = () => props.context?.getActiveFilters?.() || {}
-  const getApi = () => props.context?.getApi?.()
-
   const buttonRef = useRef(null)
   const panelRef = useRef(null)
+  const listRef = useRef(null) // 스크롤 감지용
   const inputRefs = useRef([])
   const restoredRef = useRef(false)
+  const searchTimer = useRef(0)
+
+  const getAF = () => props.context?.getActiveFilters?.() || {}
+  const getApi = () => props.context?.getApi?.()
 
   const layer = props?.colDef?.filterParams?.layer || 'ethernet'
   const fieldType = props?.colDef?.filterParams?.type || 'string'
   const field = props.colDef.field
 
-  // 서버에서 체크박스 후보 로드
-  const fetchFilterValues = async (overrideFilterModel) => {
+  const PAGE_LIMIT = Math.max(1, Number(props?.colDef?.filterParams?.pageLimit ?? 200))
+  const DEBOUNCE_MS = Math.max(0, Number(props?.colDef?.filterParams?.debounceMs ?? 250))
+
+  useEffect(() => {
+    const unsubscribe = props.context?.subscribeFilterMenuOpen?.(field, () => {
+      // 캐시 무효화 후 현재 전역 필터 기준으로 1페이지부터 다시
+      lastSigRef.current = ''
+      nextOffsetRef.current = 0
+      setValues([])
+      setHasMore(false)
+
+      const af = getAF()
+      const hasSelf = !!af[field]
+      const afForFetch = hasSelf
+        ? af
+        : Object.fromEntries(Object.entries(af).filter(([k]) => k !== field))
+      reloadAll(afForFetch)
+    })
+    return () => unsubscribe?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field])
+
+  // ---------- 서버 로드 ----------
+  const loadPage = async ({ reset = false, filterModelOverride } = {}) => {
+    const af = filterModelOverride ?? (props.context?.getActiveFilters?.() || {})
+    const includeSelf = !!af[field] // 해당 컬럼에 필터가 있으면 true
+    const sig = makeSig(af, includeSelf)
+
+    // 같은 조건으로 이미 로드되어 있고 reset 아닌 경우 스킵
+    if (!reset && lastSigRef.current === sig && values.length > 0 && !hasMore) return
+
+    // 이전 요청 취소
+    if (inflightRef.current) inflightRef.current.abort()
+    const controller = new AbortController()
+    inflightRef.current = controller
+
     try {
-      const values = await apiFetchFilterValues({
+      setLoading(true)
+      setError('')
+      const currentOffset = reset ? 0 : (nextOffsetRef.current ?? 0)
+
+      const data = await apiFetchFilterValues({
         layer,
         field,
-        filterModel: overrideFilterModel || getAF(),
+        filterModel: af,
+        search,
+        offset: currentOffset,
+        limit: PAGE_LIMIT,
+        signal: controller.signal,
+        includeSelf,
       })
-      setUniqueValues(values)
-      setFilteredValues(values)
-    } catch (err) {
-      console.error(`[${field}] 필터 값 로드 실패:`, err)
+
+      const pageValues = data?.values || []
+      if (reset) setValues(pageValues)
+      else setValues((prev) => [...prev, ...pageValues])
+
+      setHasMore(!!data?.hasMore)
+      nextOffsetRef.current = data?.nextOffset ?? null
+
+      // 성공 시 시그니처 저장(리셋일 때만 갱신해도 OK)
+      if (reset) lastSigRef.current = sig
+    } catch (e) {
+      if (e.name !== 'CanceledError' && e.message !== 'canceled') {
+        console.error(`[${field}] 필터 값 로드 실패:`, e)
+        setError('필터 후보를 불러오지 못했습니다.')
+      }
+    } finally {
+      setLoading(false)
+      inflightRef.current = null
     }
   }
 
+  const reloadAll = (filterModelOverride) => {
+    nextOffsetRef.current = 0
+    setValues([])
+    setHasMore(false)
+    return loadPage({ reset: true, filterModelOverride })
+  }
+
+  // 레이어/필드 변경 시 초기 로드
   useEffect(() => {
-    fetchFilterValues()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    restoredRef.current = false
   }, [layer, field])
 
-  // 기존 필터 복원
-  useEffect(() => {
-    if (restoredRef.current || uniqueValues.length === 0) return
-    const prevFilter = props.context?.activeFilters?.[field]
-    if (!prevFilter) return
+  // 검색 디바운스
+  const onChangeSearch = (e) => {
+    const keyword = e.target.value ?? ''
+    setSearch(keyword)
+    window.clearTimeout(searchTimer.current)
+    searchTimer.current = window.setTimeout(() => {
+      reloadAll()
+    }, DEBOUNCE_MS)
+  }
 
-    if (prevFilter.mode === 'checkbox') {
-      const validValues = prevFilter.values?.filter((v) => uniqueValues.includes(v)) || []
-      setSelected(validValues)
-    } else if (prevFilter.mode === 'condition') {
+  // 기존 필터 복원 (첫 로드 한 번만)
+  useEffect(() => {
+    if (restoredRef.current || values.length === 0) return
+    const prevFilter = props.context?.activeFilters?.[field]
+    if (prevFilter?.mode === 'checkbox') {
+      const setCandidate = new Set(values)
+      const valid = (prevFilter.values || []).filter((v) => setCandidate.has(v))
+      setSelected(valid)
+    } else if (prevFilter?.mode === 'condition') {
       setConditions(prevFilter.conditions || [{ op: 'contains', val: '' }])
       setLogicOps(prevFilter.logicOps || [])
     }
-
     restoredRef.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniqueValues])
+  }, [values])
 
-  // 검색
-  const handleSearch = (e) => {
-    const keyword = (e.target.value || '').toLowerCase()
-    setSearch(keyword)
-    const filtered = uniqueValues.filter((v) => v?.toString().toLowerCase().includes(keyword))
-    setFilteredValues(filtered)
+  // 스크롤 하단 근처에서 다음 페이지 로드
+  const onScrollList = (e) => {
+    if (!hasMore || loading) return
+    const el = e.currentTarget
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
+    if (nearBottom) loadPage({ reset: false })
   }
 
   // 체크박스 토글
@@ -80,6 +176,7 @@ const CustomCheckboxFilter = (props) => {
 
   // 필터 적용
   const applyFilter = async () => {
+    // 조건 최신화
     const latestConditions = conditions.map((c, i) => {
       const ref = inputRefs.current[i] || {}
       const base = { ...c }
@@ -89,6 +186,7 @@ const CustomCheckboxFilter = (props) => {
       }
       return base
     })
+
     const hasCondition = latestConditions.some((c) => (c.val || '').trim() !== '')
     const hasSelected = selected.length > 0
 
@@ -96,35 +194,27 @@ const CustomCheckboxFilter = (props) => {
     if (hasCondition) {
       newFilter = { mode: 'condition', type: fieldType, conditions: latestConditions, logicOps }
     } else if (hasSelected) {
-      newFilter = { mode: 'checkbox', values: selected }
+      newFilter = { mode: 'checkbox', type: fieldType, values: selected }
     }
 
     // 전역 상태 갱신
     props.context?.updateFilter?.(field, newFilter)
 
-    // 최신 스냅샷 구성
+    // 최신 필터 스냅샷
     const nextFilters = JSON.parse(JSON.stringify(getAF()))
     if (newFilter) nextFilters[field] = newFilter
     else delete nextFilters[field]
 
-    // 닫고 갱신
     setShowConditionPanel(false)
     getApi()?.hidePopupMenu?.()
 
-    await fetchFilterValues(nextFilters) // 후보 갱신
-    getApi()?.refreshInfiniteCache?.() // 데이터 재조회
-    setSearch('')
-  }
+    lastSigRef.current = ''
+    nextOffsetRef.current = 0
+    setValues([])
+    setHasMore(false)
 
-  const addCondition = () => {
-    setConditions((prev) => [...prev, { op: 'contains', val: '', val1: '', val2: '' }])
-    setLogicOps((prev) => [...prev, 'AND'])
-  }
-
-  const removeCondition = (index) => {
-    setConditions((prev) => prev.filter((_, i) => i !== index))
-    setLogicOps((prev) => prev.filter((_, i) => i !== index && i !== index - 1))
-    inputRefs.current.splice(index, 1)
+    reloadAll(nextFilters).catch(() => {})
+    getApi()?.refreshInfiniteCache?.()
   }
 
   const handleShowConditionPanel = () => {
@@ -143,7 +233,6 @@ const CustomCheckboxFilter = (props) => {
           setConditions([{ op: 'contains', val: '' }])
           setLogicOps([])
         }
-        fetchFilterValues(currentFilters).then(() => setSearch(''))
       }
       return next
     })
@@ -154,7 +243,7 @@ const CustomCheckboxFilter = (props) => {
     }
   }
 
-  // 외부 클릭으로 패널 닫기
+  // 외부 클릭 닫기
   useEffect(() => {
     if (!showConditionPanel) return
     const handleClickOutside = (e) => {
@@ -170,7 +259,7 @@ const CustomCheckboxFilter = (props) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showConditionPanel])
 
-  // 패널 UI (포털)
+  // 포털 패널
   const ConditionPanel = () =>
     createPortal(
       <div
@@ -227,7 +316,6 @@ const CustomCheckboxFilter = (props) => {
                     ))}
                   </select>
 
-                  {/* 단일값 입력 */}
                   {!(fieldType === 'date' && cond.op === 'between') && (
                     <input
                       ref={(el) => {
@@ -243,7 +331,6 @@ const CustomCheckboxFilter = (props) => {
                     />
                   )}
 
-                  {/* 날짜 between */}
                   {fieldType === 'date' && cond.op === 'between' && (
                     <div className='flex gap-1.5'>
                       <input
@@ -271,7 +358,11 @@ const CustomCheckboxFilter = (props) => {
                 </div>
 
                 <button
-                  onClick={() => removeCondition(idx)}
+                  onClick={() => {
+                    setConditions((prev) => prev.filter((_, i) => i !== idx))
+                    setLogicOps((prev) => prev.filter((_, i) => i !== idx && i !== idx - 1))
+                    inputRefs.current.splice(idx, 1)
+                  }}
                   className='h-6 cursor-pointer rounded border border-gray-300 bg-gray-100 px-1.5 text-[13px] font-semibold'
                 >
                   ✕
@@ -281,7 +372,10 @@ const CustomCheckboxFilter = (props) => {
           ))}
 
           <button
-            onClick={addCondition}
+            onClick={() => {
+              setConditions((prev) => [...prev, { op: 'contains', val: '', val1: '', val2: '' }])
+              setLogicOps((prev) => [...prev, 'AND'])
+            }}
             className='w-full cursor-pointer rounded border border-gray-300 bg-gray-50 py-1 text-[12px]'
           >
             ➕ 조건 추가
@@ -300,15 +394,15 @@ const CustomCheckboxFilter = (props) => {
       document.body,
     )
 
-  // 메인 렌더
+  // -------- 렌더 --------
   return (
     <>
-      <div className='relative w-[200px] rounded-md border border-gray-200 bg-white p-2 text-[13px] shadow-sm'>
+      <div className='relative w-[220px] rounded-md border border-gray-200 bg-white p-2 text-[13px] shadow-sm'>
         <input
           type='text'
-          placeholder='검색...'
+          placeholder='검색(접두어 일치)...'
           value={search}
-          onChange={handleSearch}
+          onChange={onChangeSearch}
           className='mb-2 w-full rounded border border-gray-300 px-2 py-1 text-[12px]'
         />
 
@@ -320,21 +414,40 @@ const CustomCheckboxFilter = (props) => {
           조건별 필터
         </button>
 
-        <div className='mt-1 max-h-[180px] overflow-y-auto border-y border-gray-100 py-1'>
-          {filteredValues.length === 0 ? (
-            <div className='py-2 text-center text-[12px] text-gray-400'>결과 없음</div>
-          ) : (
-            filteredValues.map((val) => (
-              <label key={val} className='block cursor-pointer px-1.5 py-0.5 text-[12px]'>
+        <div
+          ref={listRef}
+          onScroll={onScrollList}
+          className='mt-1 max-h-[200px] overflow-y-auto border-y border-gray-100 py-1'
+        >
+          {error && <div className='py-2 text-center text-[12px] text-red-500'>{error}</div>}
+          {!error && values.length === 0 && !loading && (
+            <div className='py-2 text-center text-[12px] text-gray-400'></div>
+          )}
+          {!error &&
+            values.map((val, i) => (
+              <label
+                key={`${val ?? 'null'}__${i}`}
+                className='block cursor-pointer px-1.5 py-0.5 text-[12px]'
+              >
                 <input
                   type='checkbox'
                   checked={selected.includes(val)}
                   onChange={() => toggleValue(val)}
                   className='mr-1.5'
                 />
-                {val}
+                {val ?? '(NULL)'}
               </label>
-            ))
+            ))}
+          {loading && (
+            <div className='py-2 text-center text-[12px] text-gray-400'>불러오는 중…</div>
+          )}
+          {!loading && hasMore && (
+            <button
+              onClick={() => loadPage({ reset: false })}
+              className='my-1 w-full cursor-pointer rounded border border-gray-200 bg-gray-50 py-1 text-[12px]'
+            >
+              더 보기
+            </button>
           )}
         </div>
 
