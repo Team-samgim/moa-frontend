@@ -62,3 +62,8 @@ export const exportGrid = async (payload, signal) => {
   const { data } = await axiosInstance.post('/exports/grid', payload, { signal })
   return data
 }
+
+export const fetchGridBySearchSpec = async (payload) => {
+  const { data } = await axiosInstance.post('/grid/search', payload)
+  return data // { layer, columns:[{name,type,labelKo}], rows:[...] }
+}

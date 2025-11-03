@@ -1,48 +1,51 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
-
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { fetchGridBySearchSpec } from '@/api/grid'
+import DataGrid from '@/components/features/grid/DataGrid'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
 import LayerBar from '@/components/features/search/LayerBar'
 import QueryPreview from '@/components/features/search/QueryPreview'
 import SelectedConditions from '@/components/features/search/SelectedConditions'
 import TimePresetBar from '@/components/features/search/TimePresetBar'
-import { useSearchMeta, useExecuteSearch } from '@/hooks/queries/useSearch'
+import { useSearchMeta } from '@/hooks/queries/useSearch'
 import { buildSearchPayload } from '@/utils/searchPayload'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const defaultValuesFor = (arity) =>
-  arity === 0 ? [] : arity === 1 ? [''] : arity === 2 ? ['', ''] : [] // -1은 태그 리스트
+  arity === 0 ? [] : arity === 1 ? [''] : arity === 2 ? ['', ''] : []
 
 const SearchPage = () => {
-  // 페이지 로컬 상태
   const [layer, setLayer] = useState('HTTP_PAGE')
   const [fieldFilter, setFieldFilter] = useState('')
-  const [conditions, setConditions] = useState([]) // [{id, join, fieldKey, dataType, operator, values}]
+  const [conditions, setConditions] = useState([])
   const [globalNot, setGlobalNot] = useState(false)
   const [timePreset, setTimePreset] = useState('1H')
-  const [setResults] = useState([])
-  const [viewKeys, setViewKeys] = useState([]) // 조회(표시) 컬럼 전용
+  const [viewKeys, setViewKeys] = useState([])
+  const [gridCols, setGridCols] = useState([])
+  const [gridRows, setGridRows] = useState(null) // 검색 결과
+  const [hasSearched, setHasSearched] = useState(false) // 게이트
+
+  const gridRef = useRef(null)
 
   useEffect(() => {
+    // 레이어 바뀌면 다시 검색해야 보이도록 초기화
     setConditions([])
     setViewKeys([])
     setFieldFilter('')
+    setGridRows(null)
+    setHasSearched(false)
   }, [layer])
 
-  // 메타: 훅으로 1회 캐시 (재호출 방지)
   const { data: meta, isLoading, error } = useSearchMeta({ layer })
   const fields = useMemo(() => meta?.fields ?? [], [meta])
-
   const selectedKeys = useMemo(() => new Set(conditions.map((c) => c.fieldKey)), [conditions])
 
-  // 파생
   const filteredFields = useMemo(() => {
     const q = fieldFilter.trim().toLowerCase()
     if (!q) return fields
     return fields.filter((f) => f.key.toLowerCase().includes(q))
   }, [fields, fieldFilter])
 
-  // 필드별 연산자 목록
   const operatorsFor = useCallback(
     (fieldKey) => {
       const f = fields.find((x) => x.key === fieldKey)
@@ -51,7 +54,6 @@ const SearchPage = () => {
     [fields],
   )
 
-  // 조건 추가/변경/삭제
   const addConditionFromField = (f) => {
     if (conditions.some((c) => c.fieldKey === f.key)) return
     const ops = operatorsFor(f.key)
@@ -76,7 +78,6 @@ const SearchPage = () => {
     updateCondition(row.id, { operator: opCode, values: defaultValuesFor(op?.valueArity ?? 1) })
   }
 
-  // 프리뷰 칩
   const queryChips = useMemo(() => {
     const chips = []
     conditions.forEach((c, idx) => {
@@ -94,81 +95,115 @@ const SearchPage = () => {
     return chips
   }, [conditions, operatorsFor])
 
-  // 검색 실행 훅
-  const exec = useExecuteSearch({
-    onSuccess: (data) => {
-      const rows = Array.isArray(data?.rows)
-        ? data.rows
-        : Array.isArray(data)
-          ? data
-          : (data?.list ?? [])
-      setResults(rows)
-    },
-    onError: () => alert('검색 중 오류가 발생했습니다.'),
-  })
+  // const exec = useExecuteSearch({
+  //   onSuccess: (data) => {
+  //     const rows = Array.isArray(data?.rows)
+  //       ? data.rows
+  //       : Array.isArray(data)
+  //         ? data
+  //         : (data?.list ?? [])
+  //     setGridRows(rows)
+  //     setHasSearched(true) // ✅ 이제 그리드 렌더
+  //     // 그리드로 스크롤 이동(옵션)
+  //     setTimeout(() => {
+  //       document.getElementById('result-grid-anchor')?.scrollIntoView({ behavior: 'smooth' })
+  //     }, 0)
+  //   },
+  //   onError: () => alert('검색 중 오류가 발생했습니다.'),
+  // })
+
+  const onClickSearch = async () => {
+    const payload = buildSearchPayload({
+      layer,
+      conditions,
+      timePreset,
+      globalNot,
+      fields,
+    })
+    // ✅ /api/grid/search 호출
+    const res = await fetchGridBySearchSpec(payload)
+    setGridCols(res?.columns ?? [])
+    setGridRows(res?.rows ?? [])
+    setHasSearched(true)
+  }
 
   return (
-    <div className='p-6 max-w-[1200px] mx-auto gap-3 flex flex-col'>
-      <TimePresetBar
-        value={timePreset}
-        onChange={setTimePreset}
-        onOpenCustom={() => alert('직접설정 TBD')}
-      />
-      <LayerBar
-        active={layer}
-        onChange={(opt) => {
-          setLayer(opt.key)
-        }}
-      />
-      <FieldPicker fields={fields} selected={viewKeys} onChange={setViewKeys} />
-      <div className='grid grid-cols-3 gap-3'>
-        <div className='col-span-1'>
-          <FieldList
-            loading={isLoading}
-            error={error ? '메타 로드 실패' : null}
-            fields={filteredFields}
-            filter={fieldFilter}
-            onFilter={setFieldFilter}
-            selectedKeys={selectedKeys}
-            onToggle={(field, checked) =>
-              checked ? addConditionFromField(field) : removeByFieldKey(field.key)
-            }
-          />
+    <div className='p-5 flex flex-col gap-4'>
+      {/* 검색 영역 */}
+      <div className='p-6 max-w-[1200px] mx-auto gap-3 flex flex-col'>
+        <TimePresetBar
+          value={timePreset}
+          onChange={setTimePreset}
+          onOpenCustom={() => alert('직접설정 TBD')}
+        />
+        <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
+        <FieldPicker fields={fields} selected={viewKeys} onChange={setViewKeys} />
+        <div className='grid grid-cols-3 gap-3'>
+          <div className='col-span-1'>
+            <FieldList
+              loading={isLoading}
+              error={error ? '메타 로드 실패' : null}
+              fields={filteredFields}
+              filter={fieldFilter}
+              onFilter={setFieldFilter}
+              selectedKeys={selectedKeys}
+              onToggle={(field, checked) =>
+                checked ? addConditionFromField(field) : removeByFieldKey(field.key)
+              }
+            />
+          </div>
+          <div className='col-span-2'>
+            <SelectedConditions
+              conditions={conditions}
+              operatorsFor={operatorsFor}
+              updateCondition={updateCondition}
+              removeByFieldKey={removeByFieldKey}
+              onChangeOperator={onChangeOperator}
+            />
+          </div>
         </div>
 
-        <div className='col-span-2'>
-          <SelectedConditions
-            conditions={conditions}
-            operatorsFor={operatorsFor}
-            updateCondition={updateCondition}
-            removeByFieldKey={removeByFieldKey}
-            onChangeOperator={onChangeOperator}
-          />
+        <QueryPreview
+          chips={queryChips}
+          globalNot={globalNot}
+          onToggleNot={() => setGlobalNot((v) => !v)}
+        />
+
+        <div className='flex justify-center'>
+          <button
+            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE]'
+            onClick={onClickSearch}
+          >
+            검색 하기
+          </button>
         </div>
       </div>
-      <QueryPreview
-        chips={queryChips}
-        globalNot={globalNot}
-        onToggleNot={() => setGlobalNot((v) => !v)}
-      />
-      <div className='flex justify-center'>
-        <button
-          className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE]'
-          onClick={() => {
-            const payload = buildSearchPayload({
-              conditions,
-              timePreset,
-              globalNot,
-              fields,
-              rows: viewKeys,
-            })
-            exec.mutate(payload)
-          }}
-        >
-          검색 하기
-        </button>
-      </div>
+
+      {/* 결과 앵커 */}
+      <div id='result-grid-anchor' />
+
+      {/* ✅ 검색 전: 아무 것도 렌더링하지 않음 */}
+      {hasSearched && (
+        <div className='max-w-[1200px] mx-auto w-full px-6'>
+          {Array.isArray(gridRows) && gridRows.length > 0 ? (
+            <DataGrid
+              ref={gridRef}
+              layer={layer}
+              columns={gridCols} // ✅ 서버가 준 컬럼
+              rows={gridRows} // ✅ 서버가 준 행
+              viewKeys={viewKeys}
+              height='55vh'
+              className='compact'
+            />
+          ) : (
+            <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
+              조건에 맞는 결과가 없습니다.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
+
 export default SearchPage
