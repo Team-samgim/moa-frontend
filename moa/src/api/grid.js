@@ -23,11 +23,30 @@ export const fetchRows = async ({
   return data
 }
 
-export const fetchFilterValues = async ({ layer, field, filterModel }) => {
+export const fetchFilterValues = async ({
+  layer,
+  field,
+  filterModel,
+  search = '',
+  offset = 0,
+  limit = 200,
+  signal,
+  includeSelf = false,
+}) => {
   const { data } = await axiosInstance.get('/filtering', {
-    params: { layer, field, filterModel: JSON.stringify(filterModel || {}), __ts: Date.now() },
+    params: {
+      layer,
+      field,
+      filterModel: JSON.stringify(filterModel || {}),
+      search,
+      offset,
+      limit,
+      includeSelf,
+      __ts: Date.now(),
+    },
+    signal,
   })
-  return data?.values || []
+  return data
 }
 
 export const fetchAggregates = async ({ layer, filterModel, metrics }) => {
