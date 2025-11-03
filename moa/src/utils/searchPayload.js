@@ -82,7 +82,6 @@ export const buildSearchPayload = ({ conditions, timePreset, globalNot, fields }
 
   return {
     layer: 'HTTP_PAGE',
-    source: 'page_sample',
     time: { field: 'ts_server', fromEpoch, toEpoch, inclusive: true },
     not: globalNot,
     conditions: cleaned,
