@@ -51,5 +51,8 @@ export const usePivotStore = create((set) => ({
 
   setValues: (values) => set(() => ({ values })),
 
-  setFilters: (filters) => set(() => ({ filters })),
+  setFilters: (next) =>
+    set((s) => ({
+      filters: typeof next === 'function' ? next(s.filters) : next,
+    })),
 }))

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { fetchPivotFields, runPivotQuery } from '@/api/pivot'
+import { fetchPivotFields, fetchValues, runPivotQuery } from '@/api/pivot'
 import { usePivotStore } from '@/stores/pivotStore'
 
 export function usePivotFields(options = {}) {
@@ -17,5 +17,40 @@ export function usePivotQuery(options = {}) {
   return useMutation({
     mutationFn: (pivotConfigPayload) => runPivotQuery(pivotConfigPayload),
     ...options,
+  })
+}
+
+const stableKey = (obj) => JSON.stringify(obj ?? null)
+
+export function useDistinctValues({
+  layer,
+  field,
+  timeRange,
+  customRange,
+  filters,
+  order = 'asc',
+  enabled = true,
+}) {
+  return useQuery({
+    queryKey: [
+      'pivot-distinct',
+      layer,
+      field,
+      order,
+      stableKey(timeRange),
+      stableKey(customRange),
+      stableKey(filters),
+    ],
+    queryFn: () =>
+      fetchValues({
+        layer,
+        field,
+        timeRange,
+        customRange,
+        filters,
+        order,
+      }),
+    enabled: !!layer && !!field && enabled,
+    staleTime: 30_000,
   })
 }

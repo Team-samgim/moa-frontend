@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import {
@@ -11,6 +11,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import DeleteIcon from '@/assets/icons/delete.svg?react'
+import FilterIcon from '@/assets/icons/filter.svg?react'
 import ResetIcon from '@/assets/icons/reset.svg?react'
 import RowIcon from '@/assets/icons/row.svg?react'
 import SettingIcon from '@/assets/icons/setting.svg?react'
@@ -18,6 +19,7 @@ import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
 
 import ColumnSelectModal from '@/components/features/pivot/ColumnSelectModal'
+import FieldFilterModal from '@/components/features/pivot/FieldFilterModal'
 import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
 
 import PivotResultTable from '@/components/features/pivot/PivotResultTable'
@@ -37,7 +39,7 @@ const TIME_PRESETS = [
   { label: '1주일', value: '1w' },
 ]
 
-const SortableRowItem = ({ item, onRemove }) => {
+const SortableRowItem = ({ item, onFilter = () => {} }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: item.field,
   })
@@ -63,17 +65,16 @@ const SortableRowItem = ({ item, onRemove }) => {
         </button>
         {item.field}
       </span>
-
       <div className='flex items-center gap-2 text-gray-400'>
-        <button className='p-1 hover:text-red-500' onClick={() => onRemove(item.field)}>
-          <DeleteIcon className='h-4 w-4' />
+        <button className='p-1 hover:text-red-500' onClick={() => onFilter(item.field)}>
+          <FilterIcon className='h-4 w-4 text-[#464646]' />
         </button>
       </div>
     </div>
   )
 }
 
-const SortableValueItem = ({ item, onRemove }) => {
+const SortableValueItem = ({ item, onFilter = () => {} }) => {
   const sortableId = item.field + '::' + item.agg
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
@@ -100,17 +101,15 @@ const SortableValueItem = ({ item, onRemove }) => {
           >
             <SideKickIcon className='h-4 w-4 text-gray-500' />
           </button>
-
           {item.alias ?? item.field}
         </span>
         <span className='pl-6 text-[11px] text-gray-500'>
           {item.agg?.toUpperCase()} • {item.field}
         </span>
       </div>
-
       <div className='flex items-center gap-2 text-gray-400'>
-        <button className='p-1 hover:text-red-500' onClick={() => onRemove(item.field, item.agg)}>
-          <DeleteIcon className='h-4 w-4' />
+        <button className='p-1 hover:text-red-500' onClick={() => onFilter(item.field)}>
+          <FilterIcon className='h-4 w-4 text-[#464646]' />
         </button>
       </div>
     </div>
@@ -121,27 +120,69 @@ const PivotPage = () => {
   const {
     layer,
     timeRange,
+    customRange,
     column,
     rows,
     values,
+    filters,
     setLayer,
     setTimePreset,
     setColumnField,
     setRows,
     setValues,
+    setFilters,
   } = usePivotStore()
 
-  const { isOpen, mode, openModal, closeModal, draftRows, draftColumn, draftValues } =
-    usePivotModalStore()
+  const [filterModal, setFilterModal] = useState({
+    open: false,
+    field: null,
+  })
 
   const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
   const runQueryNow = useCallback(() => {
     const cfg = usePivotStore.getState()
     executeQuery(cfg)
   }, [executeQuery])
+
+  const openFilterForField = useCallback(
+    (fieldName) => {
+      const valueAliases = values?.length
+        ? values.map((v) => v.alias ?? `${v.agg?.toUpperCase() || ''}: ${v.field}`)
+        : ['Values 값들']
+
+      setFilterModal({ open: true, field: fieldName, valueAliases })
+    },
+    [values],
+  )
+
+  const closeFilter = useCallback(() => setFilterModal((m) => ({ ...m, open: false })), [])
+  const applyFilter = useCallback(
+    (payload) => {
+      // payload = { field, selected: string[], order, topN }
+      setFilters((prev) => {
+        const others = (prev || []).filter((f) => f.field !== payload.field)
+        return [
+          ...others,
+          {
+            field: payload.field,
+            op: 'IN',
+            value: payload.selected,
+            topN: payload.topN,
+            order: payload.order,
+          },
+        ]
+      })
+      closeFilter()
+      runQueryNow()
+    },
+    [setFilters, closeFilter, runQueryNow],
+  )
+
+  const { isOpen, mode, openModal, closeModal, draftRows, draftColumn, draftValues } =
+    usePivotModalStore()
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
   const handleRemoveRowField = useCallback(
     (fieldName) => {
@@ -152,22 +193,9 @@ const PivotPage = () => {
     [rows, setRows, runQueryNow],
   )
 
-  const handleRemoveColumn = useCallback(() => {
-    setColumnField(null)
-    runQueryNow()
-  }, [setColumnField, runQueryNow])
-
-  const handleRemoveValueField = useCallback(
-    (fieldName, agg) => {
-      const newValues = values.filter((v) => !(v.field === fieldName && v.agg === agg))
-      setValues(newValues)
-      runQueryNow()
-    },
-    [values, setValues, runQueryNow],
-  )
-
   const applyRows = useCallback(
     (newRows) => {
+      console.log('applyRows called with:', newRows)
       setRows(newRows)
       closeModal()
       runQueryNow()
@@ -259,34 +287,20 @@ const PivotPage = () => {
     [values, setValues, runQueryNow],
   )
 
-  const RenderSortableRows = ({ rows, sensors, handleDragEndRows, handleRemoveRowField }) => {
-    return (
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEndRows}
-      >
-        <SortableContext items={rows.map((r) => r.field)} strategy={verticalListSortingStrategy}>
-          {rows.length > 0 ? (
-            rows.map((r) => (
-              <SortableRowItem key={r.field} item={r} onRemove={handleRemoveRowField} />
-            ))
-          ) : (
-            <div className='px-3 py-6 text-center text-xs text-gray-400'>행을 선택하세요</div>
-          )}
-        </SortableContext>
-      </DndContext>
-    )
-  }
+  const RenderSortableRows = ({ rows, sensors, handleDragEndRows, onFilterRow }) => (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndRows}>
+      <SortableContext items={rows.map((r) => r.field)} strategy={verticalListSortingStrategy}>
+        {rows.length > 0 ? (
+          rows.map((r) => <SortableRowItem key={r.field} item={r} onFilter={onFilterRow} />)
+        ) : (
+          <div className='px-3 py-6 text-center text-xs text-gray-400'>행을 선택하세요</div>
+        )}
+      </SortableContext>
+    </DndContext>
+  )
 
-  const RenderSortableValues = ({
-    values,
-    sensors,
-    handleDragEndValues,
-    handleRemoveValueField,
-  }) => {
+  const RenderSortableValues = ({ values, sensors, handleDragEndValues, onFilterValue }) => {
     const getId = (v) => v.field + '::' + v.agg
-
     return (
       <DndContext
         sensors={sensors}
@@ -296,7 +310,7 @@ const PivotPage = () => {
         <SortableContext items={values.map((v) => getId(v))} strategy={verticalListSortingStrategy}>
           {values.length > 0 ? (
             values.map((v) => (
-              <SortableValueItem key={getId(v)} item={v} onRemove={handleRemoveValueField} />
+              <SortableValueItem key={getId(v)} item={v} onFilter={onFilterValue} />
             ))
           ) : (
             <div className='px-3 py-6 text-center text-xs text-gray-400'>값을 선택하세요</div>
@@ -313,6 +327,12 @@ const PivotPage = () => {
     },
     [setTimePreset, runQueryNow],
   )
+
+  const currentFilterForModal = filters.find((f) => f.field === filterModal.field && f.op === 'IN')
+
+  const selectedValuesForModal = Array.isArray(currentFilterForModal?.value)
+    ? currentFilterForModal.value
+    : undefined
 
   return (
     <>
@@ -435,9 +455,9 @@ const PivotPage = () => {
 
                       <button
                         className='p-1 text-gray-400 hover:text-red-500'
-                        onClick={handleRemoveColumn}
+                        onClick={() => openFilterForField(column.field)}
                       >
-                        <DeleteIcon className='h-4 w-4' />
+                        <FilterIcon className='h-4 w-4 text-[#464646]' />
                       </button>
                     </div>
                   ) : (
@@ -466,7 +486,8 @@ const PivotPage = () => {
                     rows={rows}
                     sensors={sensors}
                     handleDragEndRows={handleDragEndRows}
-                    handleRemoveRowField={handleRemoveRowField}
+                    handleRemoveRowField={handleRemoveRowField} // (원하면 삭제 버튼도 유지)
+                    onFilterRow={openFilterForField}
                   />
                 </div>
               </div>
@@ -492,7 +513,7 @@ const PivotPage = () => {
                     values={values}
                     sensors={sensors}
                     handleDragEndValues={handleDragEndValues}
-                    handleRemoveValueField={handleRemoveValueField}
+                    onFilterValue={openFilterForField}
                   />
                 </div>
               </div>
@@ -560,6 +581,20 @@ const PivotPage = () => {
           }))}
           onApplyValues={(newVals /* [{field,agg,alias}] */) => applyValues(newVals)}
           onClose={closeModal}
+        />
+      )}
+
+      {filterModal.open && (
+        <FieldFilterModal
+          layer={layer}
+          timeRange={timeRange}
+          customRange={customRange}
+          filters={filters}
+          fieldName={filterModal.field}
+          valueAliases={filterModal.valueAliases}
+          selectedValues={selectedValuesForModal}
+          onApply={applyFilter}
+          onClose={closeFilter}
         />
       )}
     </>
