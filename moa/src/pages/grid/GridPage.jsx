@@ -19,6 +19,7 @@ const GridPage = () => {
   const [ready, setReady] = useState(false)
   const [filterResetKey, setFilterResetKey] = useState(0)
   const [currentLayer] = useState('ethernet')
+  const [gridApis, setGridApis] = useState(null)
 
   const gridRef = useRef(null)
   const navigate = useNavigate()
@@ -88,6 +89,7 @@ const GridPage = () => {
   // 데이터소스 등록
   const onGridReady = (params) => {
     params.api.setGridOption('datasource', datasource)
+    setGridApis({ api: params.api, columnApi: params.columnApi }) // columnApi 없어도 위에서 폴백 처리함
   }
 
   // 필터 변경 시 캐시 리프레시
@@ -150,8 +152,13 @@ const GridPage = () => {
 
   return (
     <div className='p-5'>
-      <GridToolbar currentLayer={currentLayer} onReset={resetFilters} onPivot={goToPivotPage} />
-
+      <GridToolbar
+        currentLayer={currentLayer}
+        onReset={resetFilters}
+        onPivot={goToPivotPage}
+        gridApis={gridApis}
+        getActiveFilters={gridContext.getActiveFilters}
+      />
       {ready ? (
         <div className='ag-theme-quartz h-[80vh] w-full'>
           <AgGridReact

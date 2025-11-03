@@ -38,3 +38,8 @@ export const fetchAggregates = async ({ layer, filterModel, metrics }) => {
   })
   return data // { aggregates: { [field]: {...} } }
 }
+
+export const exportGrid = async (payload, signal) => {
+  const { data } = await axiosInstance.post('/exports/grid', payload, { signal })
+  return data
+}
