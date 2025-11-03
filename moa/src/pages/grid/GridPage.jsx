@@ -11,6 +11,7 @@ import useInfiniteDatasource from '@/hooks/grid/useInfiniteDatasource'
 import GridToolbar from '@/pages/grid/GridToolbar'
 import { formatUtcToSeoul } from '@/utils/dateFormat'
 import { makeFilterModel } from '@/utils/makeFilterModel'
+import { pickFormatterByField } from '@/utils/numFormat'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -65,12 +66,14 @@ const GridPage = () => {
           },
           ...data.columns.map((col, idx) => {
             const isDate = col.type === 'date'
+            const isNumber = col.type === 'number'
+            const vf = isNumber ? pickFormatterByField(col.name) : null
             return {
               field: col.name,
               headerName: col.labelKo || col.name,
               colId: `${col.name}-${col.type}-${idx}`,
               sortable: true,
-              filter: CustomCheckboxFilter, // ✅ 커스텀 필터 그대로 사용
+              filter: CustomCheckboxFilter,
               filterParams: {
                 layer: currentLayer,
                 type: col.type,
@@ -79,13 +82,19 @@ const GridPage = () => {
               },
               resizable: true,
               floatingFilter: false,
+              // 날짜 포맷
               ...(isDate && {
                 valueFormatter: ({ value }) => formatUtcToSeoul(value),
+              }),
+
+              // 숫자 포맷: 화면 표시만 바꾸고(정렬/필터/집계는 원본 유지)
+              ...(isNumber && {
+                valueFormatter: ({ value }) => (value === null ? '' : vf(Number(value))),
+                cellClass: 'ag-right-aligned-cell',
               }),
             }
           }),
         ]
-
         setColumns(colDefs)
         setReady(true)
       } catch (e) {
