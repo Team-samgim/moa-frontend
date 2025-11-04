@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
@@ -23,7 +23,7 @@ const GridPage = () => {
   const [gridApis, setGridApis] = useState(null)
   const filterOpenSubsRef = useRef(new Map())
 
-  const subscribeFilterMenuOpen = (field, cb) => {
+  const subscribeFilterMenuOpen = useCallback((field, cb) => {
     const m = filterOpenSubsRef.current
     const list = m.get(field) || []
     m.set(field, [...list, cb])
@@ -34,7 +34,7 @@ const GridPage = () => {
         cur.filter((fn) => fn !== cb),
       )
     }
-  }
+  }, [])
 
   const gridRef = useRef(null)
   const navigate = useNavigate()
@@ -77,7 +77,7 @@ const GridPage = () => {
               filterParams: {
                 layer: currentLayer,
                 type: col.type,
-                pageLimit: 200,
+                pageLimit: 50,
                 debounceMs: 250,
               },
               resizable: true,
@@ -112,6 +112,7 @@ const GridPage = () => {
       getApi: () => gridRef.current?.api,
       activeFilters,
       subscribeFilterMenuOpen,
+      refreshInfiniteCache: () => gridRef.current?.api?.refreshInfiniteCache?.(),
     }),
     [activeFilters, updateFilter, subscribeFilterMenuOpen],
   )
@@ -206,7 +207,7 @@ const GridPage = () => {
             columnDefs={columns}
             defaultColDef={defaultColDef}
             rowModelType='infinite'
-            cacheBlockSize={100}
+            cacheBlockSize={50}
             animateRows={true}
             suppressMaintainUnsortedOrder={true}
             onGridReady={onGridReady}

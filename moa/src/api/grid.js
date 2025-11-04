@@ -28,24 +28,27 @@ export const fetchFilterValues = async ({
   field,
   filterModel,
   search = '',
+  after = null,
   offset = 0,
-  limit = 200,
+  limit = 50,
   signal,
   includeSelf = false,
 }) => {
-  const { data } = await axiosInstance.get('/filtering', {
-    params: {
-      layer,
-      field,
-      filterModel: JSON.stringify(filterModel || {}),
-      search,
-      offset,
-      limit,
-      includeSelf,
-      __ts: Date.now(),
-    },
-    signal,
-  })
+  const params = {
+    layer,
+    field,
+    filterModel: JSON.stringify(filterModel || {}),
+    search,
+    limit,
+    includeSelf,
+    __ts: Date.now(),
+  }
+
+  // ✅ 커서 우선
+  if (after !== null) params.after = after
+  else params.offset = offset
+
+  const { data } = await axiosInstance.get('/filtering', { params, signal })
   return data
 }
 

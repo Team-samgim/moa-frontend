@@ -3,13 +3,7 @@ import { fetchFilterValues as apiFetchFilterValues } from '@/api/grid'
 import makeSignature from '@/utils/makeSignature'
 import pickWithout from '@/utils/pickWithout'
 
-export default function useFilterData({
-  layer,
-  field,
-  context,
-  pageLimit = 200,
-  debounceMs = 250,
-}) {
+export default function useFilterData({ layer, field, context, pageLimit = 50, debounceMs = 250 }) {
   const [values, setValues] = useState([])
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -18,6 +12,8 @@ export default function useFilterData({
 
   const inflightRef = useRef(null)
   const lastSigRef = useRef('')
+  // ✅ nextCursor 우선, 레거시 nextOffset 폴백
+  const nextCursorRef = useRef(null)
   const nextOffsetRef = useRef(0)
   const restoredRef = useRef(false)
   const searchTimer = useRef(0)
@@ -44,23 +40,33 @@ export default function useFilterData({
     try {
       setLoading(true)
       setError('')
-      const offset = reset ? 0 : (nextOffsetRef.current ?? 0)
 
       const data = await apiFetchFilterValues({
         layer,
         field,
         filterModel: af,
         search,
-        offset,
         limit: pageLimit,
         signal: controller.signal,
         includeSelf,
+        // ✅ 커서 우선
+        after: reset ? null : nextCursorRef.current,
+        // ↘︎ 레거시 폴백
+        offset: reset ? 0 : (nextOffsetRef.current ?? 0),
       })
 
       const page = data?.values || []
       setValues(reset ? page : (prev) => [...prev, ...page])
-      setHasMore(!!data?.hasMore)
-      nextOffsetRef.current = data?.nextOffset ?? null
+
+      // ✅ 커서/오프셋 둘 다 지원
+      const nextCursor = data?.nextCursor ?? null
+      const nextOffset = data?.nextOffset ?? null
+      const more =
+        (typeof nextCursor === 'string' && nextCursor.length > 0) || typeof nextOffset === 'number'
+
+      nextCursorRef.current = nextCursor
+      nextOffsetRef.current = nextOffset
+      setHasMore(!!more)
 
       if (reset) lastSigRef.current = sig
     } catch (e) {
@@ -73,7 +79,10 @@ export default function useFilterData({
   }
 
   const reloadAll = (afOverride) => {
+    // ✅ 초기화
+    nextCursorRef.current = null
     nextOffsetRef.current = 0
+    restoredRef.current = false
     setValues([])
     setHasMore(false)
     return load({ reset: true, afOverride })
@@ -81,7 +90,7 @@ export default function useFilterData({
 
   const loadMore = () => load({ reset: false })
 
-  // 검색 디바운스
+  // ✅ 검색 디바운스
   const onChangeSearch = (v) => {
     setSearch(v ?? '')
     clearTimeout(searchTimer.current)
