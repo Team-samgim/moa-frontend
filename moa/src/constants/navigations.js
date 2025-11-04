@@ -8,6 +8,7 @@ const loggedOutNavigations = {
 const userNavigations = {
   DASHBOARD: '/dashboard',
   SEARCH: '/search',
+  GRID: '/grid',
   PIVOT: '/pivot',
   PRESET: '/preset',
   FILE_MANAGEMENT: '/file_management',

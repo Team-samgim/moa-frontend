@@ -70,7 +70,7 @@ const Router = () => {
             <Route path={userNavigations.PIVOT} element={<PivotPage />} />
             <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />
             <Route path={userNavigations.PRESET} element={<PresetPage />} />
-            <Route path='grid' element={<GridPage />} />
+            <Route path={userNavigations.GRID} element={<GridPage />} />
           </Route>
         </Route>
       </Routes>
