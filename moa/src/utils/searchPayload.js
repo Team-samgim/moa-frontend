@@ -26,12 +26,22 @@ export const buildSearchPayload = ({
   viewKeys,
   conditions,
   timePreset,
+  customTimeRange, // { from: Date, to: Date, fromEpoch?: number, toEpoch?: number }
   globalNot,
   fields,
 }) => {
-  const now = Date.now()
-  const toEpoch = Math.floor(now / 1000)
-  const fromEpoch = Math.floor((now - presetToMs(timePreset)) / 1000)
+  let fromEpoch, toEpoch
+
+  if (customTimeRange) {
+    // ✅ epoch가 있으면 그대로 사용, 없으면 Date 객체에서 변환
+    fromEpoch = customTimeRange.fromEpoch ?? Math.floor(customTimeRange.from.getTime() / 1000)
+    toEpoch = customTimeRange.toEpoch ?? Math.floor(customTimeRange.to.getTime() / 1000)
+  } else {
+    // ✅ 프리셋 사용
+    const now = Date.now()
+    toEpoch = Math.floor(now / 1000)
+    fromEpoch = Math.floor((now - presetToMs(timePreset)) / 1000)
+  }
 
   const arityOf = (c) => {
     const f = fields.find((x) => x.key === c.fieldKey)
@@ -91,13 +101,21 @@ export const buildSearchPayload = ({
     })
     .filter(Boolean)
 
-  // columns = FieldPicker에서 선택한 값
-  const columns = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
+  // ✅ isInfo=true인 필드들을 자동으로 추가
+  const infoKeys = fields.filter((f) => f.isInfo).map((f) => f.key)
+
+  // ✅ viewKeys에서 isInfo=false인 필드들만 추출
+  const userSelectedKeys = Array.isArray(viewKeys)
+    ? viewKeys.filter(Boolean).filter((k) => !infoKeys.includes(k))
+    : []
+
+  // ✅ infoKeys를 앞에, 사용자 선택을 뒤에 배치 (중복 제거)
+  const columns = [...infoKeys, ...userSelectedKeys]
 
   return {
     layer,
     columns,
-    time: { field: 'ts_server', fromEpoch, toEpoch },
+    time: { field: 'ts_server_nsec', fromEpoch, toEpoch },
     not: globalNot,
     conditions: cleaned,
   }
