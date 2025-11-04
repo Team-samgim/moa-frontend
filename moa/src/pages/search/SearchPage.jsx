@@ -1,5 +1,8 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { fetchGridBySearchSpec } from '@/api/grid'
+import AggregatesPanel5 from '@/components/features/grid/AggregatesPanel'
+import CustomCheckboxFilter from '@/components/features/grid/CustomCheckboxFilter'
 import DataGrid from '@/components/features/grid/DataGrid'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
@@ -7,8 +10,17 @@ import LayerBar from '@/components/features/search/LayerBar'
 import QueryPreview from '@/components/features/search/QueryPreview'
 import SelectedConditions from '@/components/features/search/SelectedConditions'
 import TimePresetBar from '@/components/features/search/TimePresetBar'
+import useActiveFilters from '@/hooks/grid/useActiveFilters'
+import useAggregateQuery from '@/hooks/grid/useAggregateQuery'
+import useInfiniteSearchDatasource from '@/hooks/grid/useInfiniteDatasource'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
+import GridToolbar from '@/pages/grid/GridToolbar'
+import { formatUtcToSeoul } from '@/utils/dateFormat'
+import { makeFilterModel } from '@/utils/makeFilterModel'
+import { pickFormatterByField } from '@/utils/numFormat'
 import { buildSearchPayload } from '@/utils/searchPayload'
+
+ModuleRegistry.registerModules([AllCommunityModule])
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const defaultValuesFor = (arity) =>
@@ -21,9 +33,12 @@ const SearchPage = () => {
   const [globalNot, setGlobalNot] = useState(false)
   const [timePreset, setTimePreset] = useState('1H')
   const [viewKeys, setViewKeys] = useState([])
-  const [gridCols, setGridCols] = useState([])
-  const [gridRows, setGridRows] = useState(null) // 검색 결과
+
+  const [setGridRows] = useState(null) // 검색 결과
   const [hasSearched, setHasSearched] = useState(false) // 게이트
+  const [colDefs, setColDefs] = useState([])
+  const basePayloadRef = useRef(null)
+  const { activeFilters, activeFiltersRef, updateFilter, setActiveFilters } = useActiveFilters()
 
   const gridRef = useRef(null)
 
@@ -95,23 +110,6 @@ const SearchPage = () => {
     return chips
   }, [conditions, operatorsFor])
 
-  // const exec = useExecuteSearch({
-  //   onSuccess: (data) => {
-  //     const rows = Array.isArray(data?.rows)
-  //       ? data.rows
-  //       : Array.isArray(data)
-  //         ? data
-  //         : (data?.list ?? [])
-  //     setGridRows(rows)
-  //     setHasSearched(true) // ✅ 이제 그리드 렌더
-  //     // 그리드로 스크롤 이동(옵션)
-  //     setTimeout(() => {
-  //       document.getElementById('result-grid-anchor')?.scrollIntoView({ behavior: 'smooth' })
-  //     }, 0)
-  //   },
-  //   onError: () => alert('검색 중 오류가 발생했습니다.'),
-  // })
-
   const onClickSearch = async () => {
     const payload = buildSearchPayload({
       layer,
@@ -120,11 +118,106 @@ const SearchPage = () => {
       globalNot,
       fields,
     })
-    // ✅ /api/grid/search 호출
-    const res = await fetchGridBySearchSpec(payload)
-    setGridCols(res?.columns ?? [])
-    setGridRows(res?.rows ?? [])
+    basePayloadRef.current = payload
+    const head = await fetchGridBySearchSpec({ ...payload, paging: { offset: 0, limit: 0 } })
+    setColDefs(buildColDefs(head?.columns ?? []))
     setHasSearched(true)
+    setTimeout(() => gridRef.current?.api?.purgeInfiniteCache?.(), 0)
+  }
+
+  const datasource = useInfiniteSearchDatasource({
+    basePayloadRef,
+    activeFiltersRef,
+    pageSize: 50,
+  })
+
+  const buildColDefs = useCallback(
+    (serverCols = []) => [
+      {
+        headerName: 'No',
+        field: '__rowNo',
+        valueGetter: (p) => (p.node.rowPinned ? (p.data?.__label ?? '') : p.node.rowIndex + 1),
+        width: 80,
+        resizable: true,
+        filter: false,
+        cellStyle: { textAlign: 'center' },
+      },
+      ...serverCols.map((col, idx) => {
+        const isDate = col.type === 'date'
+        const isNumber = col.type === 'number'
+        const vf = isNumber ? pickFormatterByField(col.name) : null
+        return {
+          field: col.name,
+          headerName: col.labelKo || col.name,
+          colId: `${col.name}-${col.type}-${idx}`,
+          sortable: true,
+          filter: CustomCheckboxFilter,
+          filterParams: { layer, type: col.type, pageLimit: 50, debounceMs: 350 },
+          resizable: true,
+          floatingFilter: false,
+          ...(isDate && { valueFormatter: ({ value }) => formatUtcToSeoul(value) }),
+          ...(isNumber && {
+            valueFormatter: ({ value }) => (value === null ? '' : vf(Number(value))),
+            cellClass: 'ag-right-aligned-cell',
+          }),
+        }
+      }),
+    ],
+    [layer],
+  )
+
+  const filterOpenSubsRef = useRef(new Map())
+  const subscribeFilterMenuOpen = useCallback((field, cb) => {
+    const m = filterOpenSubsRef.current
+    const list = m.get(field) || []
+    m.set(field, [...list, cb])
+    return () => {
+      const cur = filterOpenSubsRef.current.get(field) || []
+      filterOpenSubsRef.current.set(
+        field,
+        cur.filter((fn) => fn !== cb),
+      )
+    }
+  }, [])
+
+  const onFilterOpened = (e) => {
+    const field = e?.column?.getColDef?.()?.field
+    if (!field) return
+    const subs = filterOpenSubsRef.current.get(field) || []
+    subs.forEach((fn) => typeof fn === 'function' && fn())
+  }
+
+  const gridContext = useMemo(
+    () => ({
+      updateFilter,
+      getActiveFilters: () => activeFiltersRef.current,
+      getApi: () => gridRef.current?.api,
+      activeFilters,
+      subscribeFilterMenuOpen,
+      refreshInfiniteCache: () => gridRef.current?.api?.refreshInfiniteCache?.(),
+    }),
+    [activeFilters, updateFilter, subscribeFilterMenuOpen],
+  )
+
+  // 필터 바뀌면 캐시 리프레시
+  useEffect(() => {
+    gridRef.current?.api?.refreshInfiniteCache?.()
+  }, [activeFilters])
+
+  const filterModelObj = useMemo(() => makeFilterModel(activeFilters), [activeFilters])
+  const { data: aggData, isFetching: aggLoading } = useAggregateQuery({
+    layer,
+    filterModel: filterModelObj,
+    columns: colDefs,
+  })
+
+  const resetFilters = () => {
+    const api = gridRef.current?.api
+    if (api) {
+      api.setFilterModel(null)
+      api.refreshInfiniteCache()
+    }
+    setActiveFilters({})
   }
 
   return (
@@ -185,21 +278,29 @@ const SearchPage = () => {
       {/* ✅ 검색 전: 아무 것도 렌더링하지 않음 */}
       {hasSearched && (
         <div className='max-w-[1200px] mx-auto w-full px-6'>
-          {Array.isArray(gridRows) && gridRows.length > 0 ? (
-            <DataGrid
-              ref={gridRef}
-              layer={layer}
-              columns={gridCols} // ✅ 서버가 준 컬럼
-              rows={gridRows} // ✅ 서버가 준 행
-              viewKeys={viewKeys}
-              height='55vh'
-              className='compact'
-            />
-          ) : (
-            <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
-              조건에 맞는 결과가 없습니다.
-            </div>
-          )}
+          <GridToolbar
+            currentLayer={layer}
+            onReset={resetFilters}
+            onPivot={() => {}}
+            gridApis={{ api: gridRef.current?.api, columnApi: gridRef.current?.columnApi }}
+            getActiveFilters={() => activeFilters}
+          />
+          <DataGrid
+            ref={gridRef}
+            layer={layer}
+            colDefs={colDefs} // 변환된 ag-grid 컬럼(defs) 사용
+            viewKeys={viewKeys}
+            height='70vh'
+            rowModelType='infinite'
+            datasource={datasource}
+            gridContext={gridContext}
+            onFilterOpened={onFilterOpened}
+          />
+          <AggregatesPanel5
+            columns={colDefs}
+            aggregates={aggData?.aggregates}
+            loading={aggLoading}
+          />
         </div>
       )}
     </div>
