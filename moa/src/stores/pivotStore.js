@@ -17,11 +17,14 @@ export const usePivotStore = create((set) => ({
   filters: [],
 
   setLayer: (layer) =>
-    // set((_state) => ({
     set(() => ({
       layer,
-      // TODO: 레이어 바뀌면 column/rows/values 초기화 규칙 적용 예정
+      column: null,
+      rows: [],
+      values: [],
+      filters: [],
     })),
+
   setTimePreset: (value) =>
     set(() => ({
       timeRange: {
