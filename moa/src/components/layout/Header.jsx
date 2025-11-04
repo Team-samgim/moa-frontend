@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
-import { loggedOutNavigations } from '@/constants/navigations'
+import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import { useAuthStore } from '@/stores/authStore'
 
 const navItems = [
-  { label: '대시보드', to: '/dashboard' },
-  { label: '검색', to: '/search' },
-  { label: '피벗 테이블', to: '/pivot' },
-  { label: '프리셋', to: '/' },
-  { label: '파일 관리', to: '/' },
+  { label: '대시보드', to: userNavigations.DASHBOARD },
+  { label: '검색', to: userNavigations.SEARCH },
+  { label: '피벗 테이블', to: userNavigations.PIVOT },
+  { label: '프리셋', to: userNavigations.PRESET },
+  { label: '파일 관리', to: userNavigations.FILE_MANAGEMENT },
 ]
 
 const Header = () => {

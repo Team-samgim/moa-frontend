@@ -9,6 +9,8 @@ const userNavigations = {
   DASHBOARD: '/dashboard',
   SEARCH: '/search',
   PIVOT: '/pivot',
+  PRESET: '/preset',
+  FILE_MANAGEMENT: '/file_management',
 }
 
 export { loggedOutNavigations, userNavigations }
