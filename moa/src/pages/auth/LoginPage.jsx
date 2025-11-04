@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
 import MsgRow from '@/components/common/MsgRow'
 import IdField from '@/components/features/auth/IdField'
@@ -13,8 +13,21 @@ import { isValidEmail } from '@/utils/validators'
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const [step, setStep] = useState('login')
+  const searchParams = new URLSearchParams(location.search)
+  const modeFromQuery = searchParams.get('mode') // 'signup' | 'login' | null
+
+  const [step, setStep] = useState(modeFromQuery === 'signup' ? 'signup' : 'login')
+
+  useEffect(() => {
+    if (modeFromQuery === 'signup') {
+      setStep('signup')
+    } else {
+      setStep('login')
+    }
+  }, [modeFromQuery])
+
   const translate = useMemo(
     () => (step === 'login' ? 'translateX(0%)' : 'translateX(-50%)'),
     [step],
@@ -45,8 +58,12 @@ const LoginPage = () => {
     })
   }
 
+  const handleLoginSubmit = (e) => {
+    e.preventDefault()
+    handleLogin()
+  }
+
   const id = useIdField() // { value, onChange, status, msg, runCheck }
-  // const email = useEmailField() // { value, onChange, status, msg, runCheck }
   const pw = usePasswordMatch() // { password, setPassword, password2, setPassword2, lenOk, mixOk, mismatch }
 
   const [email, setEmail] = useState('')
@@ -116,7 +133,7 @@ const LoginPage = () => {
     signupMutation.mutate(payload)
   }
 
-  /* ------------------ 라우팅 테스트 ------------------ */
+  /* TODO: 라우팅 테스트 페이지 추후 삭제 */
   const goToTestScreen = () => navigate(loggedOutNavigations.TEST)
   const goToTestScreen2 = () => navigate(loggedOutNavigations.TEST_2)
 
@@ -132,19 +149,21 @@ const LoginPage = () => {
           </button>
         </div>
 
+        {/* 슬라이드 영역 */}
         <div
           className='w-[200%] flex transition-transform duration-500 ease-out'
           style={{ transform: translate }}
         >
           {/* ------------------ 로그인 섹션 ------------------ */}
           <section className='w-1/2 flex'>
+            {/* 왼쪽: 로그인 폼 */}
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <div className='mx-auto w-full max-w-md'>
                 <div className='flex justify-center'>
                   <img src={logo} alt='moa logo' className='h-24 md:h-28 object-contain' />
                 </div>
 
-                <div className='mt-10 space-y-8'>
+                <form onSubmit={handleLoginSubmit} className='mt-10 space-y-8'>
                   <div>
                     <label className='block text-sm text-gray-700 mb-2'>아이디</label>
                     <input
@@ -167,11 +186,11 @@ const LoginPage = () => {
                   {loginError && <MsgRow type='error'>{loginError}</MsgRow>}
 
                   <button
-                    type='button'
-                    onClick={handleLogin}
+                    type='submit'
                     className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                    disabled={loginMutation.isLoading}
                   >
-                    로그인
+                    {loginMutation.isLoading ? '로그인 중...' : '로그인'}
                   </button>
 
                   <div className='flex justify-end gap-4 text-xs text-gray-500'>
@@ -179,10 +198,11 @@ const LoginPage = () => {
                     <span aria-hidden={true}>|</span>
                     <button type='button'>비밀번호 찾기</button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
 
+            {/* 오른쪽: 회원가입 CTA */}
             <div className='w-1/2 relative'>
               <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
@@ -203,6 +223,7 @@ const LoginPage = () => {
 
           {/* ------------------ 회원가입 섹션 ------------------ */}
           <section className='w-1/2 flex'>
+            {/* 왼쪽: 로그인으로 돌아가기 CTA */}
             <div className='w-1/2 relative'>
               <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
@@ -220,6 +241,7 @@ const LoginPage = () => {
               </div>
             </div>
 
+            {/* 오른쪽: 회원가입 폼 */}
             <div className='w-1/2 p-10 md:p-16 flex flex-col justify-center'>
               <form className='mx-auto w-full max-w-md space-y-7' onSubmit={handleJoinSubmit}>
                 {/* 아이디 */}
@@ -243,21 +265,6 @@ const LoginPage = () => {
                   onChange={pw.setPassword2}
                   original={pw.password}
                 />
-
-                {/* 이메일 */}
-                {/* <IdEmailField
-                  label='이메일'
-                  value={email.value}
-                  onChange={email.onChange}
-                  onClickCheck={email.runCheck}
-                  status={email.status}
-                  inlineMsg={email.msg}
-                  fieldError={fieldErrors.email}
-                  successText='사용할 수 있는 이메일입니다.'
-                  buttonLabelIdle='이메일 중복 확인'
-                  buttonLabelChecking='확인 중...'
-                  buttonLabelDone='확인 완료'
-                /> */}
 
                 {/* 이메일 */}
                 <div>
@@ -284,8 +291,9 @@ const LoginPage = () => {
                 <button
                   type='submit'
                   className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                  disabled={signupMutation.isLoading}
                 >
-                  회원가입
+                  {signupMutation.isLoading ? '가입 중...' : '회원가입'}
                 </button>
               </form>
             </div>

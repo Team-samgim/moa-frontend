@@ -1,26 +1,77 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import Layout from './Layout'
+import ProtectedRoute from './ProtedtedRoute'
+
+import { reissueApi } from '@/api/auth'
+import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import GridPage from '@/pages/grid/GridPage'
+import FileManagementPage from '@/pages/mypage/FileManagementPage'
+import PresetPage from '@/pages/mypage/PresetPage'
 import PivotPage from '@/pages/pivot/PivotPage'
 import SearchPage from '@/pages/search/SearchPage'
 import TestPage from '@/pages/test/TestPage'
 import TestPage2 from '@/pages/test/TestPage2'
+import { useAuthStore } from '@/stores/authStore'
+
+const AuthBootstrap = () => {
+  const navigate = useNavigate()
+  const { accessToken, refreshToken, setTokens, clearTokens } = useAuthStore()
+
+  useEffect(() => {
+    const run = async () => {
+      if (!accessToken && !refreshToken) {
+        clearTokens()
+        navigate(loggedOutNavigations.LOGIN, { replace: true })
+        return
+      }
+
+      try {
+        if (refreshToken) {
+          const { accessToken: newAccess, refreshToken: newRefresh } =
+            await reissueApi(refreshToken)
+
+          setTokens({
+            accessToken: newAccess,
+            refreshToken: newRefresh,
+          })
+        }
+
+        navigate(userNavigations.DASHBOARD, { replace: true })
+      } catch (e) {
+        console.error(e)
+        clearTokens()
+        navigate(loggedOutNavigations.LOGIN, { replace: true })
+      }
+    }
+
+    run()
+  }, [accessToken, refreshToken, clearTokens, navigate, setTokens])
+  return null
+}
 
 const Router = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path='/' element={<LoginPage />} />
-          <Route path='login' element={<LoginPage />} />
-          <Route path='dashboard' element={<DashboardPage />} />
-          <Route path='search' element={<SearchPage />} />
-          <Route path='pivot' element={<PivotPage />} />
-          <Route path='test' element={<TestPage />} />
-          <Route path='test2' element={<TestPage2 />} />
-          <Route path='grid' element={<GridPage />} />
+          {/* 비로그인 상태 */}
+          <Route path='/' element={<AuthBootstrap />} />
+          <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
+          <Route path={loggedOutNavigations.TEST} element={<TestPage />} />
+          <Route path={loggedOutNavigations.TEST_2} element={<TestPage2 />} />
+
+          {/* 로그인 상태: 보호 영역 */}
+          <Route element={<ProtectedRoute />}>
+            <Route path={userNavigations.DASHBOARD} element={<DashboardPage />} />
+            <Route path={userNavigations.SEARCH} element={<SearchPage />} />
+            <Route path={userNavigations.PIVOT} element={<PivotPage />} />
+            <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />
+            <Route path={userNavigations.PRESET} element={<PresetPage />} />
+            <Route path={userNavigations.GRID} element={<GridPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

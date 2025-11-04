@@ -1,5 +1,382 @@
+import { useCallback, useState } from 'react'
+
+import { arrayMove } from '@dnd-kit/sortable'
+import ColumnIcon from '@/assets/icons/column.svg?react'
+import FilterIcon from '@/assets/icons/filter.svg?react'
+import RowIcon from '@/assets/icons/row.svg?react'
+import SettingIcon from '@/assets/icons/setting.svg?react'
+import SideKickIcon from '@/assets/icons/side-kick.svg?react'
+import ValueIcon from '@/assets/icons/value.svg?react'
+
+import ColumnSelectModal from '@/components/features/pivot/ColumnSelectModal'
+import FieldFilterModal from '@/components/features/pivot/FieldFilterModal'
+import PivotConfigPanel from '@/components/features/pivot/PivotConfigPanel'
+import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
+import PivotResultTable from '@/components/features/pivot/PivotResultTable'
+import RowSelectModal from '@/components/features/pivot/RowSelectModal'
+import SortableRowsList from '@/components/features/pivot/SortableRowsList'
+import SortableValuesList from '@/components/features/pivot/SortableValuesList'
+import ValueSelectModal from '@/components/features/pivot/ValueSelectModal'
+
+import { usePivotQuery } from '@/hooks/queries/usePivot'
+import { usePivotModalStore } from '@/stores/pivotModalStore'
+import { usePivotStore } from '@/stores/pivotStore'
+import { buildTimePayload } from '@/utils/pivotTime'
+
 const PivotPage = () => {
-  return <h1>Pivot Page</h1>
+  const {
+    layer,
+    timeRange,
+    customRange,
+    column,
+    rows,
+    values,
+    filters,
+    setLayer,
+    setTimePreset,
+    setColumnField,
+    setRows,
+    setValues,
+    setFilters,
+  } = usePivotStore()
+
+  const [filterModal, setFilterModal] = useState({
+    open: false,
+    field: null,
+  })
+
+  const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
+
+  const runQueryNow = useCallback(() => {
+    const cfg = usePivotStore.getState()
+    const time = buildTimePayload(cfg.timeRange, cfg.customRange)
+
+    executeQuery({
+      layer: cfg.layer,
+      time,
+      column: cfg.column,
+      rows: cfg.rows,
+      values: cfg.values,
+      filters: cfg.filters,
+    })
+  }, [executeQuery])
+
+  const openFilterForField = useCallback(
+    (fieldName) => {
+      const valueAliases = values?.length
+        ? values.map((v) => v.alias ?? `${v.agg?.toUpperCase() || ''}: ${v.field}`)
+        : ['Values 값들']
+
+      setFilterModal({ open: true, field: fieldName, valueAliases })
+    },
+    [values],
+  )
+
+  const closeFilter = useCallback(() => setFilterModal((m) => ({ ...m, open: false })), [])
+
+  const applyFilter = useCallback(
+    (payload) => {
+      setFilters((prev) => {
+        const others = (prev || []).filter((f) => f.field !== payload.field)
+        return [
+          ...others,
+          {
+            field: payload.field,
+            op: 'IN',
+            value: payload.selected,
+            topN: payload.topN,
+            order: payload.order,
+          },
+        ]
+      })
+      closeFilter()
+      runQueryNow()
+    },
+    [setFilters, closeFilter, runQueryNow],
+  )
+
+  const { isOpen, mode, openModal, closeModal, draftRows, draftColumn, draftValues } =
+    usePivotModalStore()
+
+  const applyRows = useCallback(
+    (newRows) => {
+      setRows(newRows)
+      closeModal()
+      runQueryNow()
+    },
+    [setRows, closeModal, runQueryNow],
+  )
+
+  const applyColumn = useCallback(
+    (newCol) => {
+      if (newCol && newCol.field) {
+        setColumnField(newCol.field)
+      } else {
+        setColumnField(null)
+      }
+      closeModal()
+      runQueryNow()
+    },
+    [setColumnField, closeModal, runQueryNow],
+  )
+
+  const applyValues = useCallback(
+    (newValues) => {
+      setValues(newValues)
+      closeModal()
+      runQueryNow()
+    },
+    [setValues, closeModal, runQueryNow],
+  )
+
+  const openRowsModal = useCallback(() => {
+    openModal('rows', {
+      rows,
+      column,
+      values,
+    })
+  }, [openModal, rows, column, values])
+
+  const openColumnModal = useCallback(() => {
+    openModal('column', {
+      rows,
+      column,
+      values,
+    })
+  }, [openModal, rows, column, values])
+
+  const openValuesModal = useCallback(() => {
+    openModal('values', {
+      rows,
+      column,
+      values,
+    })
+  }, [openModal, rows, column, values])
+
+  const handleDragEndRows = useCallback(
+    (event) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      const oldIndex = rows.findIndex((r) => r.field === active.id)
+      const newIndex = rows.findIndex((r) => r.field === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const reordered = arrayMove(rows, oldIndex, newIndex)
+      setRows(reordered)
+      runQueryNow()
+    },
+    [rows, setRows, runQueryNow],
+  )
+
+  const handleDragEndValues = useCallback(
+    (event) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      const getId = (v) => v.field + '::' + v.agg
+
+      const oldIndex = values.findIndex((v) => getId(v) === active.id)
+      const newIndex = values.findIndex((v) => getId(v) === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const reordered = arrayMove(values, oldIndex, newIndex)
+      setValues(reordered)
+      runQueryNow()
+    },
+    [values, setValues, runQueryNow],
+  )
+
+  const handleSelectTimePreset = useCallback(
+    (value) => {
+      setTimePreset(value)
+      runQueryNow()
+    },
+    [setTimePreset, runQueryNow],
+  )
+
+  const currentFilterForModal = filters.find((f) => f.field === filterModal.field && f.op === 'IN')
+
+  const selectedValuesForModal = Array.isArray(currentFilterForModal?.value)
+    ? currentFilterForModal.value
+    : undefined
+
+  const timeForFilter = buildTimePayload(timeRange, customRange)
+
+  return (
+    <>
+      <div className='flex flex-col gap-4 p-4'>
+        <div className='flex items-center'>
+          <PivotHeaderTabs />
+        </div>
+
+        <section className='rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <div className='flex flex-row gap-6 p-5 lg:flex-row'>
+            {/* 왼쪽 패널 */}
+            <PivotConfigPanel
+              layer={layer}
+              timeRange={timeRange}
+              onChangeLayer={(nextLayer) => {
+                setLayer(nextLayer)
+                runQueryNow()
+              }}
+              onSelectTimePreset={handleSelectTimePreset}
+            />
+
+            <div className='hidden w-px bg-gray-200 lg:block' />
+
+            {/* 오른쪽 패널 */}
+            <div className='flex flex-1 flex-col gap-4 lg:flex-row'>
+              {/* Column 카드 */}
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+                  <span className='flex items-center gap-1'>
+                    <ColumnIcon className='h-4 w-4 text-gray-600' />열 (Column)
+                  </span>
+
+                  <button
+                    className='p-1 text-gray-500 hover:text-gray-700'
+                    onClick={openColumnModal}
+                  >
+                    <SettingIcon className='h-4 w-4' />
+                  </button>
+                </div>
+
+                <div className='divide-y divide-gray-200'>
+                  {column && column.field ? (
+                    <div className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'>
+                      <span className='flex items-center gap-2'>
+                        <SideKickIcon className='h-4 w-4 text-gray-500' />
+                        {column.field}
+                      </span>
+
+                      <button
+                        className='p-1 text-gray-400 hover:text-red-500'
+                        onClick={() => openFilterForField(column.field)}
+                      >
+                        <FilterIcon className='h-4 w-4 text-[#464646]' />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className='px-3 py-6 text-center text-xs text-gray-400'>
+                      열을 선택하세요
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Rows 카드 */}
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+                  <span className='flex items-center gap-1'>
+                    <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
+                  </span>
+
+                  <button className='p-1 text-gray-500 hover:text-gray-700' onClick={openRowsModal}>
+                    <SettingIcon className='h-4 w-4' />
+                  </button>
+                </div>
+
+                <div className='divide-y divide-gray-200'>
+                  <SortableRowsList
+                    rows={rows}
+                    onDragEnd={handleDragEndRows}
+                    onFilterRow={openFilterForField}
+                  />
+                </div>
+              </div>
+
+              {/* Values 카드 */}
+              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+                  <span className='flex items-center gap-1'>
+                    <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)
+                  </span>
+
+                  <button
+                    className='p-1 text-gray-500 hover:text-gray-700'
+                    onClick={openValuesModal}
+                  >
+                    <SettingIcon className='h-4 w-4' />
+                  </button>
+                </div>
+
+                <div className='divide-y divide-gray-200'>
+                  <SortableValuesList
+                    values={values}
+                    onDragEnd={handleDragEndValues}
+                    onFilterValue={openFilterForField}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 결과 프리뷰 */}
+        <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
+          <div className='mb-2 flex items-center justify-between'>
+            <div className='font-medium text-gray-800'>결과 미리보기</div>
+          </div>
+
+          {isPivotLoading && (
+            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+              로딩중...
+            </div>
+          )}
+
+          {!isPivotLoading && pivotResult && <PivotResultTable pivotResult={pivotResult} />}
+
+          {!isPivotLoading && !pivotResult && (
+            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+              아직 조회되지 않았습니다
+            </div>
+          )}
+        </section>
+      </div>
+
+      {isOpen && mode === 'rows' && (
+        <RowSelectModal
+          initialSelected={draftRows.map((r) => r.field)}
+          onApplyRows={(newRows) => applyRows(newRows)}
+          onClose={closeModal}
+        />
+      )}
+
+      {isOpen && mode === 'column' && (
+        <ColumnSelectModal
+          initialSelected={draftColumn?.field || ''}
+          onApplyColumn={(newCol) => applyColumn(newCol)}
+          onClose={closeModal}
+        />
+      )}
+
+      {isOpen && mode === 'values' && (
+        <ValueSelectModal
+          initialSelected={draftValues.map((v) => ({
+            field: v.field,
+            agg: v.agg,
+          }))}
+          onApplyValues={(newVals) => applyValues(newVals)}
+          onClose={closeModal}
+        />
+      )}
+
+      {filterModal.open && (
+        <FieldFilterModal
+          layer={layer}
+          time={timeForFilter}
+          customRange={customRange}
+          filters={filters}
+          fieldName={filterModal.field}
+          valueAliases={filterModal.valueAliases}
+          selectedValues={selectedValuesForModal}
+          onApply={applyFilter}
+          onClose={closeFilter}
+        />
+      )}
+    </>
+  )
 }
 
 export default PivotPage

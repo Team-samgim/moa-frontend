@@ -1,69 +1,158 @@
-import { Link, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
+import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
+import { useAuthStore } from '@/stores/authStore'
 
 const navItems = [
-  { label: '대시보드', to: '/dashboard' },
-  { label: '검색', to: '/search' },
-  { label: '피벗 테이블', to: '/pivot' },
-  { label: '프리셋', to: '/' },
-  { label: '파일 관리', to: '/' },
+  { label: '대시보드', to: userNavigations.DASHBOARD },
+  { label: '검색', to: userNavigations.SEARCH },
+  { label: '피벗 테이블', to: userNavigations.PIVOT },
+  { label: '프리셋', to: userNavigations.PRESET },
+  { label: '파일 관리', to: userNavigations.FILE_MANAGEMENT },
 ]
 
 const Header = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const isLogin = useAuthStore((s) => s.isLogin)
+  const clearTokens = useAuthStore((s) => s.clearTokens)
+
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  const handleProtectedNavClick = (to) => {
+    if (isLogin) {
+      navigate(to)
+    } else {
+      navigate(loggedOutNavigations.LOGIN)
+    }
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      if (currentScrollY > lastScrollY && currentScrollY > 20) {
+        setIsScrolled(true)
+      } else {
+        setIsScrolled(false)
+      }
+      setLastScrollY(currentScrollY)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
+
   return (
-    <header className='w-full flex justify-center py-4 px-4 bg-transparent'>
+    <header className='w-full flex justify-center items-end bg-transparent h-[90px] fixed top-0 left-0 right-0 z-50 px-6 lg:px-8'>
       <div
-        className='
-          flex w-full max-w-[1200px] items-center justify-between
-          rounded-full border border-gray-200 bg-white
-          shadow-[0_10px_30px_rgba(0,103,255,0.06)]
-          px-5 sm:px-6 md:px-8 h-[60px]
-        '
+        className={`
+          flex w-full max-w-[1450px] items-center justify-between gap-4
+          rounded-full bg-white
+          px-6 lg:px-8 h-[68px]
+          shadow-[0_6px_8px_rgba(0,103,255,0.06),0_8px_10px_rgba(0,103,255,0.1)]
+          transition-transform duration-600 ease-out
+          ${isScrolled ? '-translate-y-23' : 'translate-y-0'}
+        `}
       >
-        <div className='flex items-center gap-3 min-w-[80px]'>
+        <div className='flex items-center gap-3 flex-shrink-0'>
           <Link to='/' className='flex flex-col leading-none select-none'>
             <div className='flex justify-center'>
-              <img src={logo} alt='moa logo' className='h-12 md:h-12 object-contain' />
+              <img src={logo} alt='moa logo' className='h-13 object-contain' />
             </div>
           </Link>
         </div>
 
-        <nav className='hidden md:flex items-center gap-8 text-[14px]'>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.label}
-              to={item.to}
-              className={({ isActive }) =>
-                [
+        <nav className='flex items-center gap-4 lg:gap-8 text-[14px] lg:text-[15.5px] font-medium flex-shrink-0'>
+          {navItems.map((item) => {
+            const active = location.pathname === item.to
+            return (
+              <button
+                key={item.label}
+                type='button'
+                onClick={() => handleProtectedNavClick(item.to)}
+                className={[
                   'transition-colors whitespace-nowrap',
-                  isActive
-                    ? 'text-[var(--color-blue,#1c4fd7)] font-medium'
+                  active
+                    ? 'text-[var(--color-blue,#1c4fd7)] font-semibold'
                     : 'text-gray-700 hover:text-gray-900',
-                ].join(' ')
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            )
+          })}
         </nav>
 
-        <div className='flex items-center gap-3 sm:gap-4'>
-          <button
-            type='button'
-            className='
-              text-white text-[14px] font-medium
-              bg-[var(--color-blue,#1c4fd7)]
-              hover:brightness-95 active:scale-[0.98]
-              rounded-full h-[38px] px-4
-              shadow-[0_4px_10px_rgba(0,103,255,0.3)]
-              transition
-            '
-            onClick={() => {
-              // TODO: 로그아웃 API 연동
-            }}
-          >
-            로그아웃
-          </button>
+        <div className='flex items-center gap-2 lg:gap-3 flex-shrink-0'>
+          {isLogin ? (
+            <>
+              <button
+                type='button'
+                className='
+                  text-white text-[13px] lg:text-[14px] font-semibold
+                  bg-[var(--color-blue,#1c4fd7)]
+                  hover:brightness-95 active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => {
+                  clearTokens()
+                  navigate(loggedOutNavigations.LOGIN, { replace: true })
+                }}
+              >
+                로그아웃
+              </button>
+
+              <button
+                type='button'
+                className='
+                  text-[var(--color-blue,#1c4fd7)] text-[13px] lg:text-[14px] font-semibold
+                  bg-transparent border border-[var(--color-blue,#1c4fd7)]
+                  hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
+                  active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                // TODO: 마이페이지 연결
+                // onClick={() => navigate(loggedOutNavigations.MYPAGE)}
+              >
+                마이페이지
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type='button'
+                className='
+                  text-white text-[13px] lg:text-[14px] font-semibold
+                  bg-[var(--color-blue,#1c4fd7)]
+                  hover:brightness-95 active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => navigate(loggedOutNavigations.LOGIN)}
+              >
+                로그인
+              </button>
+
+              <button
+                type='button'
+                className='
+                  text-[var(--color-blue,#1c4fd7)] text-[13px] lg:text-[14px] font-semibold
+                  bg-transparent border border-[var(--color-blue,#1c4fd7)]
+                  hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
+                  active:scale-[0.98]
+                  rounded-full h-[37px] px-4 lg:px-6
+                  transition whitespace-nowrap
+                '
+                onClick={() => navigate(loggedOutNavigations.SIGNUP)}
+              >
+                회원가입
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
