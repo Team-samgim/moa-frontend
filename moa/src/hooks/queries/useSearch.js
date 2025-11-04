@@ -1,18 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { searchMetaApi, executeSearchApi } from '@/api/search'
 
-// queryKey: layer/source 별 캐시 분리
 const keys = {
-  meta: (layer, source) => ['search', 'meta', layer, source],
-}
-
-// layer별 기본 source 테이블 매핑
-const defaultSourceByLayer = (layer) => {
-  if (!layer) return 'page_sample'
-  const L = String(layer).toUpperCase()
-  if (L === 'HTTP_PAGE') return 'http_page_sample'
-  if (L === 'ETHERNET') return 'ethernet_sample'
-  return 'page_sample'
+  meta: (layer) => ['search', 'meta', layer],
 }
 
 const canonicalLayer = (layer) => {
@@ -27,21 +17,18 @@ const canonicalLayer = (layer) => {
 /**
  * 계층별 메타(필드/연산자) 조회 훅
  * - 같은 layer/source면 캐시 재사용
- * - staleTime 기본 Infinity로 “재호출 방지”
- * - 탭 전환 시 layer에 따라 기본 source를 자동 매핑(HTTP_PAGE→http_page_sample, ETHERNET→ethernet_sample)
+ * - staleTime 기본 Infinity로 "재호출 방지"
  */
 export function useSearchMeta({
   layer,
-  source,
   enabled = true,
   staleTime = Infinity, // 한 번 받으면 신선함 무한
   gcTime = 60 * 60 * 1000, // 1시간 뒤 가비지 컬렉션
 } = {}) {
   const resolvedLayer = canonicalLayer(layer)
-  const resolvedSource = source ?? defaultSourceByLayer(resolvedLayer)
   return useQuery({
-    queryKey: keys.meta(resolvedLayer, resolvedSource),
-    queryFn: () => searchMetaApi(resolvedLayer, resolvedSource),
+    queryKey: keys.meta(resolvedLayer),
+    queryFn: () => searchMetaApi(resolvedLayer),
     enabled: !!resolvedLayer && enabled,
     staleTime,
     gcTime,
@@ -51,9 +38,11 @@ export function useSearchMeta({
     select: (data) => {
       const raw = data?.fields ?? data ?? []
       const fields = raw.map((f) => ({
-        key: f.fieldKey ?? f.key,
-        label: f.label ?? f.labelKo ?? f.label_ko ?? f.fieldKey ?? f.key,
-        dataType: f.dataType,
+        key: f.key ?? f.fieldKey,
+        label: f.label ?? f.labelKo ?? f.label_ko ?? f.key ?? f.fieldKey,
+        labelKo: f.labelKo ?? f.label_ko ?? f.label ?? f.key ?? f.fieldKey,
+        dataType: f.dataType ?? f.data_type,
+        isInfo: f.info ?? f.isInfo ?? f.is_info ?? false,
         orderNo: f.orderNo ?? f.order_no ?? 999,
         operators: (f.operators ?? []).map((o) => ({
           opCode: o.opCode ?? o.code ?? o.op_code,
