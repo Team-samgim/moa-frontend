@@ -95,32 +95,16 @@ const SearchPage = () => {
     return chips
   }, [conditions, operatorsFor])
 
-  // const exec = useExecuteSearch({
-  //   onSuccess: (data) => {
-  //     const rows = Array.isArray(data?.rows)
-  //       ? data.rows
-  //       : Array.isArray(data)
-  //         ? data
-  //         : (data?.list ?? [])
-  //     setGridRows(rows)
-  //     setHasSearched(true) // ✅ 이제 그리드 렌더
-  //     // 그리드로 스크롤 이동(옵션)
-  //     setTimeout(() => {
-  //       document.getElementById('result-grid-anchor')?.scrollIntoView({ behavior: 'smooth' })
-  //     }, 0)
-  //   },
-  //   onError: () => alert('검색 중 오류가 발생했습니다.'),
-  // })
-
   const onClickSearch = async () => {
     const payload = buildSearchPayload({
       layer,
+      viewKeys,
       conditions,
       timePreset,
       globalNot,
       fields,
     })
-    // ✅ /api/grid/search 호출
+    //  /api/grid/search 호출
     const res = await fetchGridBySearchSpec(payload)
     setGridCols(res?.columns ?? [])
     setGridRows(res?.rows ?? [])
