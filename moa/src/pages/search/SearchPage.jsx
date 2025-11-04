@@ -20,10 +20,11 @@ const SearchPage = () => {
   const [conditions, setConditions] = useState([])
   const [globalNot, setGlobalNot] = useState(false)
   const [timePreset, setTimePreset] = useState('1H')
+  const [customTimeRange, setCustomTimeRange] = useState(null) // ✅ 추가!
   const [viewKeys, setViewKeys] = useState([])
   const [gridCols, setGridCols] = useState([])
-  const [gridRows, setGridRows] = useState(null) // 검색 결과
-  const [hasSearched, setHasSearched] = useState(false) // 게이트
+  const [gridRows, setGridRows] = useState(null)
+  const [hasSearched, setHasSearched] = useState(false)
 
   const gridRef = useRef(null)
 
@@ -34,6 +35,7 @@ const SearchPage = () => {
     setFieldFilter('')
     setGridRows(null)
     setHasSearched(false)
+    setCustomTimeRange(null) // ✅ 추가!
   }, [layer])
 
   const { data: meta, isLoading, error } = useSearchMeta({ layer })
@@ -101,6 +103,7 @@ const SearchPage = () => {
       viewKeys,
       conditions,
       timePreset,
+      customTimeRange, // ✅ 추가!
       globalNot,
       fields,
     })
@@ -118,7 +121,13 @@ const SearchPage = () => {
         <TimePresetBar
           value={timePreset}
           onChange={setTimePreset}
-          onOpenCustom={() => alert('직접설정 TBD')}
+          onApplyCustom={(range) => {
+            setCustomTimeRange(range) // ✅ 커스텀 시간 저장!
+          }}
+          onRefresh={() => {
+            setTimePreset('1H')
+            setCustomTimeRange(null) // ✅ 초기화!
+          }}
         />
         <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
         <FieldPicker fields={fields} selected={viewKeys} onChange={setViewKeys} />
@@ -173,8 +182,8 @@ const SearchPage = () => {
             <DataGrid
               ref={gridRef}
               layer={layer}
-              columns={gridCols} // ✅ 서버가 준 컬럼
-              rows={gridRows} // ✅ 서버가 준 행
+              columns={gridCols}
+              rows={gridRows}
               viewKeys={viewKeys}
               height='55vh'
               className='compact'

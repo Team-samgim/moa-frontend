@@ -114,11 +114,15 @@ const TimePresetBar = ({ value, onChange, onRefresh, onApplyCustom }) => {
   }
 
   const handleCustomToggle = () => {
-    setOpen((prev) => {
-      const next = !prev
-      if (next) onChange?.('CUSTOM') // 커스텀 열 때 즉시 CUSTOM 활성화
-      return next
-    })
+    // ✅ 수정: state 업데이트를 분리
+    const willOpen = !open
+    setOpen(willOpen)
+    if (willOpen) {
+      // ✅ setTimeout으로 다음 렌더링 사이클로 미룸
+      setTimeout(() => {
+        onChange?.('CUSTOM')
+      }, 0)
+    }
   }
 
   const applyCustom = () => {
