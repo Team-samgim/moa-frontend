@@ -15,10 +15,12 @@ const runPivotQuery = async (payload) => {
   return res.data
 }
 
+// 필드 별 value 리스트 조회
 const fetchValues = async (payload) => {
+  console.log(payload)
   const res = await axiosInstance.post('/pivot/values', payload)
   console.log(res.data)
-  return res.data // string[]
+  return res.data
 }
 
 export { fetchPivotFields, runPivotQuery, fetchValues }

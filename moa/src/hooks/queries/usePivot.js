@@ -22,31 +22,14 @@ export function usePivotQuery(options = {}) {
 
 const stableKey = (obj) => JSON.stringify(obj ?? null)
 
-export function useDistinctValues({
-  layer,
-  field,
-  timeRange,
-  customRange,
-  filters,
-  order = 'asc',
-  enabled = true,
-}) {
+export function useDistinctValues({ layer, field, time, filters, order = 'asc', enabled = true }) {
   return useQuery({
-    queryKey: [
-      'pivot-distinct',
-      layer,
-      field,
-      order,
-      stableKey(timeRange),
-      stableKey(customRange),
-      stableKey(filters),
-    ],
+    queryKey: ['pivot-distinct', layer, field, order, stableKey(time), stableKey(filters)],
     queryFn: () =>
       fetchValues({
         layer,
         field,
-        timeRange,
-        customRange,
+        time,
         filters,
         order,
       }),

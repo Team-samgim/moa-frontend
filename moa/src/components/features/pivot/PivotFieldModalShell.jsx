@@ -1,7 +1,7 @@
 const PivotFieldModalShell = ({
   title,
   // headerRight, // e.g. "3/11", "선택한 필드: src_ip"
-  tokensArea, // 위쪽 선택된 토큰 영역 (행, 값에서만)
+  tokensArea, // 위쪽 선택된 토큰 영역 (행, 값)
   onApply,
   onClose,
   children, // 필드 리스트 영역
