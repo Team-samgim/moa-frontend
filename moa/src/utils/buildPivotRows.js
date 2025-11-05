@@ -5,14 +5,18 @@ export function buildPivotRows(pivotResult) {
   if (!rowGroups) return []
 
   return rowGroups.map((group) => {
+    const hasChildren = (group.rowInfo?.count ?? 0) > 0
+
     return {
       displayLabel: group.displayLabel,
       cells: group.cells,
-      subRows: (group.items || []).map((item) => ({
-        displayLabel: item.displayLabel,
-        cells: item.cells,
-        subRows: [],
-      })),
+      rowField: group.rowLabel,
+      rowInfo: group.rowInfo,
+      hasChildren,
+      subRows: [],
+      isLoading: false,
+      isLoaded: false,
+      infiniteMode: false,
     }
   })
 }

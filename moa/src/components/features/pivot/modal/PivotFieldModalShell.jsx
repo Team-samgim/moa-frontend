@@ -1,7 +1,7 @@
 const PivotFieldModalShell = ({
   title,
   // headerRight, // e.g. "3/11", "선택한 필드: src_ip"
-  tokensArea, // 위쪽 선택된 토큰 영역 (행, 값)
+  tokensArea, // 위쪽 선택된 토큰 영역 (행, 값에서만)
   onApply,
   onClose,
   children, // 필드 리스트 영역
@@ -10,7 +10,7 @@ const PivotFieldModalShell = ({
 }) => {
   return (
     <div className='fixed inset-0 z-999 flex items-center justify-center bg-black/50'>
-      <div className='max-h-[80vh] w-[680px] overflow-hidden rounded-lg bg-white shadow-xl flex flex-col'>
+      <div className='h-[80vh] w-[680px] overflow-hidden rounded-lg bg-white shadow-xl flex flex-col'>
         {/* 헤더 */}
         <div className='flex items-start justify-between p-6'>
           <div className='text-lg font-semibold text-gray-900'>{title}</div>
