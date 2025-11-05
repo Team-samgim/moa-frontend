@@ -27,12 +27,17 @@ export default function useFilterData({
   const load = async ({ reset = false, afOverride } = {}) => {
     const af = afOverride ?? getAF()
     const includeSelf = !!af[field]
+    const order = context?.getOrder?.() || {}
+    const base = context?.getBasePayload?.() || null
+    const filterModelForSend = includeSelf ? af : pickWithout(af, field)
     const sig = makeSignature({
       layer,
       field,
       search,
-      filters: includeSelf ? af : pickWithout(af, field),
+      filters: filterModelForSend,
       includeSelf,
+      order,
+      base,
     })
 
     if (!reset && lastSigRef.current === sig && values.length > 0 && !hasMore) return
@@ -49,12 +54,15 @@ export default function useFilterData({
       const data = await apiFetchFilterValues({
         layer,
         field,
-        filterModel: af,
+        filterModel: includeSelf ? af : pickWithout(af, field),
         search,
         offset,
         limit: pageLimit,
         signal: controller.signal,
         includeSelf,
+        orderBy: order.orderBy,
+        order: order.order,
+        baseSpec: base || undefined,
       })
 
       const page = data?.values || []
@@ -90,13 +98,14 @@ export default function useFilterData({
 
   const restoreSelected = (activeFilters, setSelected, setConditions, setLogicOps) => {
     if (restoredRef.current || values.length === 0) return
-    const prev = activeFilters?.[field]
-    if (prev?.mode === 'checkbox') {
+    const prevFilter = activeFilters?.[field]
+    if (prevFilter?.mode === 'checkbox') {
       const s = new Set(values)
-      setSelected((prev.values || prev)?.values?.filter?.((x) => s.has(x)) ?? prev.values ?? [])
-    } else if (prev?.mode === 'condition') {
-      setConditions(prev.conditions || [{ op: 'contains', val: '' }])
-      setLogicOps(prev.logicOps || [])
+      const restored = (prevFilter.values || []).filter((x) => s.has(x))
+      setSelected(restored)
+    } else if (prevFilter?.mode === 'condition') {
+      setConditions(prevFilter.conditions || [{ op: 'contains', val: '' }])
+      setLogicOps(prevFilter.logicOps || [])
     }
     restoredRef.current = true
   }

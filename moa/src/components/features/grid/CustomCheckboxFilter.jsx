@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ConditionPanel from '@/components/features/grid/ConditionPanel'
 import ValueList from '@/components/features/grid/ValueList'
 import useConditionState from '@/hooks/grid/useConditionState'
@@ -11,12 +11,8 @@ const CustomCheckboxFilter = (props) => {
   const pageLimit = Math.max(1, Number(props?.colDef?.filterParams?.pageLimit ?? 200))
   const debounceMs = Math.max(0, Number(props?.colDef?.filterParams?.debounceMs ?? 250))
 
-  const buttonRef = useRef(null)
-  const panelRef = useRef(null)
-
   const [selected, setSelected] = useState([])
-  const [showPanel, setShowPanel] = useState(false)
-  const [panelPos, setPanelPos] = useState({ top: 0, left: 0 })
+  const [showConditionMode, setShowConditionMode] = useState(false)
 
   const {
     values,
@@ -40,14 +36,14 @@ const CustomCheckboxFilter = (props) => {
   useEffect(() => {
     const unsub = props.context?.subscribeFilterMenuOpen?.(field, () => {
       setSelected([])
-      reloadAll()
+      reloadAll(getAF())
     })
     return () => unsub?.()
   }, [field, reloadAll, props.context])
 
   // 최초 후보 복원
   useEffect(() => {
-    restoreSelected(props.context?.activeFilters, setSelected, setConditions, setLogicOps)
+    restoreSelected(getAF(), setSelected, setConditions, setLogicOps)
   }, [values]) // eslint-disable-line
 
   const toggleValue = (val) => {
@@ -73,101 +69,109 @@ const CustomCheckboxFilter = (props) => {
     props.context?.updateFilter?.(field, newFilter)
 
     // 최신 필터 스냅샷 기반 다시 로드 + 그리드 새로고침
-    setShowPanel(false)
     getApi()?.hidePopupMenu?.()
     reloadAll(getAF()).catch(() => {})
     getApi()?.refreshInfiniteCache?.()
   }
 
-  const openPanel = () => {
-    setShowPanel((prev) => {
+  const toggleMode = () => {
+    setShowConditionMode((prev) => {
       const next = !prev
-      if (!prev) {
+      if (next) {
+        // 조건 모드로 전환
         const pf = getAF()[field]
-        if (pf?.mode === 'checkbox') setSelected(pf.values || [])
-        else if (pf?.mode === 'condition') {
+        if (pf?.mode === 'condition') {
           setConditions(pf.conditions || [{ op: 'contains', val: '' }])
           setLogicOps(pf.logicOps || [])
         } else {
-          setSelected([])
           setConditions([{ op: 'contains', val: '' }])
           setLogicOps([])
+        }
+      } else {
+        // 체크박스 모드로 전환
+        const pf = getAF()[field]
+        if (pf?.mode === 'checkbox') {
+          setSelected(pf.values || [])
+        } else {
+          setSelected([])
         }
       }
       return next
     })
-    const rect = buttonRef.current.getBoundingClientRect()
-    setPanelPos({ top: rect.top + window.scrollY - 10, left: rect.right + 12 })
   }
 
-  useEffect(() => {
-    if (!showPanel) return
-    const onDown = (e) => {
-      if (
-        panelRef.current &&
-        !panelRef.current.contains(e.target) &&
-        !buttonRef.current.contains(e.target)
-      ) {
-        setShowPanel(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [showPanel])
-
   return (
-    <>
-      <div className='relative w-[220px] rounded-md border border-gray-200 bg-white p-2 text-[13px] shadow-sm'>
-        <input
-          type='text'
-          placeholder='검색(접두어 일치)...'
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className='mb-2 w-full rounded border border-gray-300 px-2 py-1 text-[12px]'
-        />
-        <button
-          ref={buttonRef}
-          onClick={openPanel}
-          className='w-full cursor-pointer rounded border border-gray-300 bg-gray-50 py-1 text-[12px]'
-        >
-          조건별 필터
-        </button>
+    <div className='w-[220px] bg-white text-[13px]'>
+      {!showConditionMode ? (
+        <>
+          {/* 체크박스 모드 */}
+          <div className='p-2 border-b border-gray-200'>
+            <input
+              type='text'
+              placeholder='검색'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='w-full rounded border border-gray-300 px-2 py-1 text-[12px] focus:outline-none focus:border-blue-500'
+            />
+          </div>
 
-        <ValueList
-          values={values}
-          selected={selected}
-          toggle={toggleValue}
-          onScroll={onScrollList}
-          loading={loading}
-          hasMore={hasMore}
-          loadMore={loadMore}
-          error={error}
-        />
+          <div className='p-2 border-b border-gray-200'>
+            <button
+              onClick={toggleMode}
+              className='w-full cursor-pointer rounded bg-white border border-gray-300 py-1.5 text-[12px] hover:bg-gray-50 transition-colors'
+            >
+              조건별 필터
+            </button>
+          </div>
 
-        <div className='mt-2 flex gap-1.5'>
-          <button
-            onClick={applyFilter}
-            className='flex-1 cursor-pointer rounded bg-[#3877BE] py-1 text-[12px] text-white'
-          >
-            적용
-          </button>
-        </div>
-      </div>
+          <ValueList
+            values={values}
+            selected={selected}
+            toggle={toggleValue}
+            onScroll={onScrollList}
+            loading={loading}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            error={error}
+          />
 
-      {showPanel && (
-        <ConditionPanel
-          fieldType={fieldType}
-          panelPos={panelPos}
-          onClose={() => setShowPanel(false)}
-          conditions={conditions}
-          logicOps={logicOps}
-          setConditions={setConditions}
-          setLogicOps={setLogicOps}
-          inputRefs={inputRefs}
-          onApply={applyFilter}
-        />
+          <div className='p-2 border-t border-gray-200'>
+            <button
+              onClick={applyFilter}
+              className='w-full cursor-pointer rounded bg-[#3877BE] py-1.5 text-[12px] text-white hover:bg-blue-700 transition-colors'
+            >
+              적용
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* 조건 모드 */}
+          <div className='p-2 border-b border-gray-200'>
+            <button
+              onClick={toggleMode}
+              className='w-full cursor-pointer rounded bg-white border border-gray-300 py-1.5 text-[12px] hover:bg-gray-50 transition-colors flex items-center justify-center gap-1'
+            >
+              <span>기본 필터</span>
+            </button>
+          </div>
+
+          <div className='p-2'>
+            <ConditionPanel
+              fieldType={fieldType}
+              onClose={null}
+              conditions={conditions}
+              logicOps={logicOps}
+              setConditions={setConditions}
+              setLogicOps={setLogicOps}
+              inputRefs={inputRefs}
+              onApply={applyFilter}
+              embedded={true}
+            />
+          </div>
+        </>
       )}
-    </>
+    </div>
   )
 }
 

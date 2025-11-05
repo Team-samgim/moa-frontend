@@ -1,5 +1,10 @@
 import axiosInstance from '@/api/axios'
 
+const toJsonParam = (v) => {
+  if (v === null) return undefined
+  return typeof v === 'string' ? v : JSON.stringify(v) // 한 번만 문자열화
+}
+
 export const fetchColumns = async ({ layer, offset = 0, limit = 1 }) => {
   const { data } = await axiosInstance.get('/randering', { params: { layer, offset, limit } })
   return data
@@ -26,22 +31,28 @@ export const fetchRows = async ({
 export const fetchFilterValues = async ({
   layer,
   field,
-  filterModel,
+  filterModel, // object 또는 string 둘 다 허용
+  baseSpec, // object 또는 string 둘 다 허용 (이걸 실제로 쿼리에 붙임)
   search = '',
   offset = 0,
   limit = 200,
   signal,
   includeSelf = false,
+  orderBy,
+  order,
 }) => {
   const { data } = await axiosInstance.get('/filtering', {
     params: {
       layer,
       field,
-      filterModel: JSON.stringify(filterModel || {}),
+      filterModel: toJsonParam(filterModel) ?? '{}',
+      baseSpec: toJsonParam(baseSpec), // ✅ 여기 핵심
       search,
       offset,
       limit,
       includeSelf,
+      orderBy,
+      order,
       __ts: Date.now(),
     },
     signal,
@@ -65,5 +76,6 @@ export const exportGrid = async (payload, signal) => {
 
 export const fetchGridBySearchSpec = async (payload) => {
   const { data } = await axiosInstance.post('/grid/search', payload)
+  console.log('grid data', data)
   return data // { layer, columns:[{name,type,labelKo}], rows:[...] }
 }
