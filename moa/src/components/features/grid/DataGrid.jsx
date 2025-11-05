@@ -101,6 +101,13 @@ const DataGrid = forwardRef(function DataGrid(
     }
   }
 
+  const onSortChanged = useCallback((e) => {
+    const api = e.api
+    // 정렬이 변경되면 캐시를 비우고 datasource가 새로 요청하도록 함
+    console.log('[DataGrid] 🔄 정렬 변경 감지, 데이터 다시 불러옵니다.')
+    api.purgeInfiniteCache()
+  }, [])
+
   const updateFilter = (field, newFilter) => {
     setActiveFilters((prev) => {
       const next = { ...prev }
@@ -169,14 +176,14 @@ const DataGrid = forwardRef(function DataGrid(
         filter: false,
         cellStyle: { textAlign: 'center' },
       },
-      ...src.map((col, idx) => {
+      ...src.map((col) => {
         const isDate = col.type === 'date'
         const isNumber = col.type === 'number'
         const vf = isNumber ? pickFormatterByField(col.name) : null
         return {
           field: col.name,
           headerName: col.labelKo || col.name,
-          colId: `${col.name}-${col.type}-${idx}`,
+          colId: col.name,
           sortable: true,
           filter: CustomCheckboxFilter,
           filterParams: { layer, type: col.type, pageLimit: 200, debounceMs: 250 },
@@ -256,7 +263,6 @@ const DataGrid = forwardRef(function DataGrid(
   // ---------- datasource (basePayload + filters + offset/limit) ----------
   const datasource = useMemo(() => {
     if (!basePayload) return null
-
     let requestCount = 0
 
     return {
@@ -266,22 +272,44 @@ const DataGrid = forwardRef(function DataGrid(
         const end = rq.endRow ?? start + cacheBlockSize
         const limit = end - start
 
-        console.log(`[DataGrid] 📥 요청 #${requestCount}:`, {
+        console.log(`[DataGrid] 요청 #${requestCount}:`, {
           startRow: start,
           endRow: end,
           limit,
           message: `${start}번부터 ${end}번까지 (${limit}개 요청)`,
         })
 
+        // ✅ 정렬 정보 가져오기 (개선)
+        const sortModel = rq.sortModel || []
+
+        let orderBy = basePayload?.options?.orderBy || 'ts_server_nsec'
+        let order = (basePayload?.options?.order || 'DESC').toUpperCase()
+
+        if (sortModel.length > 0) {
+          const sm = sortModel[0]
+          orderBy = sm.colId // ✅ colId를 그대로 필드로 사용 (위에서 colId=field로 통일)
+          order = (sm.sort || 'desc').toUpperCase()
+
+          console.log(`[DataGrid] 정렬 적용:`, {
+            colId: sm.colId,
+            extractedField: orderBy,
+            order: order,
+          })
+        }
+
         const payload = {
           ...basePayload,
           conditions: [...(basePayload.conditions || []), ...conditionsFromFilters],
           options: {
             ...(basePayload.options || {}),
+            orderBy,
+            order,
             limit,
             offset: start,
           },
         }
+
+        console.log(`[DataGrid] 서버 요청 payload:`, payload)
 
         try {
           const response = await axiosInstance.post('/grid/search', payload)
@@ -289,22 +317,19 @@ const DataGrid = forwardRef(function DataGrid(
           const rows = responseData?.rows || []
           const total = responseData?.total
 
-          console.log(`[DataGrid] 📤 응답 #${requestCount}:`, {
+          console.log(`[DataGrid] 응답 #${requestCount}:`, {
             receivedRows: rows.length,
             total,
+            orderBy,
+            order,
             message: `${rows.length}개 받음, 전체 ${total}개`,
           })
 
           const lastRow = typeof total === 'number' ? total : undefined
 
-          console.log(`[DataGrid] ✅ successCallback #${requestCount}:`, {
-            lastRow,
-            status: lastRow ? `전체 ${lastRow}개 중 현재까지 로드됨` : '계속 로드 가능',
-          })
-
           rq.successCallback(rows, lastRow)
         } catch (e) {
-          console.error(`[DataGrid] ❌ 요청 #${requestCount} 실패:`, e)
+          console.error(`[DataGrid] 요청 #${requestCount} 실패:`, e)
           rq.failCallback()
         }
       },
@@ -313,7 +338,10 @@ const DataGrid = forwardRef(function DataGrid(
 
   const onGridReady = useCallback(
     (params) => {
-      if (datasource) params.api.setGridOption('datasource', datasource)
+      if (datasource) {
+        if (params.api.setGridOption) params.api.setGridOption('datasource', datasource)
+        else if (params.api.setDatasource) params.api.setDatasource(datasource)
+      }
     },
     [datasource],
   )
@@ -321,13 +349,15 @@ const DataGrid = forwardRef(function DataGrid(
   // datasource/필터 바뀌면 캐시 재생성
   useEffect(() => {
     if (gridRef.current?.api && datasource) {
-      gridRef.current.api.setGridOption('datasource', datasource)
+      const api = gridRef.current.api
+      if (api.setGridOption) api.setGridOption('datasource', datasource)
+      else if (api.setDatasource) api.setDatasource(datasource)
       gridRef.current.api.purgeInfiniteCache()
     }
   }, [datasource])
 
   useEffect(() => {
-    gridRef.current?.api?.refreshInfiniteCache?.()
+    gridRef.current?.api?.purgeInfiniteCache?.()
   }, [activeFilters])
 
   const popupParent = typeof window !== 'undefined' ? document.body : undefined
@@ -357,6 +387,7 @@ const DataGrid = forwardRef(function DataGrid(
         suppressMaintainUnsortedOrder={true}
         onGridReady={onGridReady}
         context={gridContext}
+        onSortChanged={onSortChanged}
         popupParent={popupParent}
         onFilterOpened={onFilterOpened}
       />
