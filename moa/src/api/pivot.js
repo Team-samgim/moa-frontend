@@ -11,16 +11,19 @@ const fetchPivotFields = async (layer) => {
 // 피벗 쿼리 실행
 const runPivotQuery = async (payload) => {
   const res = await axiosInstance.post('/pivot/query', payload)
-  console.log(res.data)
   return res.data
 }
 
 // 필드 별 value 리스트 조회
 const fetchValues = async (payload) => {
-  console.log(payload)
   const res = await axiosInstance.post('/pivot/values', payload)
-  console.log(res.data)
   return res.data
 }
 
-export { fetchPivotFields, runPivotQuery, fetchValues }
+// row group의 subRows 조회
+const fetchRowGroupItems = async (payload) => {
+  const res = await axiosInstance.post('/pivot/row-group/items', payload)
+  return res.data
+}
+
+export { fetchPivotFields, runPivotQuery, fetchValues, fetchRowGroupItems }

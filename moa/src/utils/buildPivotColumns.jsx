@@ -1,7 +1,7 @@
 import ArrowDownIcon from '@/assets/icons/arrow-down-bold.svg?react'
 import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
 
-export function buildPivotColumns(pivotResult) {
+export function buildPivotColumns(pivotResult, onExpandRow) {
   if (!pivotResult) return []
 
   const { columnField } = pivotResult
@@ -29,10 +29,31 @@ export function buildPivotColumns(pivotResult) {
     cell: ({ row, getValue }) => {
       const canExpand = row.getCanExpand()
       const isExpanded = row.getIsExpanded()
+      const isLoading = row.original?.isLoading
+
+      const handleClick = (e) => {
+        e.stopPropagation()
+        if (isLoading) return
+
+        if (isExpanded) {
+          row.toggleExpanded()
+        } else {
+          if (onExpandRow) {
+            onExpandRow(row)
+          } else {
+            row.toggleExpanded()
+          }
+        }
+      }
+
       return (
         <div className='flex items-center gap-1'>
           {canExpand && (
-            <button onClick={row.getToggleExpandedHandler()} className='text-gray-600'>
+            <button
+              onClick={handleClick}
+              className='text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50'
+              disabled={isLoading}
+            >
               {isExpanded ? (
                 <ArrowDownIcon className='w-4.5 h-4.5' />
               ) : (
@@ -41,16 +62,17 @@ export function buildPivotColumns(pivotResult) {
             </button>
           )}
           <span>{getValue()}</span>
+          {isLoading && <span className='ml-2 text-xs text-gray-500'>로딩중...</span>}
         </div>
       )
     },
   }
 
-  const groupedCols = columnField.values.map((colVal) => ({
-    id: colVal || '(empty)',
+  const groupedCols = columnField.values.map((colVal, colIndex) => ({
+    id: `${colIndex}::${colVal || '(empty)'}`,
     header: colVal || '(empty)',
-    columns: columnField.metrics.map((metric) => ({
-      id: `${colVal}__${metric.alias}`,
+    columns: (columnField.metrics || []).map((metric, metricIndex) => ({
+      id: `${colIndex}::${metricIndex}::${colVal || '(empty)'}__${metric.alias}`,
       header: metric.alias,
       accessorFn: (row) => row.cells?.[colVal]?.[metric.alias] ?? null,
       cell: ({ getValue }) => {

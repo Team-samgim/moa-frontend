@@ -8,15 +8,15 @@ import SettingIcon from '@/assets/icons/setting.svg?react'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
 
-import ColumnSelectModal from '@/components/features/pivot/ColumnSelectModal'
-import FieldFilterModal from '@/components/features/pivot/FieldFilterModal'
-import PivotConfigPanel from '@/components/features/pivot/PivotConfigPanel'
 import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
-import PivotResultTable from '@/components/features/pivot/PivotResultTable'
-import RowSelectModal from '@/components/features/pivot/RowSelectModal'
-import SortableRowsList from '@/components/features/pivot/SortableRowsList'
-import SortableValuesList from '@/components/features/pivot/SortableValuesList'
-import ValueSelectModal from '@/components/features/pivot/ValueSelectModal'
+import ColumnSelectModal from '@/components/features/pivot/modal/ColumnSelectModal'
+import FieldFilterModal from '@/components/features/pivot/modal/FieldFilterModal'
+import RowSelectModal from '@/components/features/pivot/modal/RowSelectModal'
+import ValueSelectModal from '@/components/features/pivot/modal/ValueSelectModal'
+import PivotConfigPanel from '@/components/features/pivot/panel/PivotConfigPanel'
+import SortableRowsList from '@/components/features/pivot/panel/SortableRowsList'
+import SortableValuesList from '@/components/features/pivot/panel/SortableValuesList'
+import PivotResultTable from '@/components/features/pivot/table/PivotResultTable'
 
 import { usePivotQuery } from '@/hooks/queries/usePivot'
 import { usePivotModalStore } from '@/stores/pivotModalStore'
@@ -205,7 +205,7 @@ const PivotPage = () => {
 
   return (
     <>
-      <div className='flex flex-col gap-4 p-4'>
+      <div className='flex flex-col gap-4 p-4 mx-30'>
         <div className='flex items-center'>
           <PivotHeaderTabs />
         </div>
@@ -226,9 +226,9 @@ const PivotPage = () => {
             <div className='hidden w-px bg-gray-200 lg:block' />
 
             {/* 오른쪽 패널 */}
-            <div className='flex flex-1 flex-col gap-4 lg:flex-row'>
+            <div className='flex flex-1 flex-col gap-4 lg:flex-row lg:h-60 min-h-0'>
               {/* Column 카드 */}
-              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ColumnIcon className='h-4 w-4 text-gray-600' />열 (Column)
@@ -242,7 +242,8 @@ const PivotPage = () => {
                   </button>
                 </div>
 
-                <div className='divide-y divide-gray-200'>
+                {/* 리스트 영역만 스크롤 */}
+                <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   {column && column.field ? (
                     <div className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'>
                       <span className='flex items-center gap-2'>
@@ -266,18 +267,17 @@ const PivotPage = () => {
               </div>
 
               {/* Rows 카드 */}
-              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
                   </span>
-
                   <button className='p-1 text-gray-500 hover:text-gray-700' onClick={openRowsModal}>
                     <SettingIcon className='h-4 w-4' />
                   </button>
                 </div>
 
-                <div className='divide-y divide-gray-200'>
+                <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   <SortableRowsList
                     rows={rows}
                     onDragEnd={handleDragEndRows}
@@ -287,12 +287,11 @@ const PivotPage = () => {
               </div>
 
               {/* Values 카드 */}
-              <div className='flex-1 rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)
                   </span>
-
                   <button
                     className='p-1 text-gray-500 hover:text-gray-700'
                     onClick={openValuesModal}
@@ -301,7 +300,7 @@ const PivotPage = () => {
                   </button>
                 </div>
 
-                <div className='divide-y divide-gray-200'>
+                <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   <SortableValuesList
                     values={values}
                     onDragEnd={handleDragEndValues}

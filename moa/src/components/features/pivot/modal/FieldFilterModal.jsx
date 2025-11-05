@@ -108,7 +108,7 @@ const FieldFilterModal = ({
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30'>
-      <div className='w-[720px] max-w-[95vw] rounded-xl bg-white shadow-lg'>
+      <div className='w-[680px] max-w-[95vw] rounded-xl bg-white shadow-lg'>
         {/* 헤더 */}
         <div className='flex items-center justify-between p-4'>
           <div className='text-xl font-semibold'>
@@ -202,7 +202,7 @@ const FieldFilterModal = ({
             </div>
 
             {/* 리스트 */}
-            <div className='max-h-[420px] overflow-auto'>
+            <div className='h-[420px] overflow-auto'>
               {isLoading && (
                 <div className='py-10 text-center text-[15px] text-gray-400'>로딩 중…</div>
               )}
