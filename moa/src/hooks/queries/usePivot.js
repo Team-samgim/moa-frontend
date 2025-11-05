@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { fetchPivotFields, fetchValues, runPivotQuery } from '@/api/pivot'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
+import { fetchPivotFields, fetchRowGroupItems, fetchValues, runPivotQuery } from '@/api/pivot'
 import { usePivotStore } from '@/stores/pivotStore'
 
 export function usePivotFields(options = {}) {
@@ -35,5 +35,54 @@ export function useDistinctValues({ layer, field, time, filters, order = 'asc', 
       }),
     enabled: !!layer && !!field && enabled,
     staleTime: 30_000,
+  })
+}
+
+export function useRowGroupItems(options = {}) {
+  return useMutation({
+    mutationFn: (payload) => fetchRowGroupItems(payload),
+    ...options,
+  })
+}
+
+export function useRowGroupItemsInfinite({
+  layer,
+  rowField,
+  time,
+  column,
+  values,
+  filters,
+  enabled = false,
+}) {
+  return useInfiniteQuery({
+    queryKey: [
+      'row-group-items-infinite',
+      layer,
+      rowField,
+      stableKey(time),
+      stableKey(column),
+      stableKey(values),
+      stableKey(filters),
+    ],
+    queryFn: ({ pageParam }) =>
+      fetchRowGroupItems({
+        layer,
+        rowField,
+        time,
+        column,
+        values,
+        filters,
+        cursor: pageParam,
+        limit: 50,
+      }),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasMore ? lastPage.nextCursor : undefined
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 }

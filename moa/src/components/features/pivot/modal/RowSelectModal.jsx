@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -51,10 +51,6 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
   const fieldNames = (data?.fields || []).map((f) => f.name)
 
   const { column: globalColumn, values: globalValues } = usePivotStore()
-
-  useEffect(() => {
-    console.log('RowSelectModal initialSelected:', initialSelected)
-  }, [initialSelected])
 
   const blockedForRows = useMemo(() => {
     const s = new Set()
