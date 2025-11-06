@@ -1,7 +1,7 @@
 import ArrowDownIcon from '@/assets/icons/arrow-down-bold.svg?react'
 import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
 
-export function buildPivotColumns(pivotResult, onExpandRow) {
+export function buildPivotColumns(pivotResult, onExpandRow, sortedColumnValues) {
   if (!pivotResult) return []
 
   const { columnField } = pivotResult
@@ -68,7 +68,10 @@ export function buildPivotColumns(pivotResult, onExpandRow) {
     },
   }
 
-  const groupedCols = columnField.values.map((colVal, colIndex) => ({
+  const colValues =
+    sortedColumnValues && sortedColumnValues.length ? sortedColumnValues : columnField.values || []
+
+  const groupedCols = colValues.map((colVal, colIndex) => ({
     id: `${colIndex}::${colVal || '(empty)'}`,
     header: colVal || '(empty)',
     columns: (columnField.metrics || []).map((metric, metricIndex) => ({

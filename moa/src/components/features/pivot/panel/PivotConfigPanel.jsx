@@ -150,7 +150,7 @@ const PivotConfigPanel = ({
             onClick={handleToggleCustom}
             className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50'
           >
-            <span className='flex flex-col items-start gap-0.5'>
+            <span className='flex flex-col items-start text-xs gap-0.5'>
               <span>직접 설정</span>
 
               {customRangeLabel && (
