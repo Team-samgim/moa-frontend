@@ -35,6 +35,7 @@ const PivotPage = () => {
     setLayer,
     setTimePreset,
     setColumnField,
+    setCustomRange,
     setRows,
     setValues,
     setFilters,
@@ -195,6 +196,14 @@ const PivotPage = () => {
     [setTimePreset, runQueryNow],
   )
 
+  const handleApplyCustomRange = useCallback(
+    (fromDate, toDate) => {
+      setCustomRange(fromDate, toDate)
+      runQueryNow()
+    },
+    [setCustomRange, runQueryNow],
+  )
+
   const currentFilterForModal = filters.find((f) => f.field === filterModal.field && f.op === 'IN')
 
   const selectedValuesForModal = Array.isArray(currentFilterForModal?.value)
@@ -216,11 +225,13 @@ const PivotPage = () => {
             <PivotConfigPanel
               layer={layer}
               timeRange={timeRange}
+              customRange={customRange}
               onChangeLayer={(nextLayer) => {
                 setLayer(nextLayer)
                 runQueryNow()
               }}
               onSelectTimePreset={handleSelectTimePreset}
+              onApplyCustomRange={handleApplyCustomRange}
             />
 
             <div className='hidden w-px bg-gray-200 lg:block' />
