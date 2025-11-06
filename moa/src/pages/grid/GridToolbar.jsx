@@ -7,7 +7,14 @@ function nowForFilename() {
   return iso.replace(/[:.]/g, '').replace('T', '_').replace('Z', '')
 }
 
-const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilters }) => {
+const GridToolbar = ({
+  currentLayer,
+  onReset,
+  onPivot,
+  gridApis,
+  getActiveFilters,
+  getBaseSpec,
+}) => {
   const exportMut = useMutation({
     mutationFn: async () => {
       const api = gridApis?.api
@@ -19,13 +26,15 @@ const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilter
         .map((def) => def?.field ?? def?.colId)
         .filter((f) => !!f && f !== '__rowNo')
 
-      const sortModel = api.getSortModel?.()[0] || null
-      const sortField = sortModel
-        ? api.getColumnDef(sortModel.colId)?.field || sortModel.colId
-        : null
-      const sortDirection = sortModel?.sort ?? null
+      const base = getBaseSpec ? getBaseSpec() : null
+      const sm = api.getSortModel?.()[0] || null
+      const sortField = sm
+        ? api.getColumnDef(sm.colId)?.field || sm.colId
+        : base?.options?.orderBy || 'ts_server_nsec'
+      const sortDirection = (sm?.sort || base?.options?.order || 'desc').toUpperCase()
 
       const filterModel = getActiveFilters ? getActiveFilters() : {}
+      const baseSpec = getBaseSpec ? getBaseSpec() : null
       const fileName = `grid_export_${nowForFilename()}`
 
       // axios.post를 여기서 직접 써도 되지만, exportGrid로 감싸두면 더 깔끔
@@ -33,6 +42,7 @@ const GridToolbar = ({ currentLayer, onReset, onPivot, gridApis, getActiveFilter
         layer: currentLayer,
         columns,
         filterModelJson: JSON.stringify(filterModel),
+        baseSpecJson: baseSpec ? JSON.stringify(baseSpec) : undefined,
         sortField,
         sortDirection,
         fileName,

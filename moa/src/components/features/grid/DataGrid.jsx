@@ -74,7 +74,7 @@ function mapConditionOp(op, fieldType) {
 }
 
 const DataGrid = forwardRef(function DataGrid(
-  { layer, columns = [], basePayload, height = '70vh', cacheBlockSize = 100 },
+  { layer, columns = [], basePayload, height = '70vh', cacheBlockSize = 100, onGridApis },
   ref,
 ) {
   const gridRef = useRef(null)
@@ -152,6 +152,17 @@ const DataGrid = forwardRef(function DataGrid(
     purge: () => gridRef.current?.api?.purgeInfiniteCache?.(),
     refresh: () => gridRef.current?.api?.refreshInfiniteCache?.(),
     setFilterModel: (m) => gridRef.current?.api?.setFilterModel?.(m),
+    getApi: () => gridRef.current?.api,
+    getActiveFilters: () => activeFiltersRef.current,
+    resetFilters: () => {
+      const api = gridRef.current?.api
+      // AG Grid 필터 UI 초기화
+      api?.setFilterModel?.(null)
+      // 내부 상태 초기화
+      setActiveFilters({})
+      // 데이터 리로드
+      api?.purgeInfiniteCache?.()
+    },
   }))
 
   // {type,value} 안전 언랩
@@ -342,6 +353,7 @@ const DataGrid = forwardRef(function DataGrid(
         if (params.api.setGridOption) params.api.setGridOption('datasource', datasource)
         else if (params.api.setDatasource) params.api.setDatasource(datasource)
       }
+      onGridApis?.({ api: params.api, columnApi: params.columnApi })
     },
     [datasource],
   )
