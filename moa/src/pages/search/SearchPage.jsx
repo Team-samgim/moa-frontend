@@ -8,6 +8,7 @@ import QueryPreview from '@/components/features/search/QueryPreview'
 import SelectedConditions from '@/components/features/search/SelectedConditions'
 import TimePresetBar from '@/components/features/search/TimePresetBar'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
+import GridToolbar from '@/pages/grid/GridToolbar'
 import { buildSearchPayload } from '@/utils/searchPayload'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
@@ -15,6 +16,7 @@ const defaultValuesFor = (arity) =>
   arity === 0 ? [] : arity === 1 ? [''] : arity === 2 ? ['', ''] : []
 
 const SearchPage = () => {
+  const [gridApis, setGridApis] = useState(null)
   const [layer, setLayer] = useState('HTTP_PAGE')
   const [fieldFilter, setFieldFilter] = useState('')
   const [conditions, setConditions] = useState([])
@@ -215,6 +217,14 @@ const SearchPage = () => {
             </div>
           ) : (
             <>
+              <GridToolbar
+                currentLayer={layer}
+                onReset={() => gridRef.current?.resetFilters?.()}
+                onPivot={undefined /* 필요시 라우팅 핸들러 연결 */}
+                gridApis={gridApis}
+                getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
+                getBaseSpec={() => searchPayload}
+              />
               {searchTotal !== null && (
                 <div className='mb-2 text-sm text-gray-600'>
                   총{' '}
@@ -231,6 +241,7 @@ const SearchPage = () => {
                 basePayload={searchPayload}
                 height='55vh'
                 cacheBlockSize={100}
+                onGridApis={setGridApis}
               />
             </>
           )}
