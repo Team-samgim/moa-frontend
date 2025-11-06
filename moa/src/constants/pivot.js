@@ -9,4 +9,4 @@ export const TIME_PRESETS = [
 
 export const ROW_INFINITE_THRESHOLD = 100 // 100개 초과 시 무한스크롤
 
-export const DEFAULT_TIME_FIELD = 'created_at'
+export const DEFAULT_TIME_FIELD = 'ts_server_nsec'

@@ -1,5 +1,7 @@
+import { DEFAULT_TIME_FIELD } from '@/constants/pivot'
+
 const buildTimePayload = (timeRange, customRange) => {
-  const field = 'ts_server_nsec'
+  const field = DEFAULT_TIME_FIELD // 'ts_server_nsec'
 
   const baseDate = timeRange && timeRange.now ? new Date(timeRange.now) : new Date()
   const baseSec = Math.floor(baseDate.getTime() / 1000) // ms → sec
@@ -31,6 +33,7 @@ const buildTimePayload = (timeRange, customRange) => {
     }
   }
 
+  // 커스텀 기간
   let fromSec = null
   let toSec = null
 
