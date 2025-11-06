@@ -8,6 +8,7 @@ const PivotInfiniteScrollRow = ({
   column,
   values,
   filters,
+  sort,
   enabled,
   colSpan,
   onDataLoaded,
@@ -23,6 +24,7 @@ const PivotInfiniteScrollRow = ({
     column,
     values,
     filters,
+    sort,
     enabled,
   })
 
@@ -49,23 +51,17 @@ const PivotInfiniteScrollRow = ({
       )
 
       if (allNewItems.length > 0) {
-        // console.log(
-        //   `[InfiniteScroll] ${rowField} - Adding ${allNewItems.length} new items from pages:`,
-        //   newPages.map((p) => p.pageIndex),
-        // )
         onDataLoaded(allNewItems)
       }
     }
   }, [data, onDataLoaded, rowField])
 
-  // IntersectionObserver로 다음 페이지 트리거
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage || isFetchingRef.current) return
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !isFetchingRef.current) {
-          // console.log(`[InfiniteScroll] ${rowField} - Triggering fetchNextPage`)
           isFetchingRef.current = true
           fetchNextPage().finally(() => {
             setTimeout(() => {

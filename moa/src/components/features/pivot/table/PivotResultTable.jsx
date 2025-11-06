@@ -25,6 +25,8 @@ const PivotResultTable = ({ pivotResult }) => {
   const [infiniteQueries, setInfiniteQueries] = useState({})
 
   const [colSort, setColSort] = useState('default')
+  const [expanded, setExpanded] = useState({})
+  const [metricSort, setMetricSort] = useState(null)
 
   const layer = usePivotStore((s) => s.layer)
   const timeRange = usePivotStore((s) => s.timeRange)
@@ -35,16 +37,63 @@ const PivotResultTable = ({ pivotResult }) => {
 
   const { mutateAsync: fetchItemsAll } = useRowGroupItems()
 
+  const handleToggleMetricSort = useCallback((columnValue, metric) => {
+    setMetricSort((prev) => {
+      const isSame =
+        prev &&
+        prev.columnValue === columnValue &&
+        prev.metricAlias === metric.alias &&
+        prev.metricField === metric.field &&
+        prev.agg === metric.agg
+
+      // 1. desc 정렬
+      if (!isSame) {
+        return {
+          columnValue,
+          metricAlias: metric.alias,
+          metricField: metric.field,
+          agg: metric.agg,
+          direction: 'desc',
+        }
+      }
+
+      // 2. asc 정렬
+      if (prev.direction === 'desc') {
+        return { ...prev, direction: 'asc' }
+      }
+
+      // 3. 정렬 해제
+      return null
+    })
+  }, [])
+
   useEffect(() => {
     const rows = buildPivotRows(pivotResult)
     setTableData(rows)
   }, [pivotResult])
+
+  useEffect(() => {
+    setTableData((prev) =>
+      prev.map((row) => ({
+        ...row,
+        subRows: [],
+        isLoaded: false,
+        isLoading: false,
+        infiniteMode: false,
+      })),
+    )
+    setInfiniteQueries({})
+  }, [metricSort])
 
   const columnFieldName = pivotResult?.columnField?.name ?? ''
 
   useEffect(() => {
     setColSort('default')
   }, [columnFieldName])
+
+  useEffect(() => {
+    setExpanded({})
+  }, [metricSort])
 
   const handleToggleColSort = () => {
     setColSort((prev) => {
@@ -82,6 +131,18 @@ const PivotResultTable = ({ pivotResult }) => {
 
   const timePayload = usePivotTimePayload(pivotResult, timeRange, customRange)
 
+  const sortPayload = useMemo(() => {
+    if (!metricSort || !metricSort.direction) return null
+
+    return {
+      mode: 'value',
+      columnValue: metricSort.columnValue,
+      valueField: metricSort.metricField,
+      agg: metricSort.agg,
+      direction: metricSort.direction,
+    }
+  }, [metricSort])
+
   const loadAllItems = useCallback(
     async (row) => {
       const rowData = row.original
@@ -98,6 +159,7 @@ const PivotResultTable = ({ pivotResult }) => {
           column,
           values,
           filters,
+          sort: sortPayload,
         }
 
         const response = await fetchItemsAll(payload)
@@ -132,7 +194,7 @@ const PivotResultTable = ({ pivotResult }) => {
         )
       }
     },
-    [layer, timePayload, column, values, filters, fetchItemsAll],
+    [layer, timePayload, column, values, filters, fetchItemsAll, sortPayload],
   )
 
   // 무한스크롤 모드 활성화
@@ -193,8 +255,14 @@ const PivotResultTable = ({ pivotResult }) => {
 
   // 테이블 컬럼 계산
   const columns = useMemo(() => {
-    return buildPivotColumns(pivotResult, handleExpandRow, sortedColumnValues)
-  }, [pivotResult, handleExpandRow, sortedColumnValues])
+    return buildPivotColumns(
+      pivotResult,
+      handleExpandRow,
+      sortedColumnValues,
+      metricSort,
+      handleToggleMetricSort,
+    )
+  }, [pivotResult, handleExpandRow, sortedColumnValues, metricSort, handleToggleMetricSort])
 
   const table = useReactTable({
     data: tableData,
@@ -203,6 +271,10 @@ const PivotResultTable = ({ pivotResult }) => {
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: (row) => row.original?.hasChildren ?? false,
+    state: {
+      expanded,
+    },
+    onExpandedChange: setExpanded,
   })
 
   const headerGroups = table.getHeaderGroups()
@@ -261,10 +333,10 @@ const PivotResultTable = ({ pivotResult }) => {
                 <th
                   rowSpan={2}
                   className='
-    px-3 py-2 font-medium text-gray-700 align-middle
-    border-r border-b border-gray-200
-    whitespace-nowrap text-left bg-gray-50
-  '
+                    px-3 py-2 font-medium text-gray-700 align-middle
+                    border-r border-b border-gray-200
+                    whitespace-nowrap text-left bg-gray-50
+                  '
                   style={{ width: '250px', minWidth: '250px' }}
                 >
                   <div className='flex items-center gap-1'>
@@ -433,6 +505,7 @@ const PivotResultTable = ({ pivotResult }) => {
                         column={column}
                         values={values}
                         filters={filters}
+                        sort={sortPayload}
                         enabled={infiniteQueries[groupData.rowField]}
                         colSpan={table.getVisibleLeafColumns().length}
                         onDataLoaded={(newItems) => {

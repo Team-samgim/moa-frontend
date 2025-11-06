@@ -1,7 +1,16 @@
 import ArrowDownIcon from '@/assets/icons/arrow-down-bold.svg?react'
 import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
+import SortAscIcon from '@/assets/icons/asc.svg?react'
+import SortDescIcon from '@/assets/icons/desc.svg?react'
+import SortIcon from '@/assets/icons/sort.svg?react'
 
-export function buildPivotColumns(pivotResult, onExpandRow, sortedColumnValues) {
+export function buildPivotColumns(
+  pivotResult,
+  onExpandRow,
+  sortedColumnValues,
+  metricSort,
+  onToggleMetricSort,
+) {
   if (!pivotResult) return []
 
   const { columnField } = pivotResult
@@ -76,7 +85,39 @@ export function buildPivotColumns(pivotResult, onExpandRow, sortedColumnValues) 
     header: colVal || '(empty)',
     columns: (columnField.metrics || []).map((metric, metricIndex) => ({
       id: `${colIndex}::${metricIndex}::${colVal || '(empty)'}__${metric.alias}`,
-      header: metric.alias,
+
+      header: () => {
+        const isActive =
+          metricSort &&
+          metricSort.columnValue === colVal &&
+          metricSort.metricAlias === metric.alias &&
+          metricSort.metricField === metric.field &&
+          metricSort.agg === metric.agg
+
+        const direction = isActive ? metricSort.direction : 'default'
+
+        const handleClick = (e) => {
+          e.stopPropagation()
+          if (!onToggleMetricSort) return
+          onToggleMetricSort(colVal, metric)
+        }
+
+        return (
+          <div className='flex items-center justify-end gap-1'>
+            <span>{metric.alias}</span>
+            <button
+              type='button'
+              onClick={handleClick}
+              className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100'
+            >
+              {direction === 'default' && <SortIcon className='h-4 w-4 text-[#242424]' />}
+              {direction === 'desc' && <SortDescIcon className='h-4 w-4 text-[#242424]' />}
+              {direction === 'asc' && <SortAscIcon className='h-4 w-4 text-[#242424]' />}
+            </button>
+          </div>
+        )
+      },
+
       accessorFn: (row) => row.cells?.[colVal]?.[metric.alias] ?? null,
       cell: ({ getValue }) => {
         const v = getValue()
