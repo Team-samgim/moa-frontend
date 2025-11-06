@@ -74,7 +74,15 @@ function mapConditionOp(op, fieldType) {
 }
 
 const DataGrid = forwardRef(function DataGrid(
-  { layer, columns = [], basePayload, height = '70vh', cacheBlockSize = 100, onGridApis },
+  {
+    layer,
+    columns = [],
+    basePayload,
+    height = '70vh',
+    cacheBlockSize = 100,
+    onGridApis,
+    onActiveFiltersChange,
+  },
   ref,
 ) {
   const gridRef = useRef(null)
@@ -86,6 +94,9 @@ const DataGrid = forwardRef(function DataGrid(
   const activeFiltersRef = useRef(activeFilters)
   useEffect(() => {
     activeFiltersRef.current = activeFilters
+    if (typeof onActiveFiltersChange === 'function') {
+      onActiveFiltersChange(activeFilters)
+    }
   }, [activeFilters])
 
   const subscribeFilterMenuOpen = (field, cb) => {
@@ -162,6 +173,7 @@ const DataGrid = forwardRef(function DataGrid(
       setActiveFilters({})
       // 데이터 리로드
       api?.purgeInfiniteCache?.()
+      if (typeof onActiveFiltersChange === 'function') onActiveFiltersChange({})
     },
   }))
 
