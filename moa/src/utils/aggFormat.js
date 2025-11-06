@@ -1,4 +1,3 @@
-// utils/aggFormat.js
 export const cut = (s, max = 18) => {
   const t = String(s ?? '')
   return t.length > max ? t.slice(0, max) + '…' : t

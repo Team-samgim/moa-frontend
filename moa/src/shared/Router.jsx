@@ -7,7 +7,7 @@ import { reissueApi } from '@/api/auth'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
-import GridPage from '@/pages/grid/GridPage'
+// import GridPage from '@/pages/grid/GridPage'
 import FileManagementPage from '@/pages/mypage/FileManagementPage'
 import PresetPage from '@/pages/mypage/PresetPage'
 import PivotPage from '@/pages/pivot/PivotPage'
@@ -70,7 +70,7 @@ const Router = () => {
             <Route path={userNavigations.PIVOT} element={<PivotPage />} />
             <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />
             <Route path={userNavigations.PRESET} element={<PresetPage />} />
-            <Route path={userNavigations.GRID} element={<GridPage />} />
+            {/* <Route path={userNavigations.GRID} element={<GridPage />} /> */}
           </Route>
         </Route>
       </Routes>
