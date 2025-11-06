@@ -212,6 +212,8 @@ const PivotPage = () => {
 
   const timeForFilter = buildTimePayload(timeRange, customRange)
 
+  const initialTopNForModal = currentFilterForModal?.topN
+
   return (
     <>
       <div className='flex flex-col gap-4 p-4 mx-30'>
@@ -381,6 +383,7 @@ const PivotPage = () => {
           fieldName={filterModal.field}
           valueAliases={filterModal.valueAliases}
           selectedValues={selectedValuesForModal}
+          initialTopN={initialTopNForModal}
           onApply={applyFilter}
           onClose={closeFilter}
         />
