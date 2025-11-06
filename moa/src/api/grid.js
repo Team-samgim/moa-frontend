@@ -37,11 +37,12 @@ export const fetchFilterValues = async ({
   return data
 }
 
-export const fetchAggregates = async ({ layer, filterModel, metrics }) => {
+export const fetchAggregates = async ({ layer, aggFilters, metrics, baseSpec }) => {
   const { data } = await axiosInstance.post('/aggregate', {
     layer,
-    filterModel: JSON.stringify(filterModel || {}),
-    metrics, // { [field]: { type: 'number'|'string'|'ip'|'mac', ops: [...] } }
+    filterModel: JSON.stringify(aggFilters || {}),
+    baseSpecJson: baseSpec ? JSON.stringify(baseSpec) : null,
+    metrics, // { [field]: { type: 'number'|'string', ops: [...] } }
   })
   return data // { aggregates: { [field]: {...} } }
 }

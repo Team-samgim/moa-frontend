@@ -1,10 +1,9 @@
-// hooks/grid/useAggregateQuery.js
 import { useQuery } from '@tanstack/react-query'
 import { fetchAggregates } from '@/api/grid'
 
 const stableHash = (obj) => JSON.stringify(obj ?? {}, Object.keys(obj ?? {}).sort())
 
-export default function useAggregateQuery({ layer, filterModel, columns }) {
+export default function useAggregateQuery({ layer, filterModel, columns, baseSpec }) {
   const metrics = (columns || []).reduce((acc, col) => {
     const field = col?.field
     const type = col?.filterParams?.type
@@ -22,9 +21,16 @@ export default function useAggregateQuery({ layer, filterModel, columns }) {
   }, {})
 
   return useQuery({
-    queryKey: ['grid', 'aggregates', layer, stableHash(filterModel), Object.keys(metrics).length],
-    queryFn: () => fetchAggregates({ layer, filterModel, metrics }),
-    enabled: !!layer && Object.keys(metrics).length > 0,
+    queryKey: [
+      'grid',
+      'aggregates',
+      layer,
+      stableHash(filterModel),
+      stableHash(baseSpec),
+      Object.keys(metrics).length,
+    ],
+    queryFn: () => fetchAggregates({ layer, filterModel, metrics, baseSpec }),
+    enabled: !!layer && !!baseSpec && Object.keys(metrics).length > 0,
     staleTime: 30_000,
   })
 }

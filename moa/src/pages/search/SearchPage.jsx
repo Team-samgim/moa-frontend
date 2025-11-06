@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { fetchGridBySearchSpec } from '@/api/grid'
+import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
@@ -7,6 +8,7 @@ import LayerBar from '@/components/features/search/LayerBar'
 import QueryPreview from '@/components/features/search/QueryPreview'
 import SelectedConditions from '@/components/features/search/SelectedConditions'
 import TimePresetBar from '@/components/features/search/TimePresetBar'
+import useAggregateQuery from '@/hooks/grid/useAggregateQuery'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
 import GridToolbar from '@/pages/grid/GridToolbar'
 import { buildSearchPayload } from '@/utils/searchPayload'
@@ -29,6 +31,7 @@ const SearchPage = () => {
   const [hasSearched, setHasSearched] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [searchTotal, setSearchTotal] = useState(null)
+  const [aggFilters, setAggFilters] = useState({})
 
   const gridRef = useRef(null)
 
@@ -59,6 +62,17 @@ const SearchPage = () => {
     },
     [fields],
   )
+
+  const aggQuery = useAggregateQuery({
+    layer,
+    filterModel: aggFilters,
+    columns: gridCols.map((c) => ({
+      field: c.name, // AggregatesGrid는 field를 기대
+      filterParams: { type: c.type }, // type: 'number' | 'string' | 'date'
+      headerName: c.labelKo || c.name,
+    })),
+    baseSpec: searchPayload, // 기간/조건 포함
+  })
 
   const addConditionFromField = (f) => {
     if (conditions.some((c) => c.fieldKey === f.key)) return
@@ -242,7 +256,21 @@ const SearchPage = () => {
                 height='55vh'
                 cacheBlockSize={100}
                 onGridApis={setGridApis}
+                onActiveFiltersChange={setAggFilters}
               />
+              {/* 집계 테이블 */}
+              {aggQuery.isSuccess && (
+                <AggregatesPanel
+                  columns={gridCols.map((c) => ({
+                    field: c.name,
+                    headerName: c.labelKo || c.name,
+                  }))}
+                  aggregates={aggQuery.data?.aggregates || {}}
+                />
+              )}
+              {aggQuery.isLoading && (
+                <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
+              )}
             </>
           )}
         </div>
