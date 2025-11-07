@@ -42,7 +42,10 @@ export const usePivotStore = create((set) => ({
         value: null,
         now: new Date().toISOString(),
       },
-      customRange: { from, to },
+      customRange: {
+        from: from ? from.toISOString() : null,
+        to: to ? to.toISOString() : null,
+      },
     })),
 
   setColumnField: (field) =>

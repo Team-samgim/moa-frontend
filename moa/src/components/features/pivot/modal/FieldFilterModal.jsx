@@ -10,6 +10,7 @@ const FieldFilterModal = ({
   selectedValues,
   order = 'asc',
   valueAliases = ['Values 값들'],
+  initialTopN,
   onApply,
   onClose,
 }) => {
@@ -50,10 +51,10 @@ const FieldFilterModal = ({
 
   const [topNOpen, setTopNOpen] = useState(false)
   const [topNEnabled, setTopNEnabled] = useState(false)
-  const [topNValue, _setTopNValue] = useState(5)
-  const [topNMode, _setTopNMode] = useState('top')
-  const [topNMetric, _setTopNMetric] = useState(valueAliases[0] ?? 'Values 값들')
-  const [_metricDdOpen, _setMetricDdOpen] = useState(false)
+  const [topNValue, setTopNValue] = useState(5)
+  const [topNMode, setTopNMode] = useState('top') // 'top' | 'bottom'
+  const [topNMetric, setTopNMetric] = useState(valueAliases[0] ?? 'Values 값들')
+  const [metricDdOpen, setMetricDdOpen] = useState(false)
 
   const allCount = items.length
   const selectedCount = items.filter((i) => i.checked).length
@@ -102,6 +103,34 @@ const FieldFilterModal = ({
     })
   }
 
+  useEffect(() => {
+    if (!initialTopN || !initialTopN.enabled) {
+      setTopNOpen(false)
+      setTopNEnabled(false)
+      setTopNValue(5)
+      setTopNMode('top')
+      setTopNMetric(valueAliases[0] ?? 'Values 값들')
+      return
+    }
+
+    setTopNEnabled(true)
+    setTopNOpen(true)
+
+    if (typeof initialTopN.n === 'number' && initialTopN.n > 0) {
+      setTopNValue(initialTopN.n)
+    }
+
+    if (initialTopN.mode === 'top' || initialTopN.mode === 'bottom') {
+      setTopNMode(initialTopN.mode)
+    }
+
+    if (initialTopN.valueKey) {
+      setTopNMetric(initialTopN.valueKey)
+    } else if (valueAliases[0]) {
+      setTopNMetric(valueAliases[0])
+    }
+  }, [initialTopN, valueAliases])
+
   const btn = 'rounded border px-3 py-2 text-sm'
   const btnMuted = 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
   const btnPrimary = 'bg-blue-light text-white hover:bg-blue-dark'
@@ -139,8 +168,11 @@ const FieldFilterModal = ({
           <button
             className={`${btn} ${topNEnabled ? btnPrimary : btnMuted} px-8`}
             onClick={() => {
-              setTopNOpen((o) => !o)
-              if (!topNEnabled) setTopNEnabled(true)
+              setTopNOpen((prev) => {
+                const next = !prev
+                setTopNEnabled(next)
+                return next
+              })
             }}
           >
             TOP N
@@ -148,7 +180,88 @@ const FieldFilterModal = ({
         </div>
 
         {topNOpen && (
-          <div className='mx-4 mt-3 rounded-lg border border-[#BBD2F1] bg-[#EAF1FF] p-3'></div>
+          <div className='mx-4 mt-3 rounded-lg border border-[#BBD2F1] bg-[#EAF1FF] p-3'>
+            <div className='flex gap-3 items-center'>
+              {/* N 값 입력 */}
+              <div className='w-20'>
+                <input
+                  type='number'
+                  min={1}
+                  value={topNValue}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    setTopNValue(Number.isNaN(v) || v <= 0 ? 1 : v)
+                  }}
+                  className='w-full rounded-md border border-[#BBD2F1] bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-light'
+                />
+              </div>
+
+              {/* Top / Bottom 토글 */}
+              <div className='inline-flex rounded-lg border border-[#BBD2F1] bg-white/80 overflow-hidden'>
+                <button
+                  type='button'
+                  onClick={() => setTopNMode('top')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    topNMode === 'top'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Top
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setTopNMode('bottom')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    topNMode === 'bottom'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Bottom
+                </button>
+              </div>
+
+              {/* metric 드롭다운 */}
+              <div className='relative flex-1'>
+                <button
+                  type='button'
+                  onClick={() => setMetricDdOpen((o) => !o)}
+                  className='flex w-full items-center justify-between rounded-md border border-[#BBD2F1] bg-white px-3 py-2 text-sm text-gray-800 hover:bg-gray-50'
+                >
+                  <span className='truncate'>
+                    {topNMetric || (valueAliases[0] ?? 'Values 값들')}
+                  </span>
+                  <span className='ml-2 text-xs text-gray-500'>▾</span>
+                </button>
+
+                {metricDdOpen && (
+                  <div className='absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-[#BBD2F1] bg-white shadow-lg'>
+                    {valueAliases.map((alias) => (
+                      <button
+                        key={alias}
+                        type='button'
+                        onClick={() => {
+                          setTopNMetric(alias)
+                          setMetricDdOpen(false)
+                        }}
+                        className={`flex w-full items-center px-3 py-2 text-sm text-left hover:bg-[#EAF1FF] ${
+                          topNMetric === alias ? 'font-medium text-blue-dark' : 'text-gray-800'
+                        }`}
+                      >
+                        {alias}
+                      </button>
+                    ))}
+                    {!valueAliases.length && (
+                      <div className='px-3 py-2 text-sm text-gray-400'>
+                        선택 가능한 Values 가 없습니다
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 본문 */}

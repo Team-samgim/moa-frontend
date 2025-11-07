@@ -7,6 +7,10 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
+import SortColumnAscIcon from '@/assets/icons/asc-horizontal.svg?react'
+import SortColumnDescIcon from '@/assets/icons/desc-horizontal.svg?react'
+import SortColumnIcon from '@/assets/icons/sort-horizontal.svg?react'
+
 import PivotInfiniteScrollRow from '@/components/features/pivot/table/PivotInfiniteScrollRow'
 import { ROW_INFINITE_THRESHOLD } from '@/constants/pivot'
 import { useRowGroupItems } from '@/hooks/queries/usePivot'
@@ -18,7 +22,11 @@ import { buildPivotRows } from '@/utils/buildPivotRows.js'
 
 const PivotResultTable = ({ pivotResult }) => {
   const [tableData, setTableData] = useState([])
-  const [infiniteQueries, setInfiniteQueries] = useState({}) // rowField -> query 활성화 여부
+  const [infiniteQueries, setInfiniteQueries] = useState({})
+
+  const [colSort, setColSort] = useState('default')
+  const [expanded, setExpanded] = useState({})
+  const [metricSort, setMetricSort] = useState(null)
 
   const layer = usePivotStore((s) => s.layer)
   const timeRange = usePivotStore((s) => s.timeRange)
@@ -29,12 +37,111 @@ const PivotResultTable = ({ pivotResult }) => {
 
   const { mutateAsync: fetchItemsAll } = useRowGroupItems()
 
+  const handleToggleMetricSort = useCallback((columnValue, metric) => {
+    setMetricSort((prev) => {
+      const isSame =
+        prev &&
+        prev.columnValue === columnValue &&
+        prev.metricAlias === metric.alias &&
+        prev.metricField === metric.field &&
+        prev.agg === metric.agg
+
+      // 1. desc 정렬
+      if (!isSame) {
+        return {
+          columnValue,
+          metricAlias: metric.alias,
+          metricField: metric.field,
+          agg: metric.agg,
+          direction: 'desc',
+        }
+      }
+
+      // 2. asc 정렬
+      if (prev.direction === 'desc') {
+        return { ...prev, direction: 'asc' }
+      }
+
+      // 3. 정렬 해제
+      return null
+    })
+  }, [])
+
   useEffect(() => {
     const rows = buildPivotRows(pivotResult)
     setTableData(rows)
   }, [pivotResult])
 
+  useEffect(() => {
+    setTableData((prev) =>
+      prev.map((row) => ({
+        ...row,
+        subRows: [],
+        isLoaded: false,
+        isLoading: false,
+        infiniteMode: false,
+      })),
+    )
+    setInfiniteQueries({})
+  }, [metricSort])
+
+  const columnFieldName = pivotResult?.columnField?.name ?? ''
+
+  useEffect(() => {
+    setColSort('default')
+  }, [columnFieldName])
+
+  useEffect(() => {
+    setExpanded({})
+  }, [metricSort])
+
+  const handleToggleColSort = () => {
+    setColSort((prev) => {
+      if (prev === 'default') return 'asc'
+      if (prev === 'asc') return 'desc'
+      return 'default'
+    })
+  }
+
+  const sortedColumnValues = useMemo(() => {
+    const original = pivotResult?.columnField?.values ?? []
+    if (!original.length) return original
+
+    if (colSort === 'default') return original
+
+    const copy = [...original]
+
+    copy.sort((a, b) => {
+      const av = a ?? ''
+      const bv = b ?? ''
+
+      // "(empty)" 또는 빈 값은 항상 뒤로
+      const isAEmpty = av === '' || av === null
+      const isBEmpty = bv === '' || bv === null
+
+      if (isAEmpty && !isBEmpty) return 1
+      if (!isAEmpty && isBEmpty) return -1
+      if (isAEmpty && isBEmpty) return 0
+
+      return colSort === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+
+    return copy
+  }, [pivotResult?.columnField?.values, colSort])
+
   const timePayload = usePivotTimePayload(pivotResult, timeRange, customRange)
+
+  const sortPayload = useMemo(() => {
+    if (!metricSort || !metricSort.direction) return null
+
+    return {
+      mode: 'value',
+      columnValue: metricSort.columnValue,
+      valueField: metricSort.metricField,
+      agg: metricSort.agg,
+      direction: metricSort.direction,
+    }
+  }, [metricSort])
 
   const loadAllItems = useCallback(
     async (row) => {
@@ -52,6 +159,7 @@ const PivotResultTable = ({ pivotResult }) => {
           column,
           values,
           filters,
+          sort: sortPayload,
         }
 
         const response = await fetchItemsAll(payload)
@@ -86,7 +194,7 @@ const PivotResultTable = ({ pivotResult }) => {
         )
       }
     },
-    [layer, timePayload, column, values, filters, fetchItemsAll],
+    [layer, timePayload, column, values, filters, fetchItemsAll, sortPayload],
   )
 
   // 무한스크롤 모드 활성화
@@ -147,8 +255,14 @@ const PivotResultTable = ({ pivotResult }) => {
 
   // 테이블 컬럼 계산
   const columns = useMemo(() => {
-    return buildPivotColumns(pivotResult, handleExpandRow)
-  }, [pivotResult, handleExpandRow])
+    return buildPivotColumns(
+      pivotResult,
+      handleExpandRow,
+      sortedColumnValues,
+      metricSort,
+      handleToggleMetricSort,
+    )
+  }, [pivotResult, handleExpandRow, sortedColumnValues, metricSort, handleToggleMetricSort])
 
   const table = useReactTable({
     data: tableData,
@@ -157,6 +271,10 @@ const PivotResultTable = ({ pivotResult }) => {
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: (row) => row.original?.hasChildren ?? false,
+    state: {
+      expanded,
+    },
+    onExpandedChange: setExpanded,
   })
 
   const headerGroups = table.getHeaderGroups()
@@ -221,7 +339,27 @@ const PivotResultTable = ({ pivotResult }) => {
                   '
                   style={{ width: '250px', minWidth: '250px' }}
                 >
-                  {pivotResult?.columnField?.name ?? ''}
+                  <div className='flex items-center gap-1'>
+                    <span>{columnFieldName}</span>
+
+                    {columnFieldName && (
+                      <button
+                        type='button'
+                        onClick={handleToggleColSort}
+                        className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100'
+                      >
+                        {colSort === 'default' && (
+                          <SortColumnIcon className='h-4 w-4 text-[#242424]' />
+                        )}
+                        {colSort === 'asc' && (
+                          <SortColumnAscIcon className='h-4 w-4 text-[#242424]' />
+                        )}
+                        {colSort === 'desc' && (
+                          <SortColumnDescIcon className='h-4 w-4 text-[#242424]' />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </th>
 
                 {topGroup.headers.slice(2).map((header) => (
@@ -367,6 +505,7 @@ const PivotResultTable = ({ pivotResult }) => {
                         column={column}
                         values={values}
                         filters={filters}
+                        sort={sortPayload}
                         enabled={infiniteQueries[groupData.rowField]}
                         colSpan={table.getVisibleLeafColumns().length}
                         onDataLoaded={(newItems) => {

@@ -52,6 +52,7 @@ export function useRowGroupItemsInfinite({
   column,
   values,
   filters,
+  sort,
   enabled = false,
 }) {
   return useInfiniteQuery({
@@ -63,6 +64,7 @@ export function useRowGroupItemsInfinite({
       stableKey(column),
       stableKey(values),
       stableKey(filters),
+      stableKey(sort),
     ],
     queryFn: ({ pageParam }) =>
       fetchRowGroupItems({
@@ -72,6 +74,7 @@ export function useRowGroupItemsInfinite({
         column,
         values,
         filters,
+        sort,
         cursor: pageParam,
         limit: 50,
       }),
