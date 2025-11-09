@@ -12,6 +12,7 @@ const userNavigations = {
   PIVOT: '/pivot',
   PRESET: '/preset',
   FILE_MANAGEMENT: '/file_management',
+  MY_PAGE: '/mypage',
 }
 
 export { loggedOutNavigations, userNavigations }
