@@ -375,7 +375,10 @@ const Row = ({ p, onFav, onDelete, onApply }) => {
           <div className='flex items-center justify-between'>
             {/* 왼쪽: 적용/삭제 */}
             <div className='inline-flex items-center gap-2'>
-              <button onClick={() => onApply(p)} className='rounded border px-2 py-1.5 text-[12px]'>
+              <button
+                onClick={() => onApply(p)}
+                className='rounded border px-2 py-1.5 text-[12px] hover:bg-blue-50'
+              >
                 적용하기
               </button>
 
