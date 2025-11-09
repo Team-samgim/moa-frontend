@@ -128,8 +128,6 @@ const SearchPage = () => {
         fields,
       })
 
-      console.log('[SearchPage] 🔍 초기 메타 조회 (limit=1)')
-
       // 컬럼/총건수만 선조회
       const res = await fetchGridBySearchSpec({
         ...payload,
@@ -139,11 +137,6 @@ const SearchPage = () => {
       setGridCols(res?.columns ?? [])
       const total = typeof res?.total === 'number' ? res.total : null
       setSearchTotal(total)
-
-      console.log('[SearchPage] ✅ 메타 조회 완료:', {
-        columns: res?.columns?.length,
-        total,
-      })
 
       // 무한스크롤 datasource 장착 (실제 데이터는 DataGrid에서 로드)
       const base = {
@@ -155,8 +148,6 @@ const SearchPage = () => {
         },
       }
       setSearchPayload(base)
-
-      console.log('[SearchPage] 🚀 DataGrid 무한스크롤 시작 (cacheBlockSize=100)')
 
       setHasSearched(true)
       setTimeout(() => gridRef.current?.purge?.(), 0)
