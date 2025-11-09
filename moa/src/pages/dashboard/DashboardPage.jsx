@@ -1,42 +1,53 @@
-import { useMember } from '@/hooks/queries/useMember'
-import { useAuthStore } from '@/stores/authStore'
+import AvgResponseTime from '@/components/features/dashboard/AvgResponseTime'
+import GeoTrafficDistribution from '@/components/features/dashboard/GeoTrafficDistribution'
+import HttpStatusDonut from '@/components/features/dashboard/HttpStatusDonut'
+import TcpErrorGauge from '@/components/features/dashboard/TcpErrorGauge'
+import Toolbar from '@/components/features/dashboard/Toolbar'
+import TopDomains from '@/components/features/dashboard/TopDomains'
+import TrafficTrend from '@/components/features/dashboard/TrafficTrend'
 
+// Arrow function 문법 + 마지막에 default export
 const DashboardPage = () => {
-  const { isLogin } = useAuthStore()
-  const { data, isLoading, isError } = useMember()
-
-  if (!isLogin) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-gray-700'>
-        <p>로그인이 필요합니다.</p>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-gray-700'>
-        <p>로딩 중...</p>
-      </div>
-    )
-  }
-
-  if (isError || !data) {
-    return (
-      <div className='min-h-screen flex items-center justify-center text-red-500'>
-        <p>프로필 정보를 불러오지 못했어요.</p>
-      </div>
-    )
-  }
-
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gray-50 p-6'>
-      <div className='bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.06)] p-10 text-center max-w-sm w-full'>
-        <p className='text-xl font-semibold text-gray-800'>{data.nickname}님 안녕하세요 👋</p>
-        <p className='mt-3 text-sm text-gray-500'>아이디: {data.loginId}</p>
-        <p className='text-sm text-gray-500'>이메일: {data.email}</p>
+    <>
+      <div className='flex flex-col gap-4 p-4 mx-30'>
+        <div className='space-y-1'>
+          <h3 className='text-2xl font-semibold'>네트워크 모니터링 대시보드</h3>
+          <p className='text-muted-foreground'>실시간 트래픽 및 성능 분석</p>
+        </div>
       </div>
-    </div>
+      <div className='flex flex-col gap-4 p-4 mx-30'>
+        <Toolbar
+          onAddWidget={() => {
+            // TODO: 위젯 추가 모달/드로어 열기
+          }}
+          onSaveLayout={() => {
+            // TODO: 현재 레이아웃 저장 처리
+          }}
+        />
+      </div>
+
+      <main className='grid grid-cols-12 grid-flow-row-dense gap-4 p-4 mx-30 bg-[#F7F9FC] rounded-2xl'>
+        <section className='col-span-12 md:col-span-8 rounded-lg bg-white shadow-sm'>
+          <TrafficTrend />
+        </section>
+        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <TcpErrorGauge />
+        </section>
+        <section className='col-span-12 md:col-span-12 rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <GeoTrafficDistribution />
+        </section>
+        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <HttpStatusDonut />
+        </section>
+        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <TopDomains />
+        </section>
+        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
+          <AvgResponseTime />
+        </section>
+      </main>
+    </>
   )
 }
 
