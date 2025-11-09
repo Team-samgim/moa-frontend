@@ -37,10 +37,10 @@ export const fetchFilterValues = async ({
   return data
 }
 
-export const fetchAggregates = async ({ layer, aggFilters, metrics, baseSpec }) => {
+export const fetchAggregates = async ({ layer, filterModel, metrics, baseSpec }) => {
   const { data } = await axiosInstance.post('/aggregate', {
     layer,
-    filterModel: JSON.stringify(aggFilters || {}),
+    filterModel: JSON.stringify(filterModel || {}),
     baseSpecJson: baseSpec ? JSON.stringify(baseSpec) : null,
     metrics, // { [field]: { type: 'number'|'string', ops: [...] } }
   })
@@ -54,7 +54,6 @@ export const exportGrid = async (payload, signal) => {
 
 export const fetchGridBySearchSpec = async (payload) => {
   const { data } = await axiosInstance.post('/grid/search', payload)
-  console.log('grid data', data)
   return data // { layer, columns:[{name,type,labelKo}], rows:[...] }
 }
 
@@ -86,6 +85,5 @@ export const fetchRows = async ({
     },
     filterModel: filterModel || {},
   })
-  console.log(`[fetchRows] 요청됨 → orderBy=${orderBy}, order=${order}`)
   return data
 }
