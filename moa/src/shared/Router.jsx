@@ -9,6 +9,7 @@ import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 // import GridPage from '@/pages/grid/GridPage'
 import FileManagementPage from '@/pages/mypage/FileManagementPage'
+import MyPage from '@/pages/mypage/MyPage'
 import PresetPage from '@/pages/mypage/PresetPage'
 import PivotPage from '@/pages/pivot/PivotPage'
 import SearchPage from '@/pages/search/SearchPage'
@@ -70,6 +71,7 @@ const Router = () => {
             <Route path={userNavigations.PIVOT} element={<PivotPage />} />
             <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />
             <Route path={userNavigations.PRESET} element={<PresetPage />} />
+            <Route path={userNavigations.MY_PAGE} element={<MyPage />} />
             {/* <Route path={userNavigations.GRID} element={<GridPage />} /> */}
           </Route>
         </Route>
