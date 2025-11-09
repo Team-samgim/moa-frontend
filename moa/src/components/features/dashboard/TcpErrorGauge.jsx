@@ -91,11 +91,20 @@ const TcpErrorGauge = () => {
   useEffect(() => {
     const inst = chartRef.current?.getEchartsInstance?.()
     if (!inst) return
+
     const el = inst.getDom()
-    const ro = new ResizeObserver(() => inst.resize())
+    const ro = new ResizeObserver(() => {
+      // dispose 체크 추가
+      if (!inst.isDisposed()) {
+        inst.resize()
+      }
+    })
     ro.observe(el)
-    return () => ro.disconnect()
-  }, [option])
+
+    return () => {
+      ro.disconnect()
+    }
+  }, []) // option 의존성 제거
 
   return (
     <WidgetCard

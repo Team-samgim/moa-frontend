@@ -14,8 +14,6 @@ import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useTrafficTrend } from '@/hooks/queries/useDashboard'
 
-// ECharts (tree-shakable imports)
-
 echarts.use([
   LineChart,
   GridComponent,
@@ -32,7 +30,6 @@ const TrafficTrend = () => {
 
   const points = data?.points ?? []
 
-  // x축: time, y축: Mbps. [timestamp,value] 형태가 성능/정확도에 좋음
   const reqData = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.req]), [points])
   const resData = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.res]), [points])
 
@@ -72,15 +69,24 @@ const TrafficTrend = () => {
     }
   }, [reqData, resData, points.length])
 
-  // 컨테이너 크기 변화 대응 (사이드바 토글 등)
+  // 컨테이너 크기 변화 대응 + cleanup
   useEffect(() => {
     const inst = chartRef.current?.getEchartsInstance?.()
     if (!inst) return
+
     const el = inst.getDom()
-    const ro = new ResizeObserver(() => inst.resize())
+    const ro = new ResizeObserver(() => {
+      // dispose 체크 추가
+      if (!inst.isDisposed()) {
+        inst.resize()
+      }
+    })
     ro.observe(el)
-    return () => ro.disconnect()
-  }, [points])
+
+    return () => {
+      ro.disconnect()
+    }
+  }, []) // points 의존성 제거 - 불필요한 재생성 방지
 
   return (
     <WidgetCard
