@@ -75,7 +75,7 @@ const MyPage = () => {
               onClick={() => scrollTo('#profile')}
             />
 
-            {/* ✅ 프리셋 → 프리셋 페이지로 이동 */}
+            {/* 프리셋 → 프리셋 페이지로 이동 */}
             <QuickCard
               title='프리셋'
               desc={'검색 프리셋\n피벗 프리셋'}
@@ -83,7 +83,7 @@ const MyPage = () => {
               onClick={() => navigate(userNavigations.PRESET)}
             />
 
-            {/* ✅ 문서 → 파일 관리 페이지로 이동 */}
+            {/* 문서 → 파일 관리 페이지로 이동 */}
             <QuickCard
               title='문서'
               desc={'그리드 CSV\n피벗 CSV\n차트 이미지'}
