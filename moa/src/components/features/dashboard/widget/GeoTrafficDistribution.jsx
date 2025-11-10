@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import PropTypes from 'prop-types'
 import MapIcon from '@/assets/icons/map.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useTrafficByCountry } from '@/hooks/queries/useDashboard'
@@ -35,7 +36,7 @@ const formatBytes = (v = 0) => {
   return `${nf.format(n)} B`
 }
 
-const GeoTrafficDistribution = () => {
+const GeoTrafficDistribution = ({ onClose }) => {
   const { data: rows = [], isError } = useTrafficByCountry()
 
   const items = useMemo(() => {
@@ -71,7 +72,7 @@ const GeoTrafficDistribution = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('지리적 트래픽 분포 설정')}
-      onClose={() => console.log('지리적 트래픽 분포 닫기')}
+      onClose={onClose} // DashboardPage에서 받은 onClose 전달
     >
       <div className='rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 p-6'>
         {isError ? (
@@ -95,6 +96,11 @@ const GeoTrafficDistribution = () => {
       </div>
     </WidgetCard>
   )
+}
+
+// PropTypes 추가
+GeoTrafficDistribution.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default GeoTrafficDistribution

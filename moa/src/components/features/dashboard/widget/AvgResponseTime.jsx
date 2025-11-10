@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types' // 🔥 추가
 import ClockIcon from '@/assets/icons/clock.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useResponseTime } from '@/hooks/queries/useDashboard'
@@ -19,7 +20,8 @@ const Stat = ({ label, value }) => {
   )
 }
 
-const AvgResponseTime = () => {
+// 🔥 onClose prop 추가
+const AvgResponseTime = ({ onClose }) => {
   const { data, isError } = useResponseTime()
 
   const avg = Number(data?.avg ?? 0)
@@ -27,7 +29,6 @@ const AvgResponseTime = () => {
   const med = Number(data?.p50 ?? 0)
   const max = Number(data?.max ?? 0)
 
-  // 백엔드가 초 단위로 주는 경우를 대비해 자동 변환 (예: 0.25 -> 250ms)
   const vals = [avg, min, med, max]
   const secondsLike = vals.some((v) => v > 0 && v < 1) && Math.max(...vals) < 20
   const toMs = (v) => (secondsLike ? v * 1000 : v)
@@ -37,7 +38,6 @@ const AvgResponseTime = () => {
   const medMs = toMs(med)
   const maxMs = toMs(max)
 
-  // 선택: 이전 평균이 응답에 있으면 전기간 대비 증감률 표시
   const prev = Number(data?.prevAvg)
   const hasPrev = Number.isFinite(prev) && prev > 0
   const deltaPct = hasPrev ? ((avg - prev) / prev) * 100 : null
@@ -51,7 +51,7 @@ const AvgResponseTime = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('평균 응답 시간 설정')}
-      onClose={() => console.log('평균 응답 시간 닫기')}
+      onClose={onClose} // 🔥 DashboardPage에서 받은 onClose 전달
     >
       <div className='flex min-h-[260px] flex-col'>
         {isError ? (
@@ -86,6 +86,11 @@ const AvgResponseTime = () => {
       </div>
     </WidgetCard>
   )
+}
+
+// 🔥 PropTypes 추가
+AvgResponseTime.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default AvgResponseTime

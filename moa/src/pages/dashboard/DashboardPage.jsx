@@ -1,13 +1,73 @@
-import AvgResponseTime from '@/components/features/dashboard/AvgResponseTime'
-import GeoTrafficDistribution from '@/components/features/dashboard/GeoTrafficDistribution'
-import HttpStatusDonut from '@/components/features/dashboard/HttpStatusDonut'
-import TcpErrorGauge from '@/components/features/dashboard/TcpErrorGauge'
+import { useState } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import SortableWidget from '@/components/features/dashboard/SortableWidget'
 import Toolbar from '@/components/features/dashboard/Toolbar'
-import TopDomains from '@/components/features/dashboard/TopDomains'
-import TrafficTrend from '@/components/features/dashboard/TrafficTrend'
+import WidgetLibraryDialog, {
+  DEFAULT_WIDGETS,
+} from '@/components/features/dashboard/WidgetLibraryDialog'
+import AvgResponseTime from '@/components/features/dashboard/widget/AvgResponseTime'
+import GeoTrafficDistribution from '@/components/features/dashboard/widget/GeoTrafficDistribution'
+import HttpStatusDonut from '@/components/features/dashboard/widget/HttpStatusDonut'
+import TcpErrorGauge from '@/components/features/dashboard/widget/TcpErrorGauge'
+import TopDomains from '@/components/features/dashboard/widget/TopDomains'
+import TrafficTrend from '@/components/features/dashboard/widget/TrafficTrend'
 
-// Arrow function 문법 + 마지막에 default export
 const DashboardPage = () => {
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const DEFAULT_IDS = DEFAULT_WIDGETS.map((w) => w.id)
+  const [widgets, setWidgets] = useState(DEFAULT_IDS)
+
+  const WIDGET_RENDERERS = {
+    trafficTrend: { comp: TrafficTrend, className: 'col-span-12 md:col-span-8' },
+    tcpErrorRate: { comp: TcpErrorGauge, className: 'col-span-12 md:col-span-4' },
+    geoHeatmap: { comp: GeoTrafficDistribution, className: 'col-span-12 md:col-span-12' },
+    httpStatus: { comp: HttpStatusDonut, className: 'col-span-12 md:col-span-4' },
+    topDomains: { comp: TopDomains, className: 'col-span-12 md:col-span-4' },
+    responseTime: { comp: AvgResponseTime, className: 'col-span-12 md:col-span-4' },
+  }
+
+  const handleRemoveWidget = (widgetId) => {
+    setWidgets((prev) => prev.filter((id) => id !== widgetId))
+  }
+
+  // 드래그앤드롭 센서 설정
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이동 후 드래그 시작 (클릭과 구분)
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  // 드래그 끝났을 때 순서 변경
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setWidgets((items) => {
+        const oldIndex = items.indexOf(active.id)
+        const newIndex = items.indexOf(over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
+
   return (
     <>
       <div className='flex flex-col gap-4 p-4 mx-30'>
@@ -18,35 +78,41 @@ const DashboardPage = () => {
       </div>
       <div className='flex flex-col gap-4 p-4 mx-30'>
         <Toolbar
-          onAddWidget={() => {
-            // TODO: 위젯 추가 모달/드로어 열기
-          }}
+          onAddWidget={() => setLibraryOpen(true)}
           onSaveLayout={() => {
-            // TODO: 현재 레이아웃 저장 처리
+            console.log('현재 위젯 순서:', widgets)
+            // TODO: localStorage나 API로 저장
           }}
         />
       </div>
 
-      <main className='grid grid-cols-12 grid-flow-row-dense gap-4 p-4 mx-30 bg-[#F7F9FC] rounded-2xl'>
-        <section className='col-span-12 md:col-span-8 rounded-lg bg-white shadow-sm'>
-          <TrafficTrend />
-        </section>
-        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <TcpErrorGauge />
-        </section>
-        <section className='col-span-12 md:col-span-12 rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <GeoTrafficDistribution />
-        </section>
-        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <HttpStatusDonut />
-        </section>
-        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <TopDomains />
-        </section>
-        <section className='col-span-12 md:col-span-4 rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <AvgResponseTime />
-        </section>
-      </main>
+      {/* DndContext로 감싸기 */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgets} strategy={rectSortingStrategy}>
+          <main className='grid grid-cols-12 grid-flow-row-dense gap-4 p-4 mx-30 bg-[#F7F9FC] rounded-2xl'>
+            {widgets.map((id) => {
+              const meta = WIDGET_RENDERERS[id]
+              if (!meta) return null
+              const Comp = meta.comp
+              return (
+                <SortableWidget key={id} id={id} className={meta.className}>
+                  <Comp onClose={() => handleRemoveWidget(id)} />
+                </SortableWidget>
+              )
+            })}
+          </main>
+        </SortableContext>
+      </DndContext>
+
+      <WidgetLibraryDialog
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        onConfirm={(ids) => {
+          setWidgets(ids)
+          setLibraryOpen(false)
+        }}
+        initialSelectedIds={widgets}
+      />
     </>
   )
 }

@@ -10,6 +10,7 @@ import {
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import ReactECharts from 'echarts-for-react'
+import PropTypes from 'prop-types'
 import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useTrafficTrend } from '@/hooks/queries/useDashboard'
@@ -24,7 +25,7 @@ echarts.use([
   CanvasRenderer,
 ])
 
-const TrafficTrend = () => {
+const TrafficTrend = ({ onClose }) => {
   const { data, isError } = useTrafficTrend()
   const chartRef = useRef(null)
 
@@ -96,7 +97,7 @@ const TrafficTrend = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('트래픽 추이 설정')}
-      onClose={() => console.log('트래픽 추이 닫기')}
+      onClose={onClose}
     >
       <div className='h-70'>
         {isError ? (
@@ -114,6 +115,11 @@ const TrafficTrend = () => {
       </div>
     </WidgetCard>
   )
+}
+
+// PropTypes 추가
+TrafficTrend.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default TrafficTrend

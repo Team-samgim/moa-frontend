@@ -4,6 +4,7 @@ import { TooltipComponent, TitleComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import ReactECharts from 'echarts-for-react'
+import PropTypes from 'prop-types'
 import RefreshIcon from '@/assets/icons/refresh.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useTcpErrorRate } from '@/hooks/queries/useDashboard'
@@ -24,7 +25,7 @@ const Row = ({ label, value }) => {
   )
 }
 
-const TcpErrorGauge = () => {
+const TcpErrorGauge = ({ onClose }) => {
   const { data, isError } = useTcpErrorRate()
   const chartRef = useRef(null)
 
@@ -114,7 +115,7 @@ const TcpErrorGauge = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('TCP 에러율 설정')}
-      onClose={() => console.log('TCP 에러율 닫기')}
+      onClose={onClose}
     >
       <div className='flex flex-col gap-4'>
         <div className='h-56'>
@@ -139,6 +140,10 @@ const TcpErrorGauge = () => {
       </div>
     </WidgetCard>
   )
+}
+// PropTypes 추가
+TcpErrorGauge.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default TcpErrorGauge

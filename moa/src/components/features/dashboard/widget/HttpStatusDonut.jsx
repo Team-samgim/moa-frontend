@@ -4,6 +4,7 @@ import { LegendComponent, TooltipComponent, TitleComponent } from 'echarts/compo
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import ReactECharts from 'echarts-for-react'
+import PropTypes from 'prop-types'
 import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useHttpStatusCodes } from '@/hooks/queries/useDashboard'
@@ -12,7 +13,7 @@ import { useHttpStatusCodes } from '@/hooks/queries/useDashboard'
 
 echarts.use([PieChart, LegendComponent, TooltipComponent, TitleComponent, CanvasRenderer])
 
-const HttpStatusDonut = () => {
+const HttpStatusDonut = ({ onClose }) => {
   const { data, isError } = useHttpStatusCodes()
   const chartRef = useRef(null)
 
@@ -74,7 +75,7 @@ const HttpStatusDonut = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('HTTP 상태코드 설정')}
-      onClose={() => console.log('HTTP 상태코드 닫기')}
+      onClose={onClose}
     >
       <div className='h-80'>
         {isError ? (
@@ -92,6 +93,11 @@ const HttpStatusDonut = () => {
       </div>
     </WidgetCard>
   )
+}
+
+// PropTypes 추가
+HttpStatusDonut.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default HttpStatusDonut

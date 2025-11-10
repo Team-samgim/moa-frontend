@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import TrendingUpIcon from '@/assets/icons/trending-up.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useTopDomains } from '@/hooks/queries/useDashboard'
@@ -57,7 +58,7 @@ const Skeleton = () => (
   </ul>
 )
 
-const TopDomains = () => {
+const TopDomains = ({ onClose }) => {
   const { data: rows = [], isLoading, isError } = useTopDomains(10)
 
   return (
@@ -68,7 +69,7 @@ const TopDomains = () => {
       showSettings={true}
       showClose={true}
       onSettings={() => console.log('Top 10 도메인 설정')}
-      onClose={() => console.log('Top 10 도메인 닫기')}
+      onClose={onClose}
     >
       <div className='py-2'>
         {isError ? (
@@ -87,6 +88,11 @@ const TopDomains = () => {
       </div>
     </WidgetCard>
   )
+}
+
+// PropTypes 추가
+TopDomains.propTypes = {
+  onClose: PropTypes.func,
 }
 
 export default TopDomains
