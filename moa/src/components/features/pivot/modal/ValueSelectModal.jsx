@@ -25,7 +25,14 @@ const AGG_OPTIONS = [
   { value: 'max', label: '최대' },
 ]
 
-const ValueToken = ({ item, openAggForId, setOpenAggForId, updateAggForItem, removeValueItem }) => {
+const ValueToken = ({
+  item,
+  openAggForId,
+  setOpenAggForId,
+  updateAggForItem,
+  removeValueItem,
+  isNumberField,
+}) => {
   const { id, field, agg } = item
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
@@ -39,6 +46,9 @@ const ValueToken = ({ item, openAggForId, setOpenAggForId, updateAggForItem, rem
 
   const aggMeta = AGG_OPTIONS.find((o) => o.value === agg)
   const aggLabel = aggMeta ? aggMeta.label : agg
+
+  const numeric = isNumberField?.(field) // true | false | undefined
+  const isNumericField = !!numeric
 
   return (
     <div
@@ -59,32 +69,40 @@ const ValueToken = ({ item, openAggForId, setOpenAggForId, updateAggForItem, rem
           {aggLabel}: {field}
         </span>
 
-        {/* agg 변경 드롭다운 트리거 */}
-        <button
-          className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50'
-          onClick={() => {
-            setOpenAggForId(openAggForId === id ? null : id)
-          }}
-        >
-          <span>{aggLabel}</span>
-          <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
-        </button>
+        {isNumericField ? (
+          <>
+            <button
+              className='flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50'
+              onClick={() => {
+                setOpenAggForId(openAggForId === id ? null : id)
+              }}
+            >
+              <span>{aggLabel}</span>
+              <ArrowDownIcon className='h-2.5 w-2.5 text-gray-500' />
+            </button>
 
-        {openAggForId === id && (
-          <div className='absolute z-10 mt-7 ml-20 w-24 rounded border border-gray-200 bg-white text-xs shadow'>
-            {AGG_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                className='block w-full px-3 py-2 text-left hover:bg-gray-50'
-                onClick={() => {
-                  updateAggForItem(id, opt.value)
-                  setOpenAggForId(null)
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+            {openAggForId === id && (
+              <div className='absolute z-10 mt-7 ml-20 w-24 rounded border border-gray-200 bg-white text-xs shadow'>
+                {AGG_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className='block w-full px-3 py-2 text-left hover:bg-gray-50'
+                    onClick={() => {
+                      updateAggForItem(id, opt.value)
+                      setOpenAggForId(null)
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          // 숫자 아닌 필드는 count 고정 뱃지만 보여주기
+          <span className='inline-flex items-center rounded border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-500'>
+            {aggLabel}
+          </span>
         )}
       </div>
 
@@ -98,7 +116,22 @@ const ValueToken = ({ item, openAggForId, setOpenAggForId, updateAggForItem, rem
 
 const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
   const { data, isLoading } = usePivotFields()
-  const fieldNames = (data?.fields || []).map((f) => f.name)
+  const fields = useMemo(() => (data?.fields ? data.fields : []), [data?.fields])
+
+  const fieldMetaMap = useMemo(() => {
+    const map = new Map()
+    fields.forEach((f) => {
+      map.set(f.name, f)
+    })
+    return map
+  }, [fields])
+
+  const fieldNames = useMemo(() => fields.map((f) => f.name), [fields])
+
+  const isNumberField = (fieldName) => {
+    const meta = fieldMetaMap.get(fieldName)
+    return typeof meta?.dataType === 'string' && meta.dataType.toLowerCase() === 'number'
+  }
 
   const { column: globalColumn, rows: globalRows } = usePivotStore()
 
@@ -151,7 +184,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
   const addField = (fieldName) => {
     if (blockedForValues.has(fieldName)) return
 
-    const defaultAgg = 'sum'
+    const defaultAgg = isNumberField(fieldName) ? 'sum' : 'count'
     const newId = `${fieldName}#${defaultAgg}`
 
     setValuesState((prev) => [...prev, { id: newId, field: fieldName, agg: defaultAgg }])
@@ -163,7 +196,16 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
 
   const updateAggForItem = (id, nextAgg) => {
     setValuesState((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, agg: nextAgg, id: `${v.field}#${nextAgg}` } : v)),
+      prev.map((v) => {
+        if (v.id !== id) return v
+
+        // 숫자가 아니면 count
+        if (!isNumberField(v.field)) {
+          return { ...v, agg: 'count', id: `${v.field}#count` }
+        }
+
+        return { ...v, agg: nextAgg, id: `${v.field}#${nextAgg}` }
+      }),
     )
   }
 
@@ -215,6 +257,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
                     setOpenAggForId={setOpenAggForId}
                     updateAggForItem={updateAggForItem}
                     removeValueItem={removeValueItem}
+                    isNumberField={isNumberField}
                   />
                   {idx !== valuesState.length - 1 && (
                     <ArrowRightIcon className='h-3.5 w-3.5 text-gray-500' />
