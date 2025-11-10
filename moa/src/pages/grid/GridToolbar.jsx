@@ -137,7 +137,7 @@ const GridToolbar = ({
         <button
           onClick={() => presetMut.mutate()}
           disabled={disabled}
-          className='rounded-md bg-indigo-600 px-3 py-1.5 text-white shadow-sm hover:shadow transition disabled:opacity-50'
+          className='rounded-md bg-[#F8F1D0] px-3 py-1.5 text-black shadow-sm hover:shadow transition disabled:opacity-50'
           title={ready ? '' : '그리드가 준비되면 활성화됩니다'}
         >
           {presetMut.isPending ? '저장 중…' : '프리셋 저장'}
@@ -146,7 +146,7 @@ const GridToolbar = ({
         <button
           onClick={() => exportMut.mutate()}
           disabled={disabled}
-          className='rounded-md bg-emerald-600 px-3 py-1.5 text-white shadow-sm hover:shadow transition disabled:opacity-50'
+          className='rounded-md bg-[#E6F0C7] px-3 py-1.5 text-black shadow-sm hover:shadow transition disabled:opacity-50'
           title={ready ? '' : '그리드가 준비되면 활성화됩니다'}
         >
           {exportMut.isPending ? '저장 중…' : 'CSV 저장'}
