@@ -23,15 +23,17 @@ const FileManagementPage = () => {
     <div className='mx-auto w-full max-w-[1200px] px-6 py-6'>
       <Tabs value={type} onChange={onTabChange} />
 
-      <div className='overflow-x-auto rounded-xl border'>
-        <table className='min-w-[900px] w-full table-fixed'>
+      <div className='overflow-x-auto'>
+        <table className='min-w-[900px] w-full table-fixed border-separate border-spacing-y-[15px] border-spacing-x-0'>
           <thead>
-            <tr className='border-b bg-gray-50 text-left text-[13px] text-gray-600'>
-              <th className={['w-16', CLASSES.TH].join(' ')}>번호</th>
+            <tr className='bg-[#F5F5F7] text-left text-[13px] text-gray-600'>
+              <th className={['w-16', CLASSES.TH, 'first:rounded-l-md'].join(' ')}>번호</th>
               <th className={CLASSES.TH}>파일명</th>
               <th className={CLASSES.TH}>조회 계층</th>
               <th className={CLASSES.TH}>생성일</th>
-              <th className={[CLASSES.TH, 'text-left w-[260px]'].join(' ')}>작업</th>
+              <th className={[CLASSES.TH, 'last:rounded-r-md text-left w-[260px]'].join(' ')}>
+                작업
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -24,6 +24,13 @@ const FileRow = ({ idx, item, onDeleted }) => {
   const config = item.config ? normalizePresetConfig(item.config) : null
   const isCsvType = item.type === 'GRID' || item.type === 'PIVOT'
   const isChart = item.type === 'CHART'
+  const rowBg = open ? 'bg-[#EEF5FE]' : 'bg-white'
+  const cellBoxCls = cx(
+    CLASSES.TD,
+    rowBg,
+    'border-y border-[#D1D1D6] first:border-l last:border-r first:rounded-l-md last:rounded-r-md',
+    open && 'first:rounded-bl-none last:rounded-br-none',
+  )
 
   const handleApply = useCallback(
     (rawCfg) => {
@@ -55,26 +62,26 @@ const FileRow = ({ idx, item, onDeleted }) => {
 
   return (
     <>
-      <tr className={cx('border-b', open && 'bg-indigo-50/30', CLASSES.ROW_H)}>
-        <td className={cx(CLASSES.TD, 'w-16 text-center')}>{idx}</td>
+      <tr className={cx('border-b', open && 'bg-[#EEF5FE]', CLASSES.ROW_H)}>
+        <td className={cx(cellBoxCls, 'w-16 text-center')}>{idx}</td>
 
-        <td className={CLASSES.TD}>
+        <td className={cellBoxCls}>
           <span className='inline-block max-w-[420px] truncate align-middle' title={item.fileName}>
             {item.fileName}
           </span>
         </td>
 
-        <td className={CLASSES.TD}>
+        <td className={cellBoxCls}>
           <LayerCell layer={item.layer} />
         </td>
 
-        <td className={cx(CLASSES.TD, 'text-gray-600')}>{fmtDate(item.createdAt)}</td>
+        <td className={cx(cellBoxCls, 'text-gray-600')}>{fmtDate(item.createdAt)}</td>
 
-        <td className={cx(CLASSES.TD, 'w-[260px]')}>
+        <td className={cx(cellBoxCls, 'w-[260px]')}>
           <div className='flex items-center justify-between'>
             <div className='inline-flex items-center gap-2'>
               <button
-                className={CLASSES.BTN}
+                className={cx(CLASSES.BTN, 'border border-[#CCCCCC]')}
                 onClick={() => downloadMut.mutate(item.fileId)}
                 disabled={downloadMut.isPending}
                 title='다운로드'
@@ -83,7 +90,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
               </button>
 
               <button
-                className={cx(CLASSES.BTN_ICON, 'hover:bg-red-50')}
+                className={cx(CLASSES.BTN_ICON, 'hover:bg-red-50 border border-[#CCCCCC]')}
                 onClick={onDelete}
                 title='삭제'
                 aria-label='삭제'
@@ -97,7 +104,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
                 onClick={() => setOpen((v) => !v)}
                 aria-label={open ? '닫기' : '열기'}
                 title={open ? '닫기' : '열기'}
-                className={CLASSES.BTN_ICON}
+                className={cx(CLASSES.BTN_ICON, 'border border-[#CCCCCC]')}
               >
                 <img src={open ? arrowDown : arrowLeft} alt='' className='h-4 w-4' />
               </button>
@@ -107,9 +114,9 @@ const FileRow = ({ idx, item, onDeleted }) => {
       </tr>
 
       {open && (
-        <tr className='border-b bg-white/60'>
-          <td colSpan={5} className='px-6 pb-3'>
-            <div className='rounded-2xl bg-white p-2'>
+        <tr className='bg-transparent'>
+          <td colSpan={5} className='pt-0 pb-3'>
+            <div className='px-6 py-3 bg-white border border-[#D1D1D6] border-t-0 rounded-b-md rounded-t-none -mt-[15px] p-2'>
               {isCsvType && <CsvPreview fileId={item.fileId} />}
               {isChart && (
                 <div className='p-4 text-sm text-gray-600'>

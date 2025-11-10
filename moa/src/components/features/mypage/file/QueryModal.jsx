@@ -116,14 +116,18 @@ const QueryModal = ({ open, onClose, config, onApply }) => {
           <div className='flex items-center gap-2'>
             {typeof onApply === 'function' && (
               <button
-                className='rounded border px-3 py-1.5'
+                className='rounded border px-2 py-1'
                 style={{ backgroundColor: layerHex, color: '#000000', borderColor: TOKENS.BORDER }}
                 onClick={() => onApply(config)}
               >
                 적용하기
               </button>
             )}
-            <button className='rounded border px-3 py-1.5 hover:bg-gray-50' onClick={onClose}>
+            <button
+              className='rounded border px-2 py-1 hover:bg-gray-50'
+              onClick={onClose}
+              style={{ borderColor: TOKENS.BORDER }}
+            >
               닫기
             </button>
           </div>
