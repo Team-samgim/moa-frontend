@@ -1,4 +1,19 @@
 import { useState } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import SortableWidget from '@/components/features/dashboard/SortableWidget'
 import Toolbar from '@/components/features/dashboard/Toolbar'
 import WidgetLibraryDialog, {
   DEFAULT_WIDGETS,
@@ -24,9 +39,33 @@ const DashboardPage = () => {
     responseTime: { comp: AvgResponseTime, className: 'col-span-12 md:col-span-4' },
   }
 
-  // 위젯 제거 핸들러 추가
   const handleRemoveWidget = (widgetId) => {
     setWidgets((prev) => prev.filter((id) => id !== widgetId))
+  }
+
+  // 드래그앤드롭 센서 설정
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이동 후 드래그 시작 (클릭과 구분)
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  // 드래그 끝났을 때 순서 변경
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setWidgets((items) => {
+        const oldIndex = items.indexOf(active.id)
+        const newIndex = items.indexOf(over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
   }
 
   return (
@@ -41,27 +80,30 @@ const DashboardPage = () => {
         <Toolbar
           onAddWidget={() => setLibraryOpen(true)}
           onSaveLayout={() => {
-            // TODO: 현재 레이아웃 저장 처리
+            console.log('현재 위젯 순서:', widgets)
+            // TODO: localStorage나 API로 저장
           }}
         />
       </div>
 
-      <main className='grid grid-cols-12 grid-flow-row-dense gap-4 p-4 mx-30 bg-[#F7F9FC] rounded-2xl'>
-        {widgets.map((id) => {
-          const meta = WIDGET_RENDERERS[id]
-          if (!meta) return null
-          const Comp = meta.comp
-          return (
-            <section
-              key={id}
-              className={`${meta.className} rounded-lg border border-gray-200 bg-white shadow-sm`}
-            >
-              {/* onClose prop 전달 */}
-              <Comp onClose={() => handleRemoveWidget(id)} />
-            </section>
-          )
-        })}
-      </main>
+      {/* DndContext로 감싸기 */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgets} strategy={rectSortingStrategy}>
+          <main className='grid grid-cols-12 grid-flow-row-dense gap-4 p-4 mx-30 bg-[#F7F9FC] rounded-2xl'>
+            {widgets.map((id) => {
+              const meta = WIDGET_RENDERERS[id]
+              if (!meta) return null
+              const Comp = meta.comp
+              return (
+                <SortableWidget key={id} id={id} className={meta.className}>
+                  <Comp onClose={() => handleRemoveWidget(id)} />
+                </SortableWidget>
+              )
+            })}
+          </main>
+        </SortableContext>
+      </DndContext>
+
       <WidgetLibraryDialog
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
