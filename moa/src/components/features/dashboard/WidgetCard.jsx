@@ -43,7 +43,7 @@ const WidgetCard = ({
 }) => {
   return (
     <section>
-      {/* Header */}
+      {/* 헤더 (타이틀, 설명, 설정, 닫기) */}
       <div className='flex items-start justify-between p-4'>
         <div className='flex items-start gap-3'>
           {icon ? (
@@ -74,7 +74,7 @@ const WidgetCard = ({
         </div>
       </div>
 
-      {/* Body */}
+      {/* 그래프, 차트 등  */}
       <div className='px-4 pb-4'>{children}</div>
     </section>
   )
