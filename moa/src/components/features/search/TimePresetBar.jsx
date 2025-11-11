@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const PRESETS = [
   { key: '1H', label: '1시간' },
@@ -103,14 +103,42 @@ const DateTimeField = ({ label, value, onChange }) => {
  * - onRefresh?: () => void
  * - onApplyCustom?: ({ from: Date, to: Date }) => void
  */
-const TimePresetBar = ({ value, onChange, onRefresh, onApplyCustom }) => {
+const TimePresetBar = ({
+  value,
+  onChange,
+  onRefresh,
+  onApplyCustom,
+  customRange,
+  autoOpenOnCustom = false,
+  onClearCustom,
+}) => {
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState(() => new Date(Date.now() - 60 * 60 * 1000)) // 기본 1시간 전
   const [to, setTo] = useState(() => new Date())
 
+  useEffect(() => {
+    if (value !== 'CUSTOM' || !customRange) return
+    const epochToDate = (sec) => (Number.isFinite(sec) ? new Date(sec * 1000) : null)
+    const f = customRange.from || epochToDate(customRange.fromEpoch)
+    const t = customRange.to || epochToDate(customRange.toEpoch)
+    if (f && t) {
+      setFrom(new Date(f))
+      setTo(new Date(t))
+      if (autoOpenOnCustom) setOpen(true)
+    }
+  }, [
+    value,
+    customRange?.from,
+    customRange?.to,
+    customRange?.fromEpoch,
+    customRange?.toEpoch,
+    autoOpenOnCustom,
+  ])
+
   const handlePreset = (key) => {
     setOpen(false)
     onChange?.(key)
+    if (key !== 'CUSTOM') onClearCustom?.()
   }
 
   const handleCustomToggle = () => {

@@ -164,7 +164,7 @@ const SearchPage = () => {
     }
   }
 
-  /** ✅ 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
+  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
   useEffect(() => {
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
     // PresetPage에서 navigate(..., { state: { preset: p.config } })
@@ -180,8 +180,24 @@ const SearchPage = () => {
     setViewKeys(spec.viewKeys ?? [])
     setConditions(spec.conditions ?? [])
     setGlobalNot(!!spec.globalNot)
-    setTimePreset(spec.timePreset ?? '1H')
-    setCustomTimeRange(spec.customTimeRange ?? null)
+    const toDate = (sec) => (Number.isFinite(sec) ? new Date(sec * 1000) : null)
+    let nextPreset = spec.timePreset ?? '1H'
+    let nextCustom = spec.customTimeRange ?? null
+
+    // fallback: spec.time.{fromEpoch,toEpoch}만 있는 케이스
+    if (!nextCustom && spec.time?.fromEpoch && spec.time?.toEpoch) {
+      nextCustom = {
+        from: toDate(spec.time.fromEpoch),
+        to: toDate(spec.time.toEpoch),
+        fromEpoch: spec.time.fromEpoch,
+        toEpoch: spec.time.toEpoch,
+      }
+    }
+    // custom 범위가 있으면 무조건 CUSTOM으로
+    if (nextCustom?.from && nextCustom?.to) nextPreset = 'CUSTOM'
+
+    setTimePreset(nextPreset)
+    setCustomTimeRange(nextCustom ?? null)
 
     // 다음 틱에 검색 실행
     setTimeout(() => onClickSearch(), 0)
@@ -194,8 +210,14 @@ const SearchPage = () => {
       <div className='p-6 max-w-[1200px] mx-auto gap-3 flex flex-col'>
         <TimePresetBar
           value={timePreset}
-          onChange={setTimePreset}
-          onApplyCustom={(range) => setCustomTimeRange(range)}
+          onChange={(key) => {
+            setTimePreset(key)
+            if (key !== 'CUSTOM') setCustomTimeRange(null) // 프리셋 선택 시 커스텀 해제
+          }}
+          customRange={customTimeRange} // 직접설정 표시 동기화
+          autoOpenOnCustom={false}
+          onApplyCustom={(range) => setCustomTimeRange(range)} // 적용하기 → 부모 상태 업데이트
+          onClearCustom={() => setCustomTimeRange(null)}
           onRefresh={() => {
             setTimePreset('1H')
             setCustomTimeRange(null)
