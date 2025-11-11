@@ -115,8 +115,7 @@ const Header = () => {
                   rounded-full h-[37px] px-4 lg:px-6
                   transition whitespace-nowrap
                 '
-                // TODO: 마이페이지 연결
-                // onClick={() => navigate(loggedOutNavigations.MYPAGE)}
+                onClick={() => navigate(userNavigations.MY_PAGE)}
               >
                 마이페이지
               </button>

@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { fetchGridBySearchSpec } from '@/api/grid'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
@@ -11,6 +12,7 @@ import TimePresetBar from '@/components/features/search/TimePresetBar'
 import useAggregateQuery from '@/hooks/grid/useAggregateQuery'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
 import GridToolbar from '@/pages/grid/GridToolbar'
+import { usePresetBridgeStore } from '@/stores/presetBridgeStore'
 import { buildSearchPayload } from '@/utils/searchPayload'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
@@ -18,6 +20,8 @@ const defaultValuesFor = (arity) =>
   arity === 0 ? [] : arity === 1 ? [''] : arity === 2 ? ['', ''] : []
 
 const SearchPage = () => {
+  const location = useLocation()
+
   const [gridApis, setGridApis] = useState(null)
   const [layer, setLayer] = useState('HTTP_PAGE')
   const [fieldFilter, setFieldFilter] = useState('')
@@ -35,7 +39,13 @@ const SearchPage = () => {
 
   const gridRef = useRef(null)
 
+  // layer 변경 시 초기화(단, 부트스트랩 중엔 스킵)
+  const skipLayerResetRef = useRef(false)
   useEffect(() => {
+    if (skipLayerResetRef.current) {
+      skipLayerResetRef.current = false
+      return
+    }
     setConditions([])
     setViewKeys([])
     setFieldFilter('')
@@ -67,11 +77,11 @@ const SearchPage = () => {
     layer,
     filterModel: aggFilters,
     columns: gridCols.map((c) => ({
-      field: c.name, // AggregatesGrid는 field를 기대
-      filterParams: { type: c.type }, // type: 'number' | 'string' | 'date'
+      field: c.name,
+      filterParams: { type: c.type },
       headerName: c.labelKo || c.name,
     })),
-    baseSpec: searchPayload, // 기간/조건 포함
+    baseSpec: searchPayload,
   })
 
   const addConditionFromField = (f) => {
@@ -128,9 +138,6 @@ const SearchPage = () => {
         fields,
       })
 
-      console.log('[SearchPage] 🔍 초기 메타 조회 (limit=1)')
-
-      // 컬럼/총건수만 선조회
       const res = await fetchGridBySearchSpec({
         ...payload,
         options: { ...(payload.options || {}), limit: 1, offset: 0 },
@@ -140,12 +147,6 @@ const SearchPage = () => {
       const total = typeof res?.total === 'number' ? res.total : null
       setSearchTotal(total)
 
-      console.log('[SearchPage] ✅ 메타 조회 완료:', {
-        columns: res?.columns?.length,
-        total,
-      })
-
-      // 무한스크롤 datasource 장착 (실제 데이터는 DataGrid에서 로드)
       const base = {
         ...payload,
         options: {
@@ -156,14 +157,36 @@ const SearchPage = () => {
       }
       setSearchPayload(base)
 
-      console.log('[SearchPage] 🚀 DataGrid 무한스크롤 시작 (cacheBlockSize=100)')
-
       setHasSearched(true)
       setTimeout(() => gridRef.current?.purge?.(), 0)
     } finally {
       setIsSearching(false)
     }
   }
+
+  /** ✅ 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
+  useEffect(() => {
+    const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
+    // PresetPage에서 navigate(..., { state: { preset: p.config } })
+    const fromRoute = location.state?.preset
+    const raw = fromStore || fromRoute
+    if (!raw) return
+
+    const spec = raw?.payload ?? raw // payload 래핑/비래핑 모두 허용
+
+    // layer 리셋 효과 방지
+    skipLayerResetRef.current = true
+    setLayer(spec.layer ?? 'HTTP_PAGE')
+    setViewKeys(spec.viewKeys ?? [])
+    setConditions(spec.conditions ?? [])
+    setGlobalNot(!!spec.globalNot)
+    setTimePreset(spec.timePreset ?? '1H')
+    setCustomTimeRange(spec.customTimeRange ?? null)
+
+    // 다음 틱에 검색 실행
+    setTimeout(() => onClickSearch(), 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 최초 1회만
 
   return (
     <div className='p-5 flex flex-col gap-4'>
@@ -234,10 +257,18 @@ const SearchPage = () => {
               <GridToolbar
                 currentLayer={layer}
                 onReset={() => gridRef.current?.resetFilters?.()}
-                onPivot={undefined /* 필요시 라우팅 핸들러 연결 */}
+                onPivot={undefined}
                 gridApis={gridApis}
                 getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
                 getBaseSpec={() => searchPayload}
+                getUiQuery={() => ({
+                  layer,
+                  timePreset,
+                  customTimeRange,
+                  globalNot,
+                  conditions,
+                  viewKeys,
+                })}
               />
               {searchTotal !== null && (
                 <div className='mb-2 text-sm text-gray-600'>
@@ -258,7 +289,6 @@ const SearchPage = () => {
                 onGridApis={setGridApis}
                 onActiveFiltersChange={setAggFilters}
               />
-              {/* 집계 테이블 */}
               {aggQuery.isSuccess && (
                 <AggregatesPanel
                   columns={gridCols.map((c) => ({

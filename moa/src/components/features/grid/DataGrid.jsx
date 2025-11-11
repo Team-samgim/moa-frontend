@@ -12,66 +12,10 @@ import { AgGridReact } from 'ag-grid-react'
 import axiosInstance from '@/api/axios'
 import CustomCheckboxFilter from '@/components/features/grid/CustomCheckboxFilter'
 import { formatUtcToSeoul } from '@/utils/dateFormat'
+import { buildConditionsFromActiveFilters } from '@/utils/filters'
 import { pickFormatterByField } from '@/utils/numFormat'
 
 ModuleRegistry.registerModules([AllCommunityModule, InfiniteRowModelModule])
-
-const TYPE_TO_DATATYPE = {
-  string: 'TEXT',
-  number: 'NUMBER',
-  ip: 'IP',
-  date: 'DATETIME',
-  boolean: 'BOOLEAN',
-  mac: 'TEXT',
-}
-
-function toNumberIfNeeded(arr, type) {
-  if (type !== 'number') return arr
-  return arr.map((v) => (v === '' || v === null ? null : Number(v)))
-}
-
-function mapConditionOp(op, fieldType) {
-  const isNumber = fieldType === 'number'
-  switch (op) {
-    // 문자열 계열
-    case 'contains':
-      return isNumber ? 'EQ' : 'LIKE'
-    case 'startsWith':
-      return isNumber ? 'EQ' : 'STARTS_WITH'
-    case 'endsWith':
-      return isNumber ? 'EQ' : 'ENDS_WITH'
-
-    // 동등
-    case 'equals':
-    case '=':
-      return 'EQ'
-
-    // 부등/비교
-    case 'ne':
-      return 'NE'
-    case '>':
-      return 'GT'
-    case '>=':
-      return 'GTE'
-    case '<':
-      return 'LT'
-    case '<=':
-      return 'LTE'
-
-    // 범위
-    case 'between':
-      return 'BETWEEN'
-
-    // 날짜 전/후 (SearchExecuteService.datetimeTpl 지원셋에 맞춤)
-    case 'before':
-      return 'LT' // 기준점보다 이전
-    case 'after':
-      return 'GTE' // 기준점 이상
-
-    default:
-      return isNumber ? 'EQ' : 'LIKE'
-  }
-}
 
 const DataGrid = forwardRef(function DataGrid(
   {
@@ -133,31 +77,27 @@ const DataGrid = forwardRef(function DataGrid(
     basePayloadRef.current = basePayload
   }, [basePayload])
 
-  const gridContext = useMemo(
-    () => ({
-      updateFilter,
-      getActiveFilters: () => activeFiltersRef.current,
-      getApi: () => gridRef.current?.api,
-      activeFilters,
-      subscribeFilterMenuOpen,
-      getOrder: () => {
-        const api = gridRef.current?.api
-        const sortModel = api?.getSortModel?.() || []
-        if (sortModel.length > 0) {
-          const sm = sortModel[0]
-          const def = api.getColumnDef(sm.colId)
-          const field = def?.field || sm.colId
-          return { orderBy: field, order: (sm.sort || 'desc').toUpperCase() }
-        }
-        return {
-          orderBy: basePayloadRef.current?.options?.orderBy || 'ts_server_nsec',
-          order: (basePayloadRef.current?.options?.order || 'DESC').toUpperCase(),
-        }
-      },
-      getBasePayload: () => basePayloadRef.current,
-    }),
-    [activeFilters],
-  )
+  const gridContextRef = useRef({
+    updateFilter: (field, newFilter) => updateFilter(field, newFilter),
+    getActiveFilters: () => activeFiltersRef.current,
+    getApi: () => gridRef.current?.api,
+    subscribeFilterMenuOpen,
+    getOrder: () => {
+      const api = gridRef.current?.api
+      const sortModel = api?.getSortModel?.() || []
+      if (sortModel.length > 0) {
+        const sm = sortModel[0]
+        const def = api.getColumnDef(sm.colId)
+        const field = def?.field || sm.colId
+        return { orderBy: field, order: (sm.sort || 'desc').toUpperCase() }
+      }
+      return {
+        orderBy: basePayloadRef.current?.options?.orderBy || 'ts_server_nsec',
+        order: (basePayloadRef.current?.options?.order || 'DESC').toUpperCase(),
+      }
+    },
+    getBasePayload: () => basePayloadRef.current,
+  })
 
   useImperativeHandle(ref, () => ({
     purge: () => gridRef.current?.api?.purgeInfiniteCache?.(),
@@ -233,54 +173,9 @@ const DataGrid = forwardRef(function DataGrid(
     [],
   )
 
-  // ---------- activeFilters → SearchDTO.conditions로 변환 ----------
   const conditionsFromFilters = useMemo(() => {
-    const colType = Object.fromEntries(columns.map((c) => [c.name, c.type || 'string']))
-    const out = []
-
-    Object.entries(activeFilters).forEach(([field, def]) => {
-      const fType = colType[field] || 'string'
-      const dataType = TYPE_TO_DATATYPE[fType] || 'TEXT'
-
-      if (def.mode === 'checkbox') {
-        const vals = toNumberIfNeeded(def.values || [], fType)
-        if (vals.length > 0) {
-          out.push({
-            join: out.length === 0 ? null : 'AND',
-            field,
-            op: 'IN',
-            values: vals,
-            dataType,
-          })
-        }
-      } else if (def.mode === 'condition') {
-        const conds = def.conditions || []
-        conds.forEach((c, idx) => {
-          const op = mapConditionOp(c.op, fType)
-          const join = out.length === 0 && idx === 0 ? null : def.logicOps?.[idx - 1] || 'AND'
-
-          if (op === 'BETWEEN') {
-            // 날짜 between: val1/val2, 숫자 between: min/max 혹은 val1/val2 둘 다 케이스 지원
-            const aRaw = c.min ?? c.val1 ?? c.from ?? c.val
-            const bRaw = c.max ?? c.val2 ?? c.to ?? c.val2
-            if (aRaw !== null && bRaw !== null) {
-              const a = fType === 'number' ? Number(aRaw) : aRaw
-              const b = fType === 'number' ? Number(bRaw) : bRaw
-              out.push({ join, field, op, values: [a, b], dataType })
-            }
-          } else {
-            // 단일값: 숫자는 Number로 캐스팅, 공백/NaN은 무시
-            const raw = c.val ?? c.value ?? ''
-            const v = fType === 'number' ? Number(raw) : raw
-            if (fType !== 'number' || Number.isFinite(v)) {
-              out.push({ join, field, op, values: [v], dataType })
-            }
-          }
-        })
-      }
-    })
-
-    return out
+    const colType = Object.fromEntries((columns || []).map((c) => [c.name, c.type || 'string']))
+    return buildConditionsFromActiveFilters(activeFilters, colType)
   }, [activeFilters, columns])
 
   // ---------- datasource (basePayload + filters + offset/limit) ----------
@@ -410,7 +305,7 @@ const DataGrid = forwardRef(function DataGrid(
         animateRows={true}
         suppressMaintainUnsortedOrder={true}
         onGridReady={onGridReady}
-        context={gridContext}
+        context={gridContextRef.current}
         onSortChanged={onSortChanged}
         popupParent={popupParent}
         onFilterOpened={onFilterOpened}

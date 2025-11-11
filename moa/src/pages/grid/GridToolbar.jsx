@@ -15,6 +15,7 @@ const GridToolbar = ({
   gridApis,
   getActiveFilters,
   getBaseSpec,
+  getUiQuery,
 }) => {
   // === 프리셋 저장 ===
   const presetMut = useMutation({
@@ -39,6 +40,7 @@ const GridToolbar = ({
 
       // 3) 필터 / 베이스 스펙(기간+조건+옵션)
       const filterModel = getActiveFilters ? getActiveFilters() : {}
+      const uiQuery = getUiQuery ? getUiQuery() : null
       const baseSpec = getBaseSpec ? getBaseSpec() : null
 
       // 4) 저장 페이로드
@@ -49,6 +51,7 @@ const GridToolbar = ({
         filters: filterModel,
         baseSpec, // SearchPage의 buildSearchPayload 결과(기간/조건/옵션 포함)
         version: 1,
+        query: uiQuery,
       }
 
       // 이름 입력(빈 입력 시 자동 이름)
