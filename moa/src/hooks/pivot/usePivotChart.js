@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
 
@@ -7,14 +7,16 @@ const usePivotChart = () => {
   const rows = usePivotStore((s) => s.rows)
   const values = usePivotStore((s) => s.values)
 
-  const isChartMode = usePivotChartStore((s) => s.isChartMode)
-  const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
-  const xField = usePivotChartStore((s) => s.xField)
-  const yMetrics = usePivotChartStore((s) => s.yMetrics)
-  const chartType = usePivotChartStore((s) => s.chartType)
-  const resetChartConfig = usePivotChartStore((s) => s.resetChartConfig)
-
-  const [isConfigOpen, setIsConfigOpen] = useState(false) // 이건 로컬 유지 OK
+  const {
+    isChartMode,
+    setIsChartMode,
+    isConfigOpen,
+    setIsConfigOpen,
+    xField,
+    yMetrics,
+    chartType,
+    resetChartConfig,
+  } = usePivotChartStore()
 
   const hasPivotStructure =
     ((column && column.field) || (rows && rows.length > 0)) && values && values.length > 0
@@ -24,16 +26,13 @@ const usePivotChart = () => {
 
     const xMatches =
       (column && column.field === xField) || (rows && rows.some((r) => r.field === xField))
-
     if (!xMatches) return false
 
-    const valueMatches =
-      values &&
-      yMetrics.every((metric) =>
-        values.some((v) => v.field === metric.field && v.agg === metric.agg),
-      )
+    const valueMatches = yMetrics.every((metric) =>
+      values.some((v) => v.field === metric.field && v.agg === metric.agg),
+    )
 
-    return !!valueMatches
+    return valueMatches
   }, [xField, yMetrics, chartType, column, rows, values])
 
   const handleToggleChart = useCallback(() => {
@@ -54,17 +53,25 @@ const usePivotChart = () => {
       resetChartConfig()
       setIsConfigOpen(true)
     }
-  }, [hasPivotStructure, isChartMode, isConfigReusable, resetChartConfig, setIsChartMode])
+  }, [
+    hasPivotStructure,
+    isChartMode,
+    isConfigReusable,
+    resetChartConfig,
+    setIsChartMode,
+    setIsConfigOpen,
+  ])
 
   const closeConfig = useCallback(() => {
     setIsConfigOpen(false)
-  }, [])
+  }, [setIsConfigOpen])
 
   return {
     isChartMode,
     isConfigOpen,
     handleToggleChart,
     closeConfig,
+    setIsConfigOpen,
   }
 }
 

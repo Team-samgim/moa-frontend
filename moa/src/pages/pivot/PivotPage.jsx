@@ -46,6 +46,7 @@ const PivotPage = () => {
   } = usePivotStore()
 
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
+  const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
 
   const [filterModal, setFilterModal] = useState({
     open: false,
@@ -55,9 +56,14 @@ const PivotPage = () => {
   const {
     isConfigOpen: isChartConfigOpen,
     handleToggleChart,
+    setIsConfigOpen,
     closeConfig: closeChartConfig,
-    applyConfig: applyChartConfig,
+    applyConfig: _applyChartConfig,
   } = usePivotChart()
+
+  const handleApplyChart = () => {
+    setIsChartMode(true)
+  }
 
   const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
 
@@ -360,6 +366,11 @@ const PivotPage = () => {
                 />
               </button>
             </div>
+            <div>
+              <button onClick={() => setIsConfigOpen(true)}>
+                <span>차트 설정 (임시)</span>
+              </button>
+            </div>
           </div>
 
           {/* 아직 차트는 안 그리고, 틀만 분기 */}
@@ -434,7 +445,7 @@ const PivotPage = () => {
           time={timeForFilter}
           filters={filters}
           onClose={closeChartConfig}
-          onApply={applyChartConfig}
+          onApply={handleApplyChart}
         />
       )}
     </>

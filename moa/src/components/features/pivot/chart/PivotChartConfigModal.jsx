@@ -489,7 +489,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
             <div className='mt-2 border-t border-gray-200 pt-3'>
               <div className='text-sm font-semibold text-gray-900'>4. 추천 차트 타입</div>
               <p className='mt-1 text-xs text-gray-500'>
-                선택한 X축과 Value 지표에 잘 어울리는 차트 유형을 선택하세요.
+                선택한 기준에 어울리는 차트 유형을 선택해보세요.
               </p>
 
               <div className='mt-3 flex flex-wrap gap-2 text-sm'>
