@@ -199,7 +199,6 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
       prev.map((v) => {
         if (v.id !== id) return v
 
-        // 숫자가 아니면 count
         if (!isNumberField(v.field)) {
           return { ...v, agg: 'count', id: `${v.field}#count` }
         }

@@ -19,7 +19,6 @@ const FieldFilterModal = ({
     [filters, fieldName],
   )
 
-  // ===== 인피니트 쿼리 사용 =====
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useInfiniteDistinctValues({
       layer,
@@ -31,10 +30,8 @@ const FieldFilterModal = ({
       limit: 50,
     })
 
-  // 서버에서 받은 raw values(flatten)
   const rawValues = useMemo(() => (data?.pages || []).flatMap((page) => page.items || []), [data])
 
-  // 선택 상태는 label 기준 Set으로 관리
   const [selectedSet, setSelectedSet] = useState(() => {
     if (Array.isArray(selectedValues) && selectedValues.length > 0) {
       return new Set(selectedValues)
@@ -42,14 +39,12 @@ const FieldFilterModal = ({
     return new Set()
   })
 
-  // selectedValues prop이 바뀌면 (기존 필터 불러오기 등) 초기화
   useEffect(() => {
     if (Array.isArray(selectedValues) && selectedValues.length > 0) {
       setSelectedSet(new Set(selectedValues))
     }
   }, [selectedValues])
 
-  // 새 페이지가 로드될 때, 초기 상태(필터 없음)라면 새로 들어온 값들은 자동 선택
   useEffect(() => {
     if (!data) return
 
@@ -61,14 +56,13 @@ const FieldFilterModal = ({
       const next = new Set(prev)
       rawValues.forEach((v) => {
         if (!next.has(v)) {
-          next.add(v) // 필터 없으면 디폴트는 모두 선택
+          next.add(v) // 필터 없는 경우: 모두 선택 (default)
         }
       })
       return next
     })
   }, [data, rawValues, selectedValues])
 
-  // items: UI에서 쓸 label + checked
   const items = useMemo(
     () =>
       rawValues.map((v) => ({
@@ -178,7 +172,6 @@ const FieldFilterModal = ({
   const btnMuted = 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
   const btnPrimary = 'bg-blue-light text-white hover:bg-blue-dark'
 
-  // ===== 인피니트 스크롤 핸들러 =====
   const listRef = useRef(null)
 
   const handleScroll = (e) => {

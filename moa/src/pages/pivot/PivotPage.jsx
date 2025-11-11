@@ -373,7 +373,6 @@ const PivotPage = () => {
             </div>
           </div>
 
-          {/* 아직 차트는 안 그리고, 틀만 분기 */}
           {isChartMode ? (
             <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
               <PivotChartView />
