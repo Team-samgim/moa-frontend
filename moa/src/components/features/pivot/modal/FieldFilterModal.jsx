@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
-import { useDistinctValues } from '@/hooks/queries/usePivot'
+import { useInfiniteDistinctValues } from '@/hooks/queries/usePivot'
 
 const FieldFilterModal = ({
   layer,
@@ -19,32 +19,58 @@ const FieldFilterModal = ({
     [filters, fieldName],
   )
 
-  const { data, isLoading } = useDistinctValues({
-    layer,
-    field: fieldName,
-    time,
-    filters: effectiveFilters,
-    order,
-    enabled: !!fieldName,
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteDistinctValues({
+      layer,
+      field: fieldName,
+      time,
+      filters: effectiveFilters,
+      order,
+      enabled: !!fieldName,
+      limit: 50,
+    })
+
+  const rawValues = useMemo(() => (data?.pages || []).flatMap((page) => page.items || []), [data])
+
+  const [selectedSet, setSelectedSet] = useState(() => {
+    if (Array.isArray(selectedValues) && selectedValues.length > 0) {
+      return new Set(selectedValues)
+    }
+    return new Set()
   })
 
-  const [items, setItems] = useState([])
+  useEffect(() => {
+    if (Array.isArray(selectedValues) && selectedValues.length > 0) {
+      setSelectedSet(new Set(selectedValues))
+    }
+  }, [selectedValues])
 
   useEffect(() => {
-    const values = data?.items ?? []
+    if (!data) return
 
-    const baseSelected =
-      Array.isArray(selectedValues) && selectedValues.length > 0
-        ? new Set(selectedValues)
-        : new Set(values)
+    const noInitialFilter = !Array.isArray(selectedValues) || selectedValues.length === 0
 
-    const opts = values.map((v) => ({
-      label: v,
-      checked: baseSelected.has(v),
-    }))
+    if (!noInitialFilter) return
 
-    setItems(opts)
-  }, [data, selectedValues])
+    setSelectedSet((prev) => {
+      const next = new Set(prev)
+      rawValues.forEach((v) => {
+        if (!next.has(v)) {
+          next.add(v) // 필터 없는 경우: 모두 선택 (default)
+        }
+      })
+      return next
+    })
+  }, [data, rawValues, selectedValues])
+
+  const items = useMemo(
+    () =>
+      rawValues.map((v) => ({
+        label: v,
+        checked: selectedSet.has(v),
+      })),
+    [rawValues, selectedSet],
+  )
 
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState(order)
@@ -60,14 +86,25 @@ const FieldFilterModal = ({
   const selectedCount = items.filter((i) => i.checked).length
   const allChecked = allCount > 0 && selectedCount === allCount
   const someChecked = selectedCount > 0 && selectedCount < allCount
+  const totalCount = data?.pages?.[0]?.totalCount ?? allCount
 
   const toggleAll = () => {
     const next = !allChecked
-    setItems((prev) => prev.map((i) => ({ ...i, checked: next })))
+    setSelectedSet(() => {
+      if (!next) {
+        return new Set()
+      }
+      return new Set(items.map((i) => i.label))
+    })
   }
 
   const toggleOne = (label) => {
-    setItems((prev) => prev.map((i) => (i.label === label ? { ...i, checked: !i.checked } : i)))
+    setSelectedSet((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
   }
 
   const filtered = useMemo(() => {
@@ -86,7 +123,7 @@ const FieldFilterModal = ({
   }, [items, query, sort])
 
   const handleApply = () => {
-    const selected = items.filter((i) => i.checked).map((i) => i.label)
+    const selected = Array.from(selectedSet)
 
     onApply?.({
       field: fieldName,
@@ -134,6 +171,19 @@ const FieldFilterModal = ({
   const btn = 'rounded border px-3 py-2 text-sm'
   const btnMuted = 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
   const btnPrimary = 'bg-blue-light text-white hover:bg-blue-dark'
+
+  const listRef = useRef(null)
+
+  const handleScroll = (e) => {
+    const target = e.currentTarget
+    if (!target) return
+    if (!hasNextPage || isFetchingNextPage) return
+
+    const threshold = 40 // px
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - threshold) {
+      fetchNextPage()
+    }
+  }
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30'>
@@ -289,7 +339,7 @@ const FieldFilterModal = ({
                 <span className='flex gap-2 text-[15px]'>
                   전체 선택{' '}
                   <span className='text-gray-500'>
-                    {selectedCount}/{allCount}
+                    {selectedCount}/{totalCount}
                   </span>
                 </span>
               </label>
@@ -314,11 +364,12 @@ const FieldFilterModal = ({
               </div>
             </div>
 
-            {/* 리스트 */}
-            <div className='h-[420px] overflow-auto'>
+            {/* 리스트 + 인피니트 스크롤 */}
+            <div ref={listRef} className='h-[420px] overflow-auto' onScroll={handleScroll}>
               {isLoading && (
                 <div className='py-10 text-center text-[15px] text-gray-400'>로딩 중…</div>
               )}
+
               {!isLoading &&
                 filtered.map((i) => (
                   <label
@@ -340,6 +391,10 @@ const FieldFilterModal = ({
 
               {!isLoading && !filtered.length && (
                 <div className='py-10 text-center text-[15px] text-gray-400'>값이 없습니다</div>
+              )}
+
+              {isFetchingNextPage && (
+                <div className='py-3 text-center text-xs text-gray-400'>더 불러오는 중…</div>
               )}
             </div>
           </div>

@@ -38,6 +38,43 @@ export function useDistinctValues({ layer, field, time, filters, order = 'asc', 
   })
 }
 
+export function useInfiniteDistinctValues({
+  layer,
+  field,
+  time,
+  filters,
+  order = 'asc',
+  enabled = true,
+  limit = 50,
+}) {
+  return useInfiniteQuery({
+    queryKey: [
+      'pivot-distinct',
+      'infinite',
+      layer,
+      field,
+      order,
+      limit,
+      stableKey(time),
+      stableKey(filters),
+    ],
+    queryFn: ({ pageParam }) =>
+      fetchValues({
+        layer,
+        field,
+        time,
+        filters,
+        order,
+        cursor: pageParam ?? null,
+        limit,
+      }),
+    enabled: !!layer && !!field && enabled,
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => (lastPage?.hasMore ? lastPage.nextCursor : undefined),
+    staleTime: 30_000,
+  })
+}
+
 export function useRowGroupItems(options = {}) {
   return useMutation({
     mutationFn: (payload) => fetchRowGroupItems(payload),

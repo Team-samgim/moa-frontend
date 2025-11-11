@@ -9,6 +9,8 @@ import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
 
 import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
+import PivotChartConfigModal from '@/components/features/pivot/chart/PivotChartConfigModal'
+import PivotChartView from '@/components/features/pivot/chart/PivotChartView'
 import ColumnSelectModal from '@/components/features/pivot/modal/ColumnSelectModal'
 import FieldFilterModal from '@/components/features/pivot/modal/FieldFilterModal'
 import RowSelectModal from '@/components/features/pivot/modal/RowSelectModal'
@@ -18,7 +20,9 @@ import SortableRowsList from '@/components/features/pivot/panel/SortableRowsList
 import SortableValuesList from '@/components/features/pivot/panel/SortableValuesList'
 import PivotResultTable from '@/components/features/pivot/table/PivotResultTable'
 
+import usePivotChart from '@/hooks/pivot/usePivotChart'
 import { usePivotQuery } from '@/hooks/queries/usePivot'
+import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotModalStore } from '@/stores/pivotModalStore'
 import { usePivotStore } from '@/stores/pivotStore'
 import { buildTimePayload } from '@/utils/pivotTime'
@@ -41,15 +45,31 @@ const PivotPage = () => {
     setFilters,
   } = usePivotStore()
 
+  const isChartMode = usePivotChartStore((s) => s.isChartMode)
+  const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
+
   const [filterModal, setFilterModal] = useState({
     open: false,
     field: null,
   })
 
+  const {
+    isConfigOpen: isChartConfigOpen,
+    handleToggleChart,
+    setIsConfigOpen,
+    closeConfig: closeChartConfig,
+    applyConfig: _applyChartConfig,
+  } = usePivotChart()
+
+  const handleApplyChart = () => {
+    setIsChartMode(true)
+  }
+
   const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
 
   const runQueryNow = useCallback(() => {
     const cfg = usePivotStore.getState()
+    // console.log(cfg)
     const time = buildTimePayload(cfg.timeRange, cfg.customRange)
 
     executeQuery({
@@ -325,24 +345,54 @@ const PivotPage = () => {
           </div>
         </section>
 
-        {/* 결과 프리뷰 */}
+        {/* 결과 프리뷰 / 차트 모드 토글 */}
         <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
-          <div className='mb-2 flex items-center justify-between'>
-            <div className='font-medium text-gray-800'>결과 미리보기</div>
+          <div className='mb-3 flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              <span className='font-medium text-gray-800'>차트 모드</span>
+
+              {/* 토글 버튼 */}
+              <button
+                type='button'
+                onClick={handleToggleChart}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isChartMode ? 'bg-[#1b254b]' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    isChartMode ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <div>
+              <button onClick={() => setIsConfigOpen(true)}>
+                <span>차트 설정 (임시)</span>
+              </button>
+            </div>
           </div>
 
-          {isPivotLoading && (
-            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-              로딩중...
+          {isChartMode ? (
+            <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
+              <PivotChartView />
             </div>
-          )}
+          ) : (
+            <>
+              {isPivotLoading && (
+                <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+                  로딩중...
+                </div>
+              )}
 
-          {!isPivotLoading && pivotResult && <PivotResultTable pivotResult={pivotResult} />}
+              {!isPivotLoading && pivotResult && <PivotResultTable pivotResult={pivotResult} />}
 
-          {!isPivotLoading && !pivotResult && (
-            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-              아직 조회되지 않았습니다
-            </div>
+              {!isPivotLoading && !pivotResult && (
+                <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+                  아직 조회되지 않았습니다
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
@@ -386,6 +436,15 @@ const PivotPage = () => {
           initialTopN={initialTopNForModal}
           onApply={applyFilter}
           onClose={closeFilter}
+        />
+      )}
+      {isChartConfigOpen && (
+        <PivotChartConfigModal
+          layer={layer}
+          time={timeForFilter}
+          filters={filters}
+          onClose={closeChartConfig}
+          onApply={handleApplyChart}
         />
       )}
     </>
