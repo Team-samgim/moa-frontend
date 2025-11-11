@@ -34,16 +34,3 @@ export async function deletePreset(presetId) {
   const { data } = await api.delete(`/mypage/presets/${presetId}`)
   return data ?? null
 }
-
-/** ========= 문서(내보내기) ========= **/
-// 내 문서(Export 파일) 목록
-export async function fetchMyExports({ page = 0, size = 50 } = {}) {
-  const { data } = await api.get('/exports', { params: { page, size } })
-  return data // { items, total, ... }
-}
-
-// 내 문서(Export 파일) 삭제
-export async function deleteExport(exportId) {
-  const { data } = await api.delete(`/exports/${exportId}`)
-  return data ?? null
-}

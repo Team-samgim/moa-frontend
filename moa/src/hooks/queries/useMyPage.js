@@ -5,8 +5,6 @@ import {
   toggleFavoritePreset,
   renamePreset,
   deletePreset,
-  fetchMyExports,
-  deleteExport,
 } from '@/api/mypage'
 
 /* ===== 프로필 ===== */
@@ -21,6 +19,7 @@ export function useMyPresets(params = { page: 0, size: 50 }) {
     queryKey: ['mypage', 'presets', params],
     queryFn: () => fetchMyPresets(params),
     staleTime: 10_000,
+    keepPreviousData: true,
   })
 }
 
@@ -54,21 +53,5 @@ export function useDeletePreset() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mypage', 'presets'] })
     },
-  })
-}
-
-/* ===== 문서(내보내기) ===== */
-export function useMyExports({ page = 0, size = 50 } = {}) {
-  return useQuery({
-    queryKey: ['exports', page, size],
-    queryFn: () => fetchMyExports({ page, size }),
-    staleTime: 30_000,
-  })
-}
-export function useDeleteExport() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: deleteExport,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exports'] }),
   })
 }
