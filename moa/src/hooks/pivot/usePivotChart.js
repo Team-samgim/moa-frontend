@@ -12,28 +12,38 @@ const usePivotChart = () => {
     setIsChartMode,
     isConfigOpen,
     setIsConfigOpen,
-    xField,
-    yMetrics,
+
+    colField,
+    rowField,
+    metric,
     chartType,
+
     resetChartConfig,
   } = usePivotChartStore()
 
   const hasPivotStructure =
-    ((column && column.field) || (rows && rows.length > 0)) && values && values.length > 0
+    !!(column && column.field) &&
+    Array.isArray(rows) &&
+    rows.length > 0 &&
+    Array.isArray(values) &&
+    values.length > 0
 
   const isConfigReusable = useCallback(() => {
-    if (!xField || !yMetrics || yMetrics.length === 0 || !chartType) return false
+    if (!colField || !rowField || !metric || !chartType) return false
 
-    const xMatches =
-      (column && column.field === xField) || (rows && rows.some((r) => r.field === xField))
-    if (!xMatches) return false
+    const colMatches = column && column.field === colField
+    if (!colMatches) return false
 
-    const valueMatches = yMetrics.every((metric) =>
-      values.some((v) => v.field === metric.field && v.agg === metric.agg),
+    const rowMatches = (rows || []).some((r) => r.field === rowField)
+    if (!rowMatches) return false
+
+    const metricMatches = (values || []).some(
+      (v) => v.field === metric.field && v.agg === metric.agg,
     )
+    if (!metricMatches) return false
 
-    return valueMatches
-  }, [xField, yMetrics, chartType, column, rows, values])
+    return true
+  }, [colField, rowField, metric, chartType, column, rows, values])
 
   const handleToggleChart = useCallback(() => {
     if (!hasPivotStructure) {
@@ -41,15 +51,18 @@ const usePivotChart = () => {
       return
     }
 
+    // 켜져 있으면 끄기
     if (isChartMode) {
       setIsChartMode(false)
       return
     }
 
+    // 기존 설정 재사용 가능하면 바로 차트 ON
     if (isConfigReusable()) {
       setIsChartMode(true)
       setIsConfigOpen(false)
     } else {
+      // 아니면 설정 초기화 후 설정 모달 오픈
       resetChartConfig()
       setIsConfigOpen(true)
     }

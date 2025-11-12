@@ -31,6 +31,7 @@ const fetchRowGroupItems = async (payload) => {
 
 // 피벗 차트 데이터 조회
 const runPivotChart = async (payload) => {
+  console.log(payload)
   const res = await axiosInstance.post('/pivot/chart', payload)
   console.log('pivot chart result', res.data)
   return res.data

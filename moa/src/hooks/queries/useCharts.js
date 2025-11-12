@@ -10,23 +10,23 @@ export function usePivotChartQuery(enabled = true) {
   const customRange = usePivotStore((s) => s.customRange)
   const filters = usePivotStore((s) => s.filters)
 
-  const xField = usePivotChartStore((s) => s.xField)
-  const xMode = usePivotChartStore((s) => s.xMode)
-  const xTopN = usePivotChartStore((s) => s.xTopN)
-  const xSelectedItems = usePivotChartStore((s) => s.xSelectedItems)
-  const yMetrics = usePivotChartStore((s) => s.yMetrics)
+  const colField = usePivotChartStore((s) => s.colField)
+  const colMode = usePivotChartStore((s) => s.colMode)
+  const colTopN = usePivotChartStore((s) => s.colTopN)
+  const colSelectedItems = usePivotChartStore((s) => s.colSelectedItems)
+
+  const rowField = usePivotChartStore((s) => s.rowField)
+  const rowMode = usePivotChartStore((s) => s.rowMode)
+  const rowTopN = usePivotChartStore((s) => s.rowTopN)
+  const rowSelectedItems = usePivotChartStore((s) => s.rowSelectedItems)
+
+  const metric = usePivotChartStore((s) => s.metric)
   const chartType = usePivotChartStore((s) => s.chartType)
 
   const time = buildTimePayload(timeRange, customRange)
 
   const canRun =
-    enabled &&
-    !!layer &&
-    !!xField &&
-    Array.isArray(yMetrics) &&
-    yMetrics.length > 0 &&
-    // pie chart: metric 한개만 허용
-    (chartType !== 'pie' || yMetrics.length === 1)
+    enabled && !!layer && !!colField && !!rowField && metric && !!metric.field && !!metric.agg
 
   return useQuery({
     queryKey: [
@@ -34,11 +34,15 @@ export function usePivotChartQuery(enabled = true) {
       layer,
       time,
       filters,
-      xField,
-      xMode,
-      xTopN,
-      xSelectedItems,
-      yMetrics,
+      colField,
+      colMode,
+      colTopN,
+      colSelectedItems,
+      rowField,
+      rowMode,
+      rowTopN,
+      rowSelectedItems,
+      metric,
       chartType,
     ],
     enabled: canRun,
@@ -48,16 +52,19 @@ export function usePivotChartQuery(enabled = true) {
         time,
         filters,
         chartType,
-        x: {
-          field: xField,
-          mode: xMode,
-          topN: xMode === 'topN' ? { n: xTopN } : null,
-          selectedItems: xMode === 'manual' ? xSelectedItems : null,
+        col: {
+          field: colField,
+          mode: colMode,
+          topN: colMode === 'topN' ? { n: colTopN } : null,
+          selectedItems: colMode === 'manual' ? colSelectedItems : null,
         },
-        y: {
-          // yMetrics: [{ field, agg, alias }]
-          metrics: yMetrics,
+        row: {
+          field: rowField,
+          mode: rowMode,
+          topN: rowMode === 'topN' ? { n: rowTopN } : null,
+          selectedItems: rowMode === 'manual' ? rowSelectedItems : null,
         },
+        metric, // { field, agg, alias }
       }),
   })
 }
