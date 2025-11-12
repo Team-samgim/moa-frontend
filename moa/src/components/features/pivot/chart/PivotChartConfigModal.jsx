@@ -1,5 +1,3 @@
-// src/components/features/pivot/chart/PivotChartConfigModal.jsx
-
 import { useEffect, useMemo, useState } from 'react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
@@ -8,12 +6,10 @@ import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
 
 const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
-  // ===== pivotStore =====
   const column = usePivotStore((s) => s.column)
   const rows = usePivotStore((s) => s.rows)
   const values = usePivotStore((s) => s.values)
 
-  // ===== pivotChartStore =====
   const colField = usePivotChartStore((s) => s.colField)
   const colMode = usePivotChartStore((s) => s.colMode)
   const colTopN = usePivotChartStore((s) => s.colTopN)
@@ -39,6 +35,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
 
   const setMetric = usePivotChartStore((s) => s.setMetric)
   const setChartType = usePivotChartStore((s) => s.setChartType)
+  const setAxisAndMetric = usePivotChartStore((s) => s.setAxisAndMetric)
 
   const [isRowFieldOpen, setIsRowFieldOpen] = useState(false)
 
@@ -195,7 +192,6 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     }
   }
 
-  // ===== 4. 차트 타입 후보 =====
   const chartTypeOptions = [
     { key: 'groupedColumn', label: '그룹 세로 막대' },
     { key: 'stackedColumn', label: '누적 세로 막대' },
@@ -229,6 +225,12 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
       window.alert('Row 직접 선택 모드에서는 최소 1개의 항목을 선택해야 합니다.')
       return
     }
+
+    setAxisAndMetric({
+      colField,
+      rowField,
+      metric,
+    })
 
     if (onApply) {
       onApply()

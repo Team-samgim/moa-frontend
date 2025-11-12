@@ -34,6 +34,13 @@ export const usePivotChartStore = create((set) => ({
   setMetric: (metric) => set({ metric }),
   setChartType: (type) => set({ chartType: type }),
 
+  setAxisAndMetric: ({ colField, rowField, metric }) =>
+    set({
+      colField,
+      rowField,
+      metric,
+    }),
+
   resetChartConfig: () =>
     set({
       colField: null,

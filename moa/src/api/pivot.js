@@ -37,4 +37,19 @@ const runPivotChart = async (payload) => {
   return res.data
 }
 
-export { fetchPivotFields, runPivotQuery, fetchValues, fetchRowGroupItems, runPivotChart }
+// 피벗 히트맵 테이블 데이터 조회
+const runPivotHeatmapTable = async (payload) => {
+  console.log(payload)
+  const res = await axiosInstance.post('/pivot/heatmap-table', payload)
+  console.log('pivot heatmap table result', res.data)
+  return res.data
+}
+
+export {
+  fetchPivotFields,
+  runPivotQuery,
+  fetchValues,
+  fetchRowGroupItems,
+  runPivotChart,
+  runPivotHeatmapTable,
+}
