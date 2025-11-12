@@ -196,19 +196,64 @@ const SearchPage = () => {
     return { field: 'ts_server_nsec', fromEpoch: now - span, toEpoch: now }
   }
 
-  // === 변경: 피벗으로 이동 (columns = viewKeys 고정) ===
+  // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
+    // viewKeys만 사용 (비어있으면 빈 배열)
+    const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
+
+    // 현재 그리드 상태 기반 검색 프리셋 구성
+    const api = gridApis?.api
+    const sortModel = api?.getSortModel?.()[0] || null
+    const sortField = sortModel
+      ? api.getColumnDef(sortModel.colId)?.field || sortModel.colId
+      : searchPayload?.options?.orderBy || 'ts_server_nsec'
+    const sortDirection = (sortModel?.sort || searchPayload?.options?.order || 'DESC').toUpperCase()
+
+    const filters = gridRef.current?.getActiveFilters?.() || {}
+    const baseSpec =
+      searchPayload ||
+      buildSearchPayload({
+        layer,
+        viewKeys,
+        conditions,
+        timePreset,
+        customTimeRange,
+        globalNot,
+        fields,
+      })
+
+    const searchPreset = {
+      version: 1,
+      layer,
+      columns: cols,
+      sort: { field: sortField, direction: sortDirection },
+      filters,
+      baseSpec, // 기간/조건/옵션 포함된 서버 요청 스펙
+      query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
+    }
+
     const payload = {
       layer,
       time: getTimeSpec(), // { field, fromEpoch, toEpoch }
-      columns: Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : [],
-      conditions, // 현재 조건 배열
+      columns: cols, // 피벗 페이지에서 x/y/value는 따로 설정
+      conditions, // 현재 조건
+      searchPreset, // 검색 프리셋 같이 전달
     }
 
-    console.log('[PIVOT payload]', payload)
+    console.log('[PIVOT payload]', payload) // 확인 로그
 
     navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
-  }, [navigate, layer, viewKeys, conditions, timePreset, customTimeRange, searchPayload])
+  }, [
+    navigate,
+    layer,
+    viewKeys,
+    conditions,
+    timePreset,
+    customTimeRange,
+    searchPayload,
+    gridApis,
+    fields,
+  ])
 
   /** 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
   useEffect(() => {
