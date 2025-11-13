@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { arrayMove } from '@dnd-kit/sortable'
 import ColumnIcon from '@/assets/icons/column.svg?react'
@@ -52,6 +52,8 @@ const PivotPage = () => {
   const gridColumns = gridContext?.columns || []
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
   const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
+
+  const chartViewRef = useRef(null)
 
   const [filterModal, setFilterModal] = useState({
     open: false,
@@ -274,7 +276,7 @@ const PivotPage = () => {
             <div className='hidden w-px bg-gray-200 lg:block' />
 
             {/* 오른쪽 패널 */}
-            <div className='flex flex-1 flex-col gap-4 lg:flex-row lg:h-60 min-h-0 items-stretch'>
+            <div className='flex flex-1 flex-col gap-4 lg:flex-row min-h-0 items-stretch'>
               {/* Column 카드 */}
               <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
@@ -315,7 +317,7 @@ const PivotPage = () => {
               </div>
 
               {/* Rows 카드 */}
-              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden h-full'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
@@ -335,7 +337,7 @@ const PivotPage = () => {
               </div>
 
               {/* Values 카드 */}
-              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden h-full'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)
@@ -382,8 +384,19 @@ const PivotPage = () => {
               </button>
             </div>
 
-            {/* 오른쪽 영역: 차트 설정 + 전체보기 버튼 */}
+            {/* 오른쪽 영역: 차트 이미지 다운로드 + 차트 설정 + 전체보기 버튼 */}
             <div className='flex items-center gap-2'>
+              <button
+                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+                onClick={() => {
+                  if (chartViewRef.current && chartViewRef.current.downloadImage) {
+                    chartViewRef.current.downloadImage()
+                  }
+                }}
+                disabled={!isChartMode}
+              >
+                <span>차트 이미지 다운로드</span>
+              </button>
               <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
                 <span>차트 설정 (임시)</span>
               </button>
@@ -408,7 +421,7 @@ const PivotPage = () => {
           {/* 이하 기존 내용 그대로 */}
           {isChartMode ? (
             <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
-              <PivotChartView />
+              <PivotChartView ref={chartViewRef} />
             </div>
           ) : (
             <>
