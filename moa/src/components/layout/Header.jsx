@@ -45,7 +45,15 @@ const Header = () => {
   }, [lastScrollY])
 
   return (
-    <header className='w-full flex justify-center items-end bg-transparent h-[90px] fixed top-0 left-0 right-0 z-50 px-6 lg:px-8'>
+    <header
+      className='
+        w-full flex justify-center items-end bg-transparent h-[90px]
+        fixed top-0 left-0 right-0 z-50
+        pl-6 lg:pl-8
+        pr-[calc(1.5rem+var(--scrollbar-comp,0px))]
+        lg:pr-[calc(2rem+var(--scrollbar-comp,0px))]
+      '
+    >
       <div
         className={`
           flex w-full max-w-[1450px] items-center justify-between gap-4

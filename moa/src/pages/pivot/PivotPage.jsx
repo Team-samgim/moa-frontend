@@ -11,6 +11,7 @@ import ValueIcon from '@/assets/icons/value.svg?react'
 import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
 import PivotChartConfigModal from '@/components/features/pivot/chart/PivotChartConfigModal'
 import PivotChartView from '@/components/features/pivot/chart/PivotChartView'
+import PivotHeatmapTableModal from '@/components/features/pivot/chart/PivotHeatmapTableModal'
 import ColumnSelectModal from '@/components/features/pivot/modal/ColumnSelectModal'
 import FieldFilterModal from '@/components/features/pivot/modal/FieldFilterModal'
 import RowSelectModal from '@/components/features/pivot/modal/RowSelectModal'
@@ -52,6 +53,8 @@ const PivotPage = () => {
     open: false,
     field: null,
   })
+
+  const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)
 
   const {
     isConfigOpen: isChartConfigOpen,
@@ -366,13 +369,31 @@ const PivotPage = () => {
                 />
               </button>
             </div>
-            <div>
-              <button onClick={() => setIsConfigOpen(true)}>
+
+            {/* 오른쪽 영역: 차트 설정 + 전체보기 버튼 */}
+            <div className='flex items-center gap-2'>
+              <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
                 <span>차트 설정 (임시)</span>
+              </button>
+
+              <button
+                type='button'
+                onClick={() => {
+                  // 최소한 column/rows/values 있어야 전체보기 의미가 있으니까 가드
+                  if (!column?.field || !rows?.length || !values?.length) {
+                    window.alert('전체보기를 사용하려면 열/행/값을 먼저 설정해주세요.')
+                    return
+                  }
+                  setIsHeatmapOpen(true)
+                }}
+                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50'
+              >
+                전체보기 (테이블 히트맵)
               </button>
             </div>
           </div>
 
+          {/* 이하 기존 내용 그대로 */}
           {isChartMode ? (
             <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
               <PivotChartView />
@@ -446,6 +467,9 @@ const PivotPage = () => {
           onClose={closeChartConfig}
           onApply={handleApplyChart}
         />
+      )}
+      {isHeatmapOpen && (
+        <PivotHeatmapTableModal isOpen={isHeatmapOpen} onClose={() => setIsHeatmapOpen(false)} />
       )}
     </>
   )

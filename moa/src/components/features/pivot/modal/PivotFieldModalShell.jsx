@@ -1,3 +1,6 @@
+import { useEffect } from 'react'
+import { allowScroll, preventScroll } from '@/utils/modal'
+
 const PivotFieldModalShell = ({
   title,
   // headerRight, // e.g. "3/11", "선택한 필드: src_ip"
@@ -8,6 +11,13 @@ const PivotFieldModalShell = ({
   searchValue,
   onSearchChange,
 }) => {
+  useEffect(() => {
+    const prevScrollY = preventScroll()
+    return () => {
+      allowScroll(prevScrollY)
+    }
+  }, [])
+
   return (
     <div className='fixed inset-0 z-999 flex items-center justify-center bg-black/50'>
       <div className='h-[80vh] w-[680px] overflow-hidden rounded-lg bg-white shadow-xl flex flex-col'>
