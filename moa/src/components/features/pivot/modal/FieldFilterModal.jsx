@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import { useInfiniteDistinctValues } from '@/hooks/queries/usePivot'
+import { allowScroll, preventScroll } from '@/utils/modal'
 
 const FieldFilterModal = ({
   layer,
@@ -14,6 +15,13 @@ const FieldFilterModal = ({
   onApply,
   onClose,
 }) => {
+  useEffect(() => {
+    const prevScrollY = preventScroll()
+    return () => {
+      allowScroll(prevScrollY)
+    }
+  }, [])
+
   const effectiveFilters = useMemo(
     () => (filters ?? []).filter((f) => f.field !== fieldName),
     [filters, fieldName],

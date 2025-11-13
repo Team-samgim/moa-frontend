@@ -4,6 +4,7 @@ import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import { useInfiniteDistinctValues } from '@/hooks/queries/usePivot'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
+import { allowScroll, preventScroll } from '@/utils/modal'
 
 const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   const column = usePivotStore((s) => s.column)
@@ -39,7 +40,13 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
 
   const [isRowFieldOpen, setIsRowFieldOpen] = useState(false)
 
-  // ===== 0. 초기 colField / rowField 세팅 =====
+  useEffect(() => {
+    const prevScrollY = preventScroll()
+    return () => {
+      allowScroll(prevScrollY)
+    }
+  }, [])
+
   useEffect(() => {
     if (column?.field && !colField) {
       setColField(column.field)
