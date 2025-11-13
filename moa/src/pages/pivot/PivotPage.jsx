@@ -274,9 +274,9 @@ const PivotPage = () => {
             <div className='hidden w-px bg-gray-200 lg:block' />
 
             {/* 오른쪽 패널 */}
-            <div className='flex flex-1 flex-col gap-4 lg:flex-row lg:h-60 min-h-0'>
+            <div className='flex flex-1 flex-col gap-4 lg:flex-row lg:h-60 min-h-0 items-stretch'>
               {/* Column 카드 */}
-              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ColumnIcon className='h-4 w-4 text-gray-600' />열 (Column)
@@ -315,7 +315,7 @@ const PivotPage = () => {
               </div>
 
               {/* Rows 카드 */}
-              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden h-full'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
@@ -335,7 +335,7 @@ const PivotPage = () => {
               </div>
 
               {/* Values 카드 */}
-              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden'>
+              <div className='flex-1 flex min-h-0 flex-col rounded border border-gray-200 overflow-hidden h-full'>
                 <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
                     <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)

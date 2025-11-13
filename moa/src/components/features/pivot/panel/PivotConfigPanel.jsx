@@ -118,7 +118,7 @@ const PivotConfigPanel = ({
         </div>
         {isFromGrid && (
           <p className='mt-1 text-[10px] text-gray-400'>
-            일반 그리드에서 선택한 계층으로 고정되어 있습니다.
+            검색에서 선택한 계층으로 고정되어 있습니다.
           </p>
         )}
       </div>
@@ -236,7 +236,7 @@ const PivotConfigPanel = ({
 
           {isFromGrid && customRangeLabel && (
             <p className='mt-1 text-[10px] text-gray-400'>
-              일반 그리드에서 설정한 기간: {customRangeLabel}
+              검색에서 설정한 기간: {customRangeLabel}
             </p>
           )}
         </div>
