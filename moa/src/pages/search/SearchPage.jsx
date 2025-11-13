@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchGridBySearchSpec } from '@/api/grid'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
+import EthernetRowPreviewModal from '@/components/features/grid/EthernetRowPreviewModal'
 import HttpPageRowPreviewModal from '@/components/features/grid/HttpPageRowPreviewModal'
 import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
@@ -28,9 +29,10 @@ const SearchPage = () => {
 
   const [tcpRowKey, setTcpRowKey] = useState(null)
   const [httpPageRowKey, setHttpPageRowKey] = useState(null)
+  const [ethernetRowKey, setEthernetRowKey] = useState(null)
 
   const withRowKeyIfDetail = (keys, lyr) =>
-    ['TCP', 'HTTP_PAGE'].includes(lyr)
+    ['TCP', 'HTTP_PAGE', 'ETHERNET'].includes(lyr)
       ? Array.from(new Set(['row_key', ...(keys || [])]))
       : keys || []
 
@@ -420,8 +422,14 @@ const SearchPage = () => {
                   const key =
                     row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
                   if (!key) return
-                  if (layer === 'TCP') setTcpRowKey(key)
-                  else if (layer === 'HTTP_PAGE') setHttpPageRowKey(key)
+
+                  if (layer === 'TCP') {
+                    setTcpRowKey(key)
+                  } else if (layer === 'HTTP_PAGE') {
+                    setHttpPageRowKey(key)
+                  } else if (layer === 'ETHERNET') {
+                    setEthernetRowKey(key)
+                  }
                 }}
               />
               {aggQuery.isSuccess && (
@@ -448,6 +456,14 @@ const SearchPage = () => {
                   open={!!httpPageRowKey}
                   onClose={() => setHttpPageRowKey(null)}
                   rowKey={httpPageRowKey}
+                />
+              )}
+
+              {layer === 'ETHERNET' && (
+                <EthernetRowPreviewModal
+                  open={!!ethernetRowKey}
+                  onClose={() => setEthernetRowKey(null)}
+                  rowKey={ethernetRowKey}
                 />
               )}
             </>
