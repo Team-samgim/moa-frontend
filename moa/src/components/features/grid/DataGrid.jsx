@@ -26,6 +26,7 @@ const DataGrid = forwardRef(function DataGrid(
     cacheBlockSize = 100,
     onGridApis,
     onActiveFiltersChange,
+    onRowClick,
   },
   ref,
 ) {
@@ -309,6 +310,12 @@ const DataGrid = forwardRef(function DataGrid(
         onSortChanged={onSortChanged}
         popupParent={popupParent}
         onFilterOpened={onFilterOpened}
+        onRowClicked={(e) => {
+          // 무한 스크롤 모델에서도 e.data 사용 가능
+          console.log('[row]', e.data)
+
+          onRowClick?.(e.data)
+        }}
       />
     </div>
   )

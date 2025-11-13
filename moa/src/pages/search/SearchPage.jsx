@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchGridBySearchSpec } from '@/api/grid'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
+import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
 import LayerBar from '@/components/features/search/LayerBar'
@@ -23,6 +24,11 @@ const defaultValuesFor = (arity) =>
 const SearchPage = () => {
   const location = useLocation()
   const navigate = useNavigate()
+
+  const [tcpRowKey, setTcpRowKey] = useState(null)
+
+  const withRowKeyIfTcp = (keys, lyr) =>
+    lyr === 'TCP' ? Array.from(new Set(['row_key', ...(keys || [])])) : keys || []
 
   const [gridApis, setGridApis] = useState(null)
   const [layer, setLayer] = useState('HTTP_PAGE')
@@ -132,7 +138,7 @@ const SearchPage = () => {
     try {
       const payload = buildSearchPayload({
         layer,
-        viewKeys,
+        viewKeys: withRowKeyIfTcp(viewKeys, layer),
         conditions,
         timePreset,
         customTimeRange,
@@ -168,7 +174,12 @@ const SearchPage = () => {
 
   useEffect(() => {
     if (viewKeys.length === 0 && gridCols.length > 0) {
-      setViewKeys(gridCols.map((c) => c.name))
+      setViewKeys(
+        withRowKeyIfTcp(
+          gridCols.map((c) => c.name),
+          layer,
+        ),
+      )
     }
   }, [gridCols, viewKeys.length])
 
@@ -401,6 +412,13 @@ const SearchPage = () => {
                 cacheBlockSize={100}
                 onGridApis={setGridApis}
                 onActiveFiltersChange={setAggFilters}
+                onRowClick={(row) => {
+                  if (layer !== 'TCP') return
+                  // row_key가 원시값/래핑객체 둘 다 올 수 있으니 안전하게 추출
+                  const key =
+                    row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
+                  if (key) setTcpRowKey(key)
+                }}
               />
               {aggQuery.isSuccess && (
                 <AggregatesPanel
@@ -413,6 +431,13 @@ const SearchPage = () => {
               )}
               {aggQuery.isLoading && (
                 <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
+              )}
+              {layer === 'TCP' && (
+                <TcpRowPreviewModal
+                  open={!!tcpRowKey}
+                  onClose={() => setTcpRowKey(null)}
+                  rowKey={tcpRowKey}
+                />
               )}
             </>
           )}
