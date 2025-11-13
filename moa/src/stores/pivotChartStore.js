@@ -2,37 +2,58 @@ import { create } from 'zustand'
 
 export const usePivotChartStore = create((set) => ({
   isChartMode: false,
-  isConfigOpen: false, // 추가
+  isConfigOpen: false,
 
-  xField: null,
-  xMode: 'topN',
-  xTopN: 5,
-  xSelectedItems: [],
+  colField: null, // ex) 'country_name_res'
+  colMode: 'topN', // 'topN' | 'manual'
+  colTopN: 5, // 기본 5 (백엔드에서도 5로 캡)
+  colSelectedItems: [], // manual 모드에서 선택된 값들
 
-  yMetrics: [],
-  chartType: 'bar',
+  rowField: null, // ex) 'ts_date'
+  rowMode: 'topN',
+  rowTopN: 5,
+  rowSelectedItems: [],
+
+  metric: null,
+
+  chartType: 'groupedColumn',
 
   setIsChartMode: (v) => set({ isChartMode: v }),
-  setIsConfigOpen: (v) => set({ isConfigOpen: v }), // 추가
+  setIsConfigOpen: (v) => set({ isConfigOpen: v }),
 
-  setXField: (field) => set({ xField: field }),
-  setXMode: (mode) => set({ xMode: mode }),
-  setXTopN: (n) => set({ xTopN: n }),
-  setXSelectedItems: (items) => set({ xSelectedItems: items }),
+  setColField: (field) => set({ colField: field }),
+  setColMode: (mode) => set({ colMode: mode }),
+  setColTopN: (n) => set({ colTopN: n }),
+  setColSelectedItems: (items) => set({ colSelectedItems: items }),
 
-  setYMetrics: (updater) =>
-    set((s) => ({
-      yMetrics: typeof updater === 'function' ? updater(s.yMetrics) : updater,
-    })),
+  setRowField: (field) => set({ rowField: field }),
+  setRowMode: (mode) => set({ rowMode: mode }),
+  setRowTopN: (n) => set({ rowTopN: n }),
+  setRowSelectedItems: (items) => set({ rowSelectedItems: items }),
+
+  setMetric: (metric) => set({ metric }),
   setChartType: (type) => set({ chartType: type }),
+
+  setAxisAndMetric: ({ colField, rowField, metric }) =>
+    set({
+      colField,
+      rowField,
+      metric,
+    }),
 
   resetChartConfig: () =>
     set({
-      xField: null,
-      xMode: 'topN',
-      xTopN: 10,
-      xSelectedItems: [],
-      yMetrics: [],
-      chartType: 'bar', // null 대신 기본값
+      colField: null,
+      colMode: 'topN',
+      colTopN: 5,
+      colSelectedItems: [],
+
+      rowField: null,
+      rowMode: 'topN',
+      rowTopN: 5,
+      rowSelectedItems: [],
+
+      metric: null,
+      chartType: 'groupedColumn',
     }),
 }))

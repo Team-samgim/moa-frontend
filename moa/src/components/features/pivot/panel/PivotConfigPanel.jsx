@@ -97,7 +97,7 @@ const PivotConfigPanel = ({
                 'rounded border px-3 py-2 text-xs font-medium',
                 layer === opt
                   ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
-                  : 'bg-[#F5F5F7] text-gray-700 border-gray-300 hover:bg-gray-50',
+                  : 'bg-[#ffffff] text-gray-700 border-gray-300 hover:bg-gray-50',
               ].join(' ')}
             >
               {opt}
@@ -136,7 +136,7 @@ const PivotConfigPanel = ({
                   'rounded border px-3 py-2 text-xs font-medium',
                   isActive
                     ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
-                    : 'bg-[#F5F5F7] text-gray-700 border-gray-300 hover:bg-gray-50',
+                    : 'bg-[#ffffff] text-gray-700 border-gray-300 hover:bg-gray-50',
                 ].join(' ')}
               >
                 {p.label}

@@ -14,6 +14,8 @@
   --color-blue: #3f72af;
   --color-blue-light: #3877be;
   --color-blue-dark: #2c619c;
+  /* scrollbar */
+  --scrollbar-comp: 0px;
 }
 
 body {

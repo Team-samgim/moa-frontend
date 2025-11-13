@@ -33,7 +33,7 @@ const PivotChartView = () => {
     )
   }
 
-  const option = buildPivotEChartOption(chartType || 'bar', data)
+  const option = buildPivotEChartOption(chartType || 'groupedColumn', data)
 
   return (
     <div className='h-[360px] w-full'>
