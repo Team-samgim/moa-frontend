@@ -44,8 +44,12 @@ const PivotPage = () => {
     setRows,
     setValues,
     setFilters,
+    pivotMode,
+    gridContext,
   } = usePivotStore()
 
+  const isFromGrid = pivotMode === 'fromGrid'
+  const gridColumns = gridContext?.columns || []
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
   const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
 
@@ -251,12 +255,20 @@ const PivotPage = () => {
               layer={layer}
               timeRange={timeRange}
               customRange={customRange}
+              isFromGrid={isFromGrid}
               onChangeLayer={(nextLayer) => {
+                if (isFromGrid) return // 그리드 모드: 레이어 변경 금지
                 setLayer(nextLayer)
                 runQueryNow()
               }}
-              onSelectTimePreset={handleSelectTimePreset}
-              onApplyCustomRange={handleApplyCustomRange}
+              onSelectTimePreset={(value) => {
+                if (isFromGrid) return // 프리셋 변경 금지
+                handleSelectTimePreset(value)
+              }}
+              onApplyCustomRange={(fromDate, toDate) => {
+                if (isFromGrid) return // 직접 설정 변경 금지
+                handleApplyCustomRange(fromDate, toDate)
+              }}
             />
 
             <div className='hidden w-px bg-gray-200 lg:block' />
@@ -423,6 +435,7 @@ const PivotPage = () => {
           initialSelected={draftRows.map((r) => r.field)}
           onApplyRows={(newRows) => applyRows(newRows)}
           onClose={closeModal}
+          availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
@@ -431,6 +444,7 @@ const PivotPage = () => {
           initialSelected={draftColumn?.field || ''}
           onApplyColumn={(newCol) => applyColumn(newCol)}
           onClose={closeModal}
+          availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
@@ -442,6 +456,7 @@ const PivotPage = () => {
           }))}
           onApplyValues={(newVals) => applyValues(newVals)}
           onClose={closeModal}
+          availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
