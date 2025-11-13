@@ -26,7 +26,7 @@ const presetToStepSec = (p) => {
  * 대시보드 공통 파라미터 (store → API payload 기본값)
  */
 export const useDashboardParams = () => {
-  const { layer, timePreset, customRange, live, filters } = useDashboardStore()
+  const { timePreset, customRange, live, filters } = useDashboardStore()
   const now = Date.now()
   const toEpoch = Math.floor(now / 1000)
   const fromEpoch = customRange
@@ -35,15 +35,14 @@ export const useDashboardParams = () => {
 
   const step = presetToStepSec(timePreset ?? '1H')
 
-  return { layer, fromEpoch, toEpoch, step, live, filters }
+  return { fromEpoch, toEpoch, step, live, filters }
 }
 
 /**
  * 공통 queryKey (동일 key면 캐시 공유)
  */
-const dashboardKey = ({ layer, fromEpoch, toEpoch, step, filters }) => [
+const dashboardKey = ({ fromEpoch, toEpoch, step, filters }) => [
   'dashboard',
-  layer,
   fromEpoch,
   toEpoch,
   step,
@@ -55,10 +54,10 @@ const dashboardKey = ({ layer, fromEpoch, toEpoch, step, filters }) => [
  * - 필요 시 컴포넌트에서 data.trafficTrend 처럼 직접 사용
  */
 export const useDashboardAggregated = () => {
-  const { layer, fromEpoch, toEpoch, step, live, filters } = useDashboardParams()
+  const { fromEpoch, toEpoch, step, live, filters } = useDashboardParams()
   return useQuery({
-    queryKey: dashboardKey({ layer, fromEpoch, toEpoch, step, filters }),
-    queryFn: () => fetchDashboardApi({ layer, range: { fromEpoch, toEpoch }, step, filters }),
+    queryKey: dashboardKey({ fromEpoch, toEpoch, step, filters }),
+    queryFn: () => fetchDashboardApi({ range: { fromEpoch, toEpoch }, step, filters }),
     refetchInterval: live ? 5000 : false,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
@@ -77,7 +76,6 @@ export const useTrafficTrend = () => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
@@ -105,7 +103,6 @@ export const useTcpErrorRate = () => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
@@ -135,20 +132,19 @@ export const useTrafficByCountry = () => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
       }),
     select: (d) => {
       const rows = (d?.trafficByCountry ?? []).map((it) => ({
-        country: it.countryName,
-        volume: Number(it.trafficVolume || 0),
-        requests: Number(it.requestCount || 0),
-        pct: Number(it.percentage || 0),
+        countryName: it.countryName,
+        trafficVolume: Number(it.trafficVolume || 0),
+        requestCount: Number(it.requestCount || 0),
+        percentage: Number(it.percentage || 0),
       }))
       // 기본: 트래픽량 내림차순
-      rows.sort((a, b) => b.volume - a.volume)
+      rows.sort((a, b) => b.trafficVolume - a.trafficVolume)
       return rows
     },
     refetchInterval: p.live ? 5000 : false,
@@ -164,7 +160,6 @@ export const useHttpStatusCodes = () => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
@@ -201,7 +196,6 @@ export const useTopDomains = (limit = 10) => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
@@ -229,7 +223,6 @@ export const useResponseTime = () => {
     queryKey: dashboardKey(p),
     queryFn: () =>
       fetchDashboardApi({
-        layer: p.layer,
         range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
         step: p.step,
         filters: p.filters,
