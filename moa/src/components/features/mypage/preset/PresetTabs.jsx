@@ -2,7 +2,7 @@ import { memo, useCallback } from 'react'
 import { cx } from '@/utils/misc'
 
 const TABS = [
-  { key: 'GRID', label: '검색 프리셋', panelId: 'tabpanel-grid' },
+  { key: 'SEARCH', label: '검색 프리셋', panelId: 'tabpanel-search' },
   { key: 'PIVOT', label: '피벗 프리셋', panelId: 'tabpanel-pivot' },
 ]
 

@@ -1,8 +1,7 @@
-// src/components/detail/EthernetRowPreviewModal.jsx
 import { memo, useEffect, useState } from 'react'
 import useEthernetMetrics from '@/hooks/detail/useEthernetMetrics'
 
-// bytes pretty print
+// ===== 유틸리티 함수 =====
 const prettyBytes = (n = 0) => {
   if (!n) return '0 B'
   const u = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -12,9 +11,48 @@ const prettyBytes = (n = 0) => {
 
 const pct = (v = 0) => `${((v || 0) * 100).toFixed(2)}%`
 
-// 임계치: 프로젝트 기준 자유 조정
+// 빈 값 처리 헬퍼
+const emptyValue = (value, defaultText = '값 없음') => {
+  if (value === null || value === undefined || value === '') return defaultText
+  if (typeof value === 'number' && isNaN(value)) return defaultText
+  return value
+}
+
+// epoch seconds → 로컬 시간 문자열
+const formatTimestamp = (epoch) => {
+  if (!epoch) return '값 없음'
+  try {
+    return new Date(epoch * 1000).toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+  } catch {
+    return String(epoch)
+  }
+}
+
+// 🆕 초 → 읽기 쉬운 문자열
+const formatDuration = (sec) => {
+  if (!sec || sec < 0) return '0초'
+  if (sec < 0.001) return `${(sec * 1000000).toFixed(0)} μs`
+  if (sec < 1) return `${(sec * 1000).toFixed(2)} ms`
+  if (sec < 60) return `${sec.toFixed(2)}초`
+  const min = Math.floor(sec / 60)
+  const s = (sec % 60).toFixed(0)
+  if (min < 60) return `${min}분 ${s}초`
+  const hr = Math.floor(min / 60)
+  const m = min % 60
+  return `${hr}시간 ${m}분`
+}
+
 const levelByRate = (r = 0) => (r >= 0.05 ? 'crit' : r > 0 ? 'warn' : 'ok')
 
+// ===== 컴포넌트 =====
 const Badge = ({ level = 'ok', children }) => {
   const cls =
     level === 'crit'
@@ -33,13 +71,20 @@ const Chip = ({ children }) => (
   <span className='rounded-full bg-[#F5F5F7] px-3 py-1 text-xs'>{children}</span>
 )
 
-// 라벨/값
-const LV = ({ label, value }) => (
-  <div className='text-sm'>
-    <span className='text-gray-500'>{label}</span>
-    <span className='ml-2 font-medium break-all'>{value}</span>
-  </div>
-)
+// 🆕 빈 값 처리가 추가된 LV 컴포넌트
+const LV = ({ label, value, showEmpty = true }) => {
+  const displayValue = emptyValue(value, showEmpty ? '값 없음' : '')
+  const isEmpty = displayValue === '값 없음' || displayValue === ''
+
+  return (
+    <div className='text-sm'>
+      <span className='text-gray-500'>{label}</span>
+      <span className={`ml-2 font-medium break-all ${isEmpty ? 'text-gray-400 italic' : ''}`}>
+        {displayValue}
+      </span>
+    </div>
+  )
+}
 
 const TabButton = ({ id, activeId, onClick, children }) => {
   const active = id === activeId
@@ -59,14 +104,12 @@ const TabButton = ({ id, activeId, onClick, children }) => {
   )
 }
 
-// 진단 메시지 severity 추정 (문구에 crit 들어가면 crit)
 const diagLevel = (msg = '') => (msg && msg.includes('crit') ? 'crit' : 'warn')
 
 const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, onClose, rowKey }) {
   const q = useEthernetMetrics(rowKey)
-  const [activeTab, setActiveTab] = useState('summary') // 'summary' | 'errors'
+  const [activeTab, setActiveTab] = useState('summary')
 
-  // ESC close
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {
@@ -76,7 +119,6 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  // 모달 닫힐 때 탭 초기화
   useEffect(() => {
     if (!open) setActiveTab('summary')
   }, [open])
@@ -85,68 +127,83 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
 
   const d = q.data || {}
 
-  // DTO 필드 매핑 (백엔드 EthernetMetricsDTO 기준)
   const {
     rowKey: _rk,
+    flowIdentifier,
     srcMac,
     dstMac,
     srcIp,
     dstIp,
-
-    // 프로토콜 정보
+    srcPort,
+    dstPort,
     l2Proto,
     l3Proto,
     l4Proto,
-    l7Proto,
+    l4ProtoName,
+    l7proto,
     ipVersion,
-
-    // 규모/시간/속도
+    app,
+    master,
+    sniHostname,
+    tsFirst,
+    tsLast,
+    tsSampleBegin,
+    tsSampleEnd,
     durSec,
+    expired,
+    expiredByTimeout,
     bps,
-    frames,
-    framesTx,
-    framesRx,
     bytes,
-    bytesTx,
-    bytesRx,
-
-    // 오류 카운트 (플랫)
+    bytesReq,
+    bytesRes,
+    frames,
+    framesReq,
+    framesRes,
     crcErrorCnt,
-    alignmentErrorCnt,
-    runtCnt,
-    giantCnt,
-    jabberCnt,
-    pauseCnt,
-    collisionCnt,
-    lateCollisionCnt,
-
-    // 품질 / 진단
-    qualityCounts,
-    badges,
+    crcErrorCntReq,
+    crcErrorCntRes,
+    crcErrorRateFrames,
+    crcErrorLen,
+    crcErrorLenReq,
+    crcErrorLenRes,
+    packetStats,
+    env,
+    counters,
     diagnostics,
   } = d
 
   const mbps = (bps || 0) / 1_000_000
   const diagEntries = Object.entries(diagnostics || {})
-  const qCounts = qualityCounts || {}
+  const cntEntries = Object.entries(counters || {})
 
-  // 에러 비율 계산 (전체 프레임 대비)
   const totalFrames = frames || 0
   const rate = (cnt = 0) => (totalFrames > 0 ? cnt / totalFrames : 0)
 
+  // 🆕 환경 정보가 있는지 확인
+  const hasEnv =
+    env &&
+    (env.countryReq ||
+      env.countryRes ||
+      env.domesticPrimaryReq ||
+      env.domesticPrimaryRes ||
+      env.sensorDeviceName)
+
   return (
     <div className='fixed inset-0 z-[100] flex items-center justify-center'>
-      {/* overlay */}
       <div className='absolute inset-0 bg-black/40' onClick={onClose} />
-      {/* dialog */}
       <div
         role='dialog'
         aria-modal='true'
-        className='relative w-[min(96vw,920px)] max-h-[90vh] bg-white rounded-2xl shadow-xl flex flex-col'
+        className='relative w-[min(96vw,960px)] max-h-[90vh] bg-white rounded-2xl shadow-xl flex flex-col'
       >
-        {/* header */}
+        {/* Header */}
         <div className='flex items-center justify-between border-b px-5 py-3'>
-          <h2 className='text-base font-semibold'>Ethernet 상세</h2>
+          <div>
+            <h2 className='text-base font-semibold'>Ethernet Flow 상세</h2>
+            {flowIdentifier && (
+              <p className='text-xs text-gray-500 mt-0.5 font-mono'>{flowIdentifier}</p>
+            )}
+          </div>
           <button
             className='rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50'
             onClick={onClose}
@@ -155,106 +212,150 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
           </button>
         </div>
 
-        {/* 탭 헤더 */}
+        {/* Tabs */}
         <div className='px-5 pt-3 border-b flex gap-2 overflow-x-auto'>
           <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
             요약
           </TabButton>
           <TabButton id='errors' activeId={activeTab} onClick={setActiveTab}>
-            오류 / 품질
+            품질 / 에러
           </TabButton>
+          <TabButton id='session' activeId={activeTab} onClick={setActiveTab}>
+            세션 정보
+          </TabButton>
+          {hasEnv && (
+            <TabButton id='geo' activeId={activeTab} onClick={setActiveTab}>
+              위치 정보
+            </TabButton>
+          )}
         </div>
 
-        {/* body */}
+        {/* Body */}
         <div className='p-5 space-y-5 overflow-y-auto flex-1'>
           {q.isLoading && <div className='text-sm text-gray-500'>불러오는 중…</div>}
           {q.isError && (
             <div className='text-sm text-red-600'>
-              요약을 불러오지 못했습니다. {q.error && q.error.message ? q.error.message : ''}
+              데이터를 불러오지 못했습니다. {q.error?.message || ''}
             </div>
           )}
           {q.isSuccess && !q.data && <div className='text-sm text-gray-500'>데이터 없음</div>}
 
           {q.isSuccess && q.data && (
             <>
-              {/* 공통: L2 세션 정보 */}
-              <div className='rounded-xl border bg-white p-4'>
-                <div className='text-sm text-gray-500 mb-1'>L2 세션</div>
-                <div className='text-[15px] font-semibold'>
-                  {srcMac} <span className='text-gray-400'>→</span> {dstMac}
-                </div>
-                {(srcIp || dstIp) && (
-                  <div className='mt-1 text-xs text-gray-500'>
-                    {srcIp && <span>Src IP: {srcIp}</span>}
-                    {srcIp && dstIp && <span className='mx-2'>|</span>}
-                    {dstIp && <span>Dst IP: {dstIp}</span>}
-                  </div>
-                )}
-                <div className='mt-2 flex flex-wrap gap-2'>
-                  {typeof ipVersion !== 'undefined' && ipVersion !== null && (
-                    <Chip>IP v{ipVersion}</Chip>
-                  )}
-                  {typeof l2Proto !== 'undefined' && l2Proto !== null && <Chip>L2: {l2Proto}</Chip>}
-                  {typeof l3Proto !== 'undefined' && l3Proto !== null && <Chip>L3: {l3Proto}</Chip>}
-                  {typeof l4Proto !== 'undefined' && l4Proto !== null && <Chip>L4: {l4Proto}</Chip>}
-                  {typeof l7Proto !== 'undefined' && l7Proto !== null && <Chip>L7: {l7Proto}</Chip>}
-                  {badges && badges.bcast && <Chip>Broadcast</Chip>}
-                  {badges && badges.mcast && <Chip>Multicast</Chip>}
-                  {badges && badges.jumbo && <Chip>Jumbo Frame</Chip>}
-                  {badges && badges.error && <Chip>Error</Chip>}
-                </div>
-              </div>
-
-              {/* === 탭별 콘텐츠 === */}
+              {/* === Tab: 요약 === */}
               {activeTab === 'summary' && (
                 <>
-                  {/* KPI 4칸 */}
-                  <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>기간</div>
-                      <div className='text-base font-semibold'>
-                        {Number(durSec || 0).toFixed(3)}s
+                  {/* 연결 정보 */}
+                  <div className='rounded-xl border bg-white p-4'>
+                    <div className='text-sm text-gray-500 mb-2'>연결 정보</div>
+                    <div className='space-y-2'>
+                      <div className='text-[15px] font-semibold'>
+                        {emptyValue(srcMac)} <span className='text-gray-400'>→</span>{' '}
+                        {emptyValue(dstMac)}
                       </div>
+                      {(srcIp || dstIp) && (
+                        <div className='text-sm'>
+                          <span className='text-gray-500'>IP: </span>
+                          {srcIp ? (
+                            <>
+                              <span className='font-medium'>{srcIp}</span>
+                              {srcPort && <span className='text-gray-500'>:{srcPort}</span>}
+                            </>
+                          ) : (
+                            <span className='text-gray-400 italic'>값 없음</span>
+                          )}
+                          {srcIp && dstIp && <span className='mx-2 text-gray-400'>→</span>}
+                          {dstIp ? (
+                            <>
+                              <span className='font-medium'>{dstIp}</span>
+                              {dstPort && <span className='text-gray-500'>:{dstPort}</span>}
+                            </>
+                          ) : (
+                            <span className='text-gray-400 italic'>값 없음</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>평균 처리량</div>
-                      <div className='text-base font-semibold'>{mbps.toFixed(2)} Mbps</div>
-                    </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>프레임 수</div>
-                      <div className='text-base font-semibold'>
-                        {(frames || 0).toLocaleString()}
-                        <span className='text-gray-500'>
-                          {' '}
-                          (tx {(framesTx || 0).toLocaleString()}, rx{' '}
-                          {(framesRx || 0).toLocaleString()})
-                        </span>
-                      </div>
-                    </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>바이트</div>
-                      <div className='text-base font-semibold'>
-                        {prettyBytes(bytes || 0)}
-                        <span className='text-gray-500'>
-                          {' '}
-                          (tx {prettyBytes(bytesTx || 0)}, rx {prettyBytes(bytesRx || 0)})
-                        </span>
-                      </div>
+
+                    {/* 프로토콜 칩들 */}
+                    <div className='mt-3 flex flex-wrap gap-2'>
+                      {ipVersion && <Chip>IPv{ipVersion}</Chip>}
+                      {l4ProtoName ? (
+                        <Chip>{l4ProtoName}</Chip>
+                      ) : l4Proto ? (
+                        <Chip>L4: {l4Proto}</Chip>
+                      ) : (
+                        <Chip className='text-gray-400 italic'>L4: 값 없음</Chip>
+                      )}
+                      {app && <Chip>App: {app}</Chip>}
+                      {master && <Chip>Master: {master}</Chip>}
+                      {sniHostname && <Chip>SNI: {sniHostname}</Chip>}
                     </div>
                   </div>
 
-                  {/* 진단 요약 */}
+                  {/* 🆕 시간 정보 */}
+                  {(tsFirst || tsLast || tsSampleBegin || durSec) && (
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='text-sm font-semibold text-gray-800 mb-3'>⏱️ 시간 정보</div>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
+                        <LV label='플로우 시작' value={formatTimestamp(tsFirst)} />
+                        <LV label='플로우 종료' value={formatTimestamp(tsLast)} />
+                        <LV label='샘플링 시작' value={formatTimestamp(tsSampleBegin)} />
+                        <LV label='샘플링 종료' value={formatTimestamp(tsSampleEnd)} />
+                        {durSec !== null && durSec !== undefined && (
+                          <LV label='지속 시간' value={formatDuration(durSec)} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* KPI 카드 */}
+                  <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+                    <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='text-xs text-gray-500'>평균 처리량</div>
+                      <div className='text-lg font-bold text-blue-700'>{mbps.toFixed(2)} Mbps</div>
+                    </div>
+                    <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                      <div className='text-xs text-gray-500'>총 데이터</div>
+                      <div className='text-lg font-bold text-emerald-700'>{prettyBytes(bytes)}</div>
+                      <div className='text-xs text-gray-500 mt-1'>
+                        Req: {prettyBytes(bytesReq)} / Res: {prettyBytes(bytesRes)}
+                      </div>
+                    </div>
+                    <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                      <div className='text-xs text-gray-500'>총 프레임</div>
+                      <div className='text-lg font-bold text-purple-700'>
+                        {(frames || 0).toLocaleString()}
+                      </div>
+                      <div className='text-xs text-gray-500 mt-1'>
+                        Req: {(framesReq || 0).toLocaleString()} / Res:{' '}
+                        {(framesRes || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                      <div className='text-xs text-gray-500'>CRC 에러</div>
+                      <div className='text-lg font-bold text-amber-700'>
+                        {(crcErrorCnt || 0).toLocaleString()}
+                      </div>
+                      {crcErrorRateFrames > 0 && (
+                        <div className='text-xs text-amber-600 mt-1'>
+                          에러율: {(crcErrorRateFrames * 100).toFixed(3)}%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 진단 메시지 */}
                   <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>진단 요약</div>
-                    {diagEntries.length === 0 && (
-                      <div className='text-xs text-gray-500'>특이사항 없음</div>
-                    )}
-                    {diagEntries.length > 0 && (
-                      <ul className='space-y-2 text-xs'>
+                    <div className='mb-3 text-sm font-semibold text-gray-800'>🔍 진단 메시지</div>
+                    {diagEntries.length === 0 ? (
+                      <div className='text-sm text-gray-400 italic py-2'>특이사항 없음</div>
+                    ) : (
+                      <ul className='space-y-2'>
                         {diagEntries.map(([k, msg]) => (
                           <li
                             key={k}
-                            className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2'
+                            className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm'
                           >
                             <Badge level={diagLevel(msg)}>{k}</Badge>
                             <span className='text-gray-700'>{msg}</span>
@@ -263,13 +364,107 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                       </ul>
                     )}
                   </div>
+                </>
+              )}
 
-                  {/* 품질 관련 카운트(전체) */}
-                  {Object.keys(qCounts).length > 0 && (
+              {/* === Tab: 품질/에러 === */}
+              {activeTab === 'errors' && (
+                <>
+                  {/* CRC 에러 상세 */}
+                  {crcErrorCnt > 0 ? (
+                    <div className='rounded-xl border bg-red-50 p-4'>
+                      <div className='mb-3 text-sm font-semibold text-red-800'>⚠️ CRC 에러</div>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3'>
+                        <div className='bg-white rounded-lg p-3'>
+                          <LV label='총 에러' value={(crcErrorCnt || 0).toLocaleString()} />
+                          <Badge level='crit'>{pct(rate(crcErrorCnt))}</Badge>
+                        </div>
+                        <div className='bg-white rounded-lg p-3'>
+                          <LV label='요청 에러' value={(crcErrorCntReq || 0).toLocaleString()} />
+                          <Badge level={levelByRate(rate(crcErrorCntReq))}>
+                            {pct(rate(crcErrorCntReq))}
+                          </Badge>
+                        </div>
+                        <div className='bg-white rounded-lg p-3'>
+                          <LV label='응답 에러' value={(crcErrorCntRes || 0).toLocaleString()} />
+                          <Badge level={levelByRate(rate(crcErrorCntRes))}>
+                            {pct(rate(crcErrorCntRes))}
+                          </Badge>
+                        </div>
+                        {(crcErrorLen || crcErrorLenReq || crcErrorLenRes) && (
+                          <>
+                            <div className='bg-white rounded-lg p-3'>
+                              <LV label='에러 데이터' value={prettyBytes(crcErrorLen)} />
+                            </div>
+                            <div className='bg-white rounded-lg p-3'>
+                              <LV label='요청 에러 데이터' value={prettyBytes(crcErrorLenReq)} />
+                            </div>
+                            <div className='bg-white rounded-lg p-3'>
+                              <LV label='응답 에러 데이터' value={prettyBytes(crcErrorLenRes)} />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='rounded-xl border bg-emerald-50 p-4'>
+                      <div className='text-sm text-emerald-800'>
+                        ✅ CRC 에러 없음 - 정상 상태입니다
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 패킷 크기 통계 */}
+                  {packetStats && (
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-2 text-sm font-semibold text-gray-800'>카운트</div>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📊 패킷 크기 통계
+                      </div>
+                      <div className='grid grid-cols-2 gap-4'>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-2'>요청 방향</div>
+                          <div className='space-y-2 text-sm'>
+                            <LV
+                              label='최소'
+                              value={`${emptyValue(packetStats.pktLenMinReq, '0')} bytes`}
+                            />
+                            <LV
+                              label='최대'
+                              value={`${emptyValue(packetStats.pktLenMaxReq, '0')} bytes`}
+                            />
+                            <LV
+                              label='평균'
+                              value={`${(packetStats.pktLenAvgReq || 0).toFixed(1)} bytes`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-2'>응답 방향</div>
+                          <div className='space-y-2 text-sm'>
+                            <LV
+                              label='최소'
+                              value={`${emptyValue(packetStats.pktLenMinRes, '0')} bytes`}
+                            />
+                            <LV
+                              label='최대'
+                              value={`${emptyValue(packetStats.pktLenMaxRes, '0')} bytes`}
+                            />
+                            <LV
+                              label='평균'
+                              value={`${(packetStats.pktLenAvgRes || 0).toFixed(1)} bytes`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 카운터 전체 */}
+                  {cntEntries.length > 0 && (
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>📈 전체 카운터</div>
                       <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                        {Object.entries(qCounts).map(([k, v]) => (
+                        {cntEntries.map(([k, v]) => (
                           <LV key={k} label={k} value={(v || 0).toLocaleString()} />
                         ))}
                       </div>
@@ -278,89 +473,122 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                 </>
               )}
 
-              {activeTab === 'errors' && (
-                <div className='space-y-4'>
-                  {/* 오류 상세 */}
+              {/* === Tab: 세션 정보 === */}
+              {activeTab === 'session' && (
+                <>
+                  {/* 세션 상태 */}
                   <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>
-                      프레임 오류 / 품질
+                    <div className='mb-3 text-sm font-semibold text-gray-800'>🔌 세션 상태</div>
+                    <div className='grid grid-cols-2 gap-3 text-sm'>
+                      <LV
+                        label='만료 여부'
+                        value={
+                          expired !== null && expired !== undefined
+                            ? expired
+                              ? 'Yes'
+                              : 'No'
+                            : '값 없음'
+                        }
+                      />
+                      <LV
+                        label='타임아웃으로 만료'
+                        value={
+                          expiredByTimeout !== null && expiredByTimeout !== undefined
+                            ? expiredByTimeout
+                              ? 'Yes'
+                              : 'No'
+                            : '값 없음'
+                        }
+                      />
                     </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm'>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='CRC 오류' value={(crcErrorCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(crcErrorCnt || 0))}>
-                          {pct(rate(crcErrorCnt || 0))}
-                        </Badge>
+                    {expiredByTimeout === 1 && (
+                      <div className='mt-3 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800'>
+                        ⚠️ 세션이 타임아웃으로 종료되었습니다
                       </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
+                    )}
+                  </div>
+
+                  {/* 시간 상세 */}
+                  <div className='rounded-xl border bg-white p-4'>
+                    <div className='mb-3 text-sm font-semibold text-gray-800'>
+                      ⏰ 타임스탬프 상세
+                    </div>
+                    <div className='space-y-2 text-sm'>
+                      <LV label='플로우 시작' value={formatTimestamp(tsFirst)} />
+                      <LV label='플로우 종료' value={formatTimestamp(tsLast)} />
+                      <LV label='샘플링 시작' value={formatTimestamp(tsSampleBegin)} />
+                      <LV label='샘플링 종료' value={formatTimestamp(tsSampleEnd)} />
+                      {durSec !== null && durSec !== undefined && (
                         <LV
-                          label='Alignment 오류'
-                          value={(alignmentErrorCnt || 0).toLocaleString()}
+                          label='지속 시간'
+                          value={`${formatDuration(durSec)} (${durSec.toFixed(3)}초)`}
                         />
-                        <Badge level={levelByRate(rate(alignmentErrorCnt || 0))}>
-                          {pct(rate(alignmentErrorCnt || 0))}
-                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 프로토콜 상세 */}
+                  <div className='rounded-xl border bg-white p-4'>
+                    <div className='mb-3 text-sm font-semibold text-gray-800'>🔢 프로토콜 정보</div>
+                    <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                      <LV label='L2 프로토콜' value={l2Proto} />
+                      <LV label='L3 프로토콜' value={l3Proto} />
+                      <LV label='L4 프로토콜' value={l4Proto} />
+                      <LV label='L4 프로토콜 이름' value={l4ProtoName} />
+                      <LV label='L7 프로토콜' value={l7proto} />
+                      <LV label='IP 버전' value={ipVersion ? `IPv${ipVersion}` : null} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* === Tab: 위치 정보 === */}
+              {activeTab === 'geo' && hasEnv && (
+                <>
+                  <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 출발지 위치 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📍 출발지 (요청)
                       </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Runt 프레임' value={(runtCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(runtCnt || 0))}>
-                          {pct(rate(runtCnt || 0))}
-                        </Badge>
+                      <div className='space-y-2 text-sm'>
+                        <LV label='국가' value={env?.countryReq} />
+                        <LV label='대륙' value={env?.continentReq} />
+                        <LV label='시/도' value={env?.domesticPrimaryReq} />
+                        <LV label='시/군/구' value={env?.domesticSub1Req} />
+                        <LV label='읍/면/동' value={env?.domesticSub2Req} />
                       </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Giant 프레임' value={(giantCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(giantCnt || 0))}>
-                          {pct(rate(giantCnt || 0))}
-                        </Badge>
+                    </div>
+
+                    {/* 목적지 위치 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📍 목적지 (응답)
                       </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Jabber' value={(jabberCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(jabberCnt || 0))}>
-                          {pct(rate(jabberCnt || 0))}
-                        </Badge>
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Pause 프레임' value={(pauseCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(pauseCnt || 0))}>
-                          {pct(rate(pauseCnt || 0))}
-                        </Badge>
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Collision' value={(collisionCnt || 0).toLocaleString()} />
-                        <Badge level={levelByRate(rate(collisionCnt || 0))}>
-                          {pct(rate(collisionCnt || 0))}
-                        </Badge>
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV
-                          label='Late Collision'
-                          value={(lateCollisionCnt || 0).toLocaleString()}
-                        />
-                        <Badge level={levelByRate(rate(lateCollisionCnt || 0))}>
-                          {pct(rate(lateCollisionCnt || 0))}
-                        </Badge>
+                      <div className='space-y-2 text-sm'>
+                        <LV label='국가' value={env?.countryRes} />
+                        <LV label='대륙' value={env?.continentRes} />
+                        <LV label='시/도' value={env?.domesticPrimaryRes} />
+                        <LV label='시/군/구' value={env?.domesticSub1Res} />
+                        <LV label='읍/면/동' value={env?.domesticSub2Res} />
                       </div>
                     </div>
                   </div>
 
-                  {/* 품질 카운트 (qualityCounts) */}
-                  {Object.keys(qCounts).length > 0 && (
+                  {/* 센서 정보 */}
+                  {env?.sensorDeviceName && (
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-2 text-sm font-semibold text-gray-800'>
-                        품질 관련 카운트 (qualityCounts)
-                      </div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                        {Object.entries(qCounts).map(([k, v]) => (
-                          <LV key={k} label={k} value={(v || 0).toLocaleString()} />
-                        ))}
-                      </div>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>🖥️ 센서 정보</div>
+                      <LV label='센서 장치명' value={env.sensorDeviceName} />
                     </div>
                   )}
-                </div>
+                </>
               )}
 
-              {/* 내부 키 */}
-              <div className='text-xs text-gray-400 mt-2'>rowKey: {_rk}</div>
+              {/* Footer - rowKey */}
+              <div className='text-xs text-gray-400 pt-4 border-t'>
+                <span className='font-mono'>rowKey: {emptyValue(_rk)}</span>
+              </div>
             </>
           )}
         </div>
