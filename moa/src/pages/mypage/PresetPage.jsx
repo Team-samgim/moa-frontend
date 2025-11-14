@@ -10,12 +10,12 @@ import { normalizePresetConfig } from '@/utils/presetNormalizer'
 import { toSearchSpecFromPreset } from '@/utils/presetPayload'
 
 const PresetPage = () => {
-  const [type, setType] = useState('GRID')
+  const [type, setType] = useState('SEARCH')
   const [page, setPage] = useState(0)
   const size = 10
   const navigate = useNavigate()
 
-  const apiType = type === 'GRID' ? 'GRID' : 'PIVOT'
+  const apiType = type === 'SEARCH' ? 'SEARCH' : 'PIVOT'
   const { data, isLoading } = useMyPresets({ page, size, type: apiType })
   const favMut = useToggleFavoritePreset()
   const delMut = useDeletePreset()
@@ -76,7 +76,7 @@ const PresetPage = () => {
 
   const onApply = useCallback(
     (p) => {
-      const routeMap = { GRID: userNavigations.SEARCH, PIVOT: userNavigations.PIVOT }
+      const routeMap = { SEARCH: userNavigations.SEARCH, PIVOT: userNavigations.PIVOT }
       const payload = toSearchSpecFromPreset(p.config || {})
       navigate(routeMap[p.presetType] ?? userNavigations.SEARCH, { state: { preset: { payload } } })
     },

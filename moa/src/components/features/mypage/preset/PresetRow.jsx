@@ -82,7 +82,7 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
           {/* 테이블 전체가 border-spacing-y-[12px]이므로 상세는 그만큼 위로 당겨 붙임 */}
           <td colSpan={5} className='pt-0'>
             <div className='bg-white -mt-[15px]'>
-              {p.presetType === 'GRID' ? (
+              {p.presetType === 'SEARCH' ? (
                 <GridPresetDetail payload={p.config} />
               ) : (
                 <PivotPresetDetail payload={p.config} />

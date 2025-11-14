@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchGridBySearchSpec } from '@/api/grid'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
+import EthernetRowPreviewModal from '@/components/features/grid/EthernetRowPreviewModal'
+import HttpPageRowPreviewModal from '@/components/features/grid/HttpPageRowPreviewModal'
 import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
@@ -27,9 +29,13 @@ const SearchPage = () => {
   const navigate = useNavigate()
 
   const [tcpRowKey, setTcpRowKey] = useState(null)
+  const [httpPageRowKey, setHttpPageRowKey] = useState(null)
+  const [ethernetRowKey, setEthernetRowKey] = useState(null)
 
-  const withRowKeyIfTcp = (keys, lyr) =>
-    lyr === 'TCP' ? Array.from(new Set(['row_key', ...(keys || [])])) : keys || []
+  const withRowKeyIfDetail = (keys, lyr) =>
+    ['TCP', 'HTTP_PAGE', 'ETHERNET'].includes(lyr)
+      ? Array.from(new Set(['row_key', ...(keys || [])]))
+      : keys || []
 
   const [gridApis, setGridApis] = useState(null)
   const [layer, setLayer] = useState('HTTP_PAGE')
@@ -139,7 +145,7 @@ const SearchPage = () => {
     try {
       const payload = buildSearchPayload({
         layer,
-        viewKeys: withRowKeyIfTcp(viewKeys, layer),
+        viewKeys: withRowKeyIfDetail(viewKeys, layer),
         conditions,
         timePreset,
         customTimeRange,
@@ -176,13 +182,13 @@ const SearchPage = () => {
   useEffect(() => {
     if (viewKeys.length === 0 && gridCols.length > 0) {
       setViewKeys(
-        withRowKeyIfTcp(
+        withRowKeyIfDetail(
           gridCols.map((c) => c.name),
           layer,
         ),
       )
     }
-  }, [gridCols, viewKeys.length])
+  }, [gridCols, viewKeys.length, layer])
 
   // === 헬퍼: 현재 상태에서 time 스펙 뽑기 (기존 코드 그대로 사용) ===
   const toEpochSec = (d) => Math.floor(d.getTime() / 1000)
@@ -416,11 +422,17 @@ const SearchPage = () => {
                 onGridApis={setGridApis}
                 onActiveFiltersChange={setAggFilters}
                 onRowClick={(row) => {
-                  if (layer !== 'TCP') return
-                  // row_key가 원시값/래핑객체 둘 다 올 수 있으니 안전하게 추출
                   const key =
                     row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
-                  if (key) setTcpRowKey(key)
+                  if (!key) return
+
+                  if (layer === 'TCP') {
+                    setTcpRowKey(key)
+                  } else if (layer === 'HTTP_PAGE') {
+                    setHttpPageRowKey(key)
+                  } else if (layer === 'ETHERNET') {
+                    setEthernetRowKey(key)
+                  }
                 }}
               />
               {aggQuery.isSuccess && (
@@ -440,6 +452,21 @@ const SearchPage = () => {
                   open={!!tcpRowKey}
                   onClose={() => setTcpRowKey(null)}
                   rowKey={tcpRowKey}
+                />
+              )}
+              {layer === 'HTTP_PAGE' && (
+                <HttpPageRowPreviewModal
+                  open={!!httpPageRowKey}
+                  onClose={() => setHttpPageRowKey(null)}
+                  rowKey={httpPageRowKey}
+                />
+              )}
+
+              {layer === 'ETHERNET' && (
+                <EthernetRowPreviewModal
+                  open={!!ethernetRowKey}
+                  onClose={() => setEthernetRowKey(null)}
+                  rowKey={ethernetRowKey}
                 />
               )}
             </>
