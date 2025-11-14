@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+@import '@webdatarocks/webdatarocks/webdatarocks.css';
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('/fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Pretendard Variable', sans-serif;
+  /* colors */
+  --color-blue: #3f72af;
+  --color-blue-light: #3877be;
+  --color-blue-dark: #2c619c;
+  /* scrollbar */
+  --scrollbar-comp: 0px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #fff;
+  color: #222;
+}
+
+@layer components {
+  .muted {
+    @apply text-gray-500 text-sm;
+  }
+  .card {
+    @apply bg-white border border-gray-200 rounded-2xl p-4;
+  }
+
+  .input,
+  .select {
+    @apply w-full px-3 py-2 border border-gray-200 rounded-lg text-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center px-3 py-2 rounded-lg border text-sm;
+  }
+  .btn-primary {
+    @apply text-white bg-[#3877BE] border-[#3877BE] hover:bg-blue-700;
+  }
+  .btn-danger {
+    @apply border-red-500 text-red-500 hover:bg-red-50;
+  }
+}
