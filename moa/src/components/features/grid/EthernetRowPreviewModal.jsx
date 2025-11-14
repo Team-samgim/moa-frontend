@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import useEthernetMetrics from '@/hooks/detail/useEthernetMetrics'
 
-// ===== 유틸리티 함수 =====
+// 유틸리티 함수
 const prettyBytes = (n = 0) => {
   if (!n) return '0 B'
   const u = ['B', 'KB', 'MB', 'GB', 'TB']
