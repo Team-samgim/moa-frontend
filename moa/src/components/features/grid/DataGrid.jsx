@@ -191,13 +191,6 @@ const DataGrid = forwardRef(function DataGrid(
         const end = rq.endRow ?? start + cacheBlockSize
         const limit = end - start
 
-        console.log(`[DataGrid] 요청 #${requestCount}:`, {
-          startRow: start,
-          endRow: end,
-          limit,
-          message: `${start}번부터 ${end}번까지 (${limit}개 요청)`,
-        })
-
         // ✅ 정렬 정보 가져오기 (개선)
         const sortModel = rq.sortModel || []
 
@@ -208,12 +201,6 @@ const DataGrid = forwardRef(function DataGrid(
           const sm = sortModel[0]
           orderBy = sm.colId // ✅ colId를 그대로 필드로 사용 (위에서 colId=field로 통일)
           order = (sm.sort || 'desc').toUpperCase()
-
-          console.log(`[DataGrid] 정렬 적용:`, {
-            colId: sm.colId,
-            extractedField: orderBy,
-            order: order,
-          })
         }
 
         const payload = {
@@ -228,21 +215,11 @@ const DataGrid = forwardRef(function DataGrid(
           },
         }
 
-        console.log(`[DataGrid] 서버 요청 payload:`, payload)
-
         try {
           const response = await axiosInstance.post('/grid/search', payload)
           const responseData = response.data
           const rows = responseData?.rows || []
           const total = responseData?.total
-
-          console.log(`[DataGrid] 응답 #${requestCount}:`, {
-            receivedRows: rows.length,
-            total,
-            orderBy,
-            order,
-            message: `${rows.length}개 받음, 전체 ${total}개`,
-          })
 
           const lastRow = typeof total === 'number' ? total : undefined
 

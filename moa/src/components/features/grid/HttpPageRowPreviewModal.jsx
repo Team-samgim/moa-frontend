@@ -1,20 +1,46 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import useHttpPageMetrics from '@/hooks/detail/useHttpPageMetrics'
 
-// bytes pretty print
+// ===== 유틸리티 함수 =====
 const prettyBytes = (n = 0) => {
-  if (!n) return '0 B'
+  if (n === 0) return '0 B'
   const u = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(n) / Math.log(1024))
   return `${(n / Math.pow(1024, i)).toFixed(1)} ${u[i]}`
 }
 
-const pct = (v = 0) => `${((v || 0) * 100).toFixed(2)}%`
+const emptyValue = (value, defaultText = '값 없음') => {
+  if (value === null || value === undefined || value === '') return defaultText
+  if (typeof value === 'number' && isNaN(value)) return defaultText
+  return value
+}
 
-// 임계치: 프로젝트 기준 자유 조정
-const levelByRate = (r = 0) => (r >= 0.05 ? 'crit' : r > 0 ? 'warn' : 'ok')
+const formatTimestamp = (epoch) => {
+  if (!epoch) return '값 없음'
+  try {
+    return new Date(epoch * 1000).toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+  } catch {
+    return String(epoch)
+  }
+}
 
-const Badge = ({ level = 'ok', children }) => {
+const formatMs = (ms) => {
+  if (!ms || ms < 0) return '0ms'
+  if (ms < 1) return `${(ms * 1000).toFixed(0)}μs`
+  if (ms < 1000) return `${ms.toFixed(2)}ms`
+  return `${(ms / 1000).toFixed(2)}s`
+}
+
+// ===== 컴포넌트 =====
+const Badge = ({ level, children }) => {
   const cls =
     level === 'crit'
       ? 'bg-red-100 text-red-700 border-red-200'
@@ -32,11 +58,24 @@ const Chip = ({ children }) => (
   <span className='rounded-full bg-[#F5F5F7] px-3 py-1 text-xs'>{children}</span>
 )
 
-// 라벨/값
-const LV = ({ label, value }) => (
-  <div className='text-sm'>
-    <span className='text-gray-500'>{label}</span>
-    <span className='ml-2 font-medium break-all'>{value}</span>
+const LV = ({ label, value, showEmpty = true }) => {
+  const displayValue = emptyValue(value, showEmpty ? '값 없음' : '')
+  const isEmpty = displayValue === '값 없음' || displayValue === ''
+
+  return (
+    <div className='text-sm'>
+      <span className='text-gray-500'>{label}</span>
+      <span className={`ml-2 font-medium break-all ${isEmpty ? 'text-gray-400 italic' : ''}`}>
+        {displayValue}
+      </span>
+    </div>
+  )
+}
+
+const Row = ({ label, value }) => (
+  <div className='flex items-center justify-between py-1'>
+    <span className='text-gray-500 text-sm'>{label}</span>
+    <span className='text-sm font-medium'>{emptyValue(String(value))}</span>
   </div>
 )
 
@@ -47,7 +86,7 @@ const TabButton = ({ id, activeId, onClick, children }) => {
       type='button'
       onClick={() => onClick(id)}
       className={[
-        'px-3 py-2 text-xs md:text-sm border-b-2 -mb-px',
+        'px-3 py-2 text-xs md:text-sm border-b-2 -mb-px whitespace-nowrap',
         active
           ? 'border-blue-500 text-blue-600 font-semibold'
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -58,24 +97,46 @@ const TabButton = ({ id, activeId, onClick, children }) => {
   )
 }
 
-// 진단 메시지 severity 추정 (문구에 crit 들어가면 crit)
-const diagLevel = (msg = '') => (msg && msg.includes('crit') ? 'crit' : 'warn')
-
 const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, onClose, rowKey }) {
   const q = useHttpPageMetrics(rowKey)
-  const [activeTab, setActiveTab] = useState('summary') // 'summary' | 'timing' | 'transport' | 'http'
+  const [activeTab, setActiveTab] = useState('summary')
 
-  // ESC close
+  // ESC 닫기
   useEffect(() => {
     if (!open) return
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose && onClose()
-    }
+    const onKey = (e) => e.key === 'Escape' && onClose?.()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  // 모달 닫힐 때 탭 초기화
+  // 바디 스크롤 잠금
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
+
+  // 포커스 이동(접근성)
+  const closeBtnRef = useRef(null)
+  useEffect(() => {
+    if (open) closeBtnRef.current?.focus()
+  }, [open])
+
+  // 등장 트랜지션
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    if (open) {
+      const t = requestAnimationFrame(() => setMounted(true))
+      return () => cancelAnimationFrame(t)
+    } else {
+      setMounted(false)
+    }
+  }, [open])
+
+  // 탭 초기화
   useEffect(() => {
     if (!open) setActiveTab('summary')
   }, [open])
@@ -84,492 +145,597 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
   const d = q.data || {}
 
-  // DTO 필드 매핑 (백엔드 HttpPageMetricsDTO)
-  const {
-    rowKey: _rk,
-    srcIp,
-    srcPort,
-    dstIp,
-    dstPort,
-    app,
-    master,
-    https,
-    host,
-    uri,
-    method,
-    resCode,
-    resPhrase,
-
-    // 규모/시간/속도
-    durSec,
-    bps,
-    bytes,
-    bytesReq,
-    bytesRes,
-    pkts,
-    pktsReq,
-    pktsRes,
-
-    // 품질 비율 (모두 '...Pkts')
-    retransRatePkts,
-    oooRatePkts,
-    lossRatePkts,
-    csumRatePkts,
-
-    // 카운트/배지/세부
-    qualityCounts,
-    badges,
-    timings,
-    transport,
-    http: httpInfo,
-    env,
-    diagnostics,
-  } = d
-
-  // Mbps 파생
-  const mbps = (bps || 0) / 1_000_000
-  const diagEntries = Object.entries(diagnostics || {})
-  const qCounts = qualityCounts || {}
-
-  const t = timings || {}
-  const tr = transport || {}
-  const h = httpInfo || {}
-  const e = env || {}
+  // 환경 정보 확인
+  const hasEnv =
+    d.env &&
+    (d.env.countryReq || d.env.countryRes || d.env.domesticPrimaryReq || d.env.domesticPrimaryRes)
 
   return (
-    <div className='fixed inset-0 z-[100] flex items-center justify-center'>
+    <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
       {/* overlay */}
-      <div className='absolute inset-0 bg-black/40' onClick={onClose} />
-      {/* dialog */}
-      <div
-        role='dialog'
-        aria-modal='true'
-        className='relative w-[min(96vw,980px)] max-h-[90vh] bg-white rounded-2xl shadow-xl flex flex-col'
-      >
-        {/* header */}
-        <div className='flex items-center justify-between border-b px-5 py-3'>
-          <h2 className='text-base font-semibold'>HTTP 페이지 상세</h2>
-          <button
-            className='rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50'
-            onClick={onClose}
-          >
-            닫기
-          </button>
-        </div>
+      <div className='absolute inset-0 bg-black/40 backdrop-blur-[2px]' onClick={onClose} />
 
-        {/* 탭 헤더 */}
-        <div className='px-5 pt-3 border-b flex gap-2 overflow-x-auto'>
-          <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
-            요약
-          </TabButton>
-          <TabButton id='timing' activeId={activeTab} onClick={setActiveTab}>
-            타이밍 / 성능
-          </TabButton>
-          <TabButton id='transport' activeId={activeTab} onClick={setActiveTab}>
-            전송 / 품질
-          </TabButton>
-          <TabButton id='http' activeId={activeTab} onClick={setActiveTab}>
-            HTTP / 환경
-          </TabButton>
-        </div>
-
-        {/* body */}
-        <div className='p-5 space-y-5 overflow-y-auto flex-1'>
-          {q.isLoading && <div className='text-sm text-gray-500'>불러오는 중…</div>}
-          {q.isError && (
-            <div className='text-sm text-red-600'>
-              요약을 불러오지 못했습니다. {q.error && q.error.message ? q.error.message : ''}
+      {/* centered dialog */}
+      <div className='absolute inset-0 flex items-center justify-center p-4'>
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-labelledby='http-page-dialog-title'
+          className={[
+            'w-full max-w-[960px] max-h-[90vh] overflow-hidden rounded-2xl',
+            'border bg-white shadow-2xl flex flex-col',
+            'transform transition duration-200 ease-out',
+            mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
+          ].join(' ')}
+        >
+          {/* header */}
+          <div className='flex items-center justify-between border-b px-6 py-4'>
+            <div id='http-page-dialog-title' className='text-lg font-semibold'>
+              HTTP Page 상세
             </div>
-          )}
-          {q.isSuccess && !q.data && <div className='text-sm text-gray-500'>데이터 없음</div>}
+            <button
+              ref={closeBtnRef}
+              className='rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              onClick={onClose}
+            >
+              닫기
+            </button>
+          </div>
 
-          {q.isSuccess && q.data && (
-            <>
-              {/* 공통: 엔드포인트 / 태그 */}
-              <div className='rounded-xl border bg-white p-4'>
-                <div className='text-sm text-gray-500 mb-1'>세션</div>
-                <div className='text-[15px] font-semibold'>
-                  {srcIp}:{srcPort} <span className='text-gray-400'>→</span> {dstIp}:{dstPort}
-                </div>
-                <div className='mt-2 flex flex-wrap gap-2'>
-                  {app && <Chip>App: {app}</Chip>}
-                  {master && <Chip>Proto: {master}</Chip>}
-                  {host && <Chip>Host: {host}</Chip>}
-                  {method && <Chip>Method: {method}</Chip>}
-                  {Number.isInteger(resCode) && <Chip>Status: {resCode}</Chip>}
-                  {https && <Chip>HTTPS</Chip>}
-                  {badges && badges.res && <Chip>Resp: {badges.res}</Chip>}
-                  {badges && badges.timeout && <Chip>Timeout</Chip>}
-                  {badges && badges.incomplete && <Chip>Incomplete</Chip>}
-                  {badges && badges.stopped && <Chip>Stopped</Chip>}
-                </div>
-                {uri && <div className='text-xs text-gray-500 mt-2 break-all'>URI: {uri}</div>}
-                {resPhrase && <div className='text-xs text-gray-500 mt-1'>Reason: {resPhrase}</div>}
+          {/* Tabs */}
+          <div className='px-6 pt-3 border-b flex gap-2 overflow-x-auto'>
+            <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
+              요약
+            </TabButton>
+            <TabButton id='timing' activeId={activeTab} onClick={setActiveTab}>
+              시간 분석
+            </TabButton>
+            <TabButton id='methods' activeId={activeTab} onClick={setActiveTab}>
+              HTTP 메소드
+            </TabButton>
+            <TabButton id='status' activeId={activeTab} onClick={setActiveTab}>
+              응답 코드
+            </TabButton>
+            <TabButton id='quality' activeId={activeTab} onClick={setActiveTab}>
+              TCP 품질
+            </TabButton>
+            <TabButton id='performance' activeId={activeTab} onClick={setActiveTab}>
+              성능
+            </TabButton>
+            {hasEnv && (
+              <TabButton id='geo' activeId={activeTab} onClick={setActiveTab}>
+                위치 정보
+              </TabButton>
+            )}
+          </div>
+
+          {/* body */}
+          <div className='p-6 space-y-5 overflow-auto flex-1'>
+            {/* 로딩/에러/빈 */}
+            {q.isLoading && <div className='text-sm text-gray-500'>불러오는 중…</div>}
+            {q.isError && (
+              <div className='text-sm text-red-600'>
+                데이터를 불러오지 못했습니다. {q.error?.message || ''}
               </div>
+            )}
+            {q.isSuccess && !q.data && <div className='text-sm text-gray-500'>데이터 없음</div>}
 
-              {/* === 탭별 콘텐츠 === */}
-              {activeTab === 'summary' && (
-                <>
-                  {/* KPI 4칸 */}
-                  <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+            {q.isSuccess && q.data && (
+              <>
+                {/* === Tab: 요약 === */}
+                {activeTab === 'summary' && (
+                  <>
+                    {/* 페이지 헤더 */}
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>기간</div>
-                      <div className='text-base font-semibold'>{(durSec || 0).toFixed(3)}s</div>
-                    </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>평균 처리량</div>
-                      <div className='text-base font-semibold'>{mbps.toFixed(2)} Mbps</div>
-                    </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>바이트</div>
-                      <div className='text-base font-semibold'>
-                        {prettyBytes(bytes || 0)}{' '}
-                        <span className='text-gray-500'>
-                          (req {prettyBytes(bytesReq || 0)}, res {prettyBytes(bytesRes || 0)})
-                        </span>
+                      <div className='text-sm text-gray-500 mb-1'>HTTP Page</div>
+                      <div className='text-[15px] font-semibold'>
+                        {emptyValue(d.srcIp)}:{emptyValue(d.srcPort)}{' '}
+                        <span className='text-gray-400'>→</span> {emptyValue(d.dstIp)}:
+                        {emptyValue(d.dstPort)}
+                      </div>
+                      {(d.srcMac || d.dstMac) && (
+                        <div className='mt-1 text-xs text-gray-500'>
+                          MAC: {emptyValue(d.srcMac)} → {emptyValue(d.dstMac)}
+                        </div>
+                      )}
+                      <div className='mt-2 flex flex-wrap gap-2'>
+                        {d.httpMethod && <Chip>Method: {d.httpMethod}</Chip>}
+                        {d.httpHost && <Chip>Host: {d.httpHost}</Chip>}
+                        {d.httpResCode && <Chip>Status: {d.httpResCode}</Chip>}
+                        {d.ndpiProtocolApp && <Chip>App: {d.ndpiProtocolApp}</Chip>}
+                        {d.isHttps && <Chip>HTTPS</Chip>}
                       </div>
                     </div>
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-xs text-gray-500'>패킷</div>
-                      <div className='text-base font-semibold'>
-                        {(pkts || 0).toLocaleString()}{' '}
-                        <span className='text-gray-500'>
-                          (req {(pktsReq || 0).toLocaleString()}, res{' '}
-                          {(pktsRes || 0).toLocaleString()})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* 품질 지표 */}
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-3 text-sm font-semibold text-gray-800'>품질 지표</div>
+                    {/* KPI 카드 */}
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-                      <div>
-                        <LV label='재전송율' value={pct(retransRatePkts)} />
-                        <div className='mt-1'>
-                          <Badge level={levelByRate(retransRatePkts)}>
-                            Retrans {pct(retransRatePkts)}
-                          </Badge>
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>페이지 로딩</div>
+                        <div className='text-lg font-bold text-blue-700'>
+                          {formatMs((d.timing?.tsPage || 0) * 1000)}
                         </div>
                       </div>
-                      <div>
-                        <LV label='순서 뒤바뀜율 (OOO)' value={pct(oooRatePkts)} />
-                        <div className='mt-1'>
-                          <Badge level={levelByRate(oooRatePkts)}>
-                            Out-of-Order {pct(oooRatePkts)}
-                          </Badge>
+                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>총 데이터</div>
+                        <div className='text-lg font-bold text-emerald-700'>
+                          {prettyBytes(d.traffic?.pageHttpLen || 0)}
                         </div>
                       </div>
-                      <div>
-                        <LV label='손실율' value={pct(lossRatePkts)} />
-                        <div className='mt-1'>
-                          <Badge level={levelByRate(lossRatePkts)}>Loss {pct(lossRatePkts)}</Badge>
+                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>URI 수</div>
+                        <div className='text-lg font-bold text-purple-700'>
+                          {(d.uriCnt || 0).toLocaleString()}
                         </div>
                       </div>
-                      <div>
-                        <LV label='TCP 오류율 (Checksum)' value={pct(csumRatePkts)} />
-                        <div className='mt-1'>
-                          <Badge level={levelByRate(csumRatePkts)}>
-                            TCP Error {pct(csumRatePkts)}
-                          </Badge>
+                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>세션 수</div>
+                        <div className='text-lg font-bold text-amber-700'>
+                          {(d.pageSessionCnt || 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* 서버 진단 메시지 */}
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>진단 요약</div>
-                    {diagEntries.length === 0 && (
-                      <div className='text-xs text-gray-500'>특이사항 없음</div>
+                    {/* HTTP 정보 */}
+                    {(d.httpMethod || d.httpUri) && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>📋 HTTP 정보</div>
+                        <div className='space-y-2'>
+                          <LV label='메소드' value={d.httpMethod} />
+                          <LV label='URI' value={d.httpUri} />
+                          <LV label='Host' value={d.httpHost} />
+                          <LV label='응답 코드' value={d.httpResCode} />
+                          <LV label='응답 구문' value={d.httpResPhrase} />
+                        </div>
+                      </div>
                     )}
-                    {diagEntries.length > 0 && (
-                      <ul className='space-y-2 text-xs'>
-                        {diagEntries.map(([k, msg]) => (
-                          <li
-                            key={k}
-                            className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2'
-                          >
-                            <Badge level={diagLevel(msg)}>{k}</Badge>
-                            <span className='text-gray-700'>{msg}</span>
-                          </li>
-                        ))}
-                      </ul>
+
+                    {/* 세션 & 연결 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>🔌 세션 & 연결</div>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                        <LV label='세션 수' value={(d.pageSessionCnt || 0).toLocaleString()} />
+                        <LV label='TCP 연결' value={(d.pageTcpConnectCnt || 0).toLocaleString()} />
+                        <LV label='URI 수' value={(d.uriCnt || 0).toLocaleString()} />
+                        <LV label='HTTP URI' value={(d.httpUriCnt || 0).toLocaleString()} />
+                        <LV label='HTTPS URI' value={(d.httpsUriCnt || 0).toLocaleString()} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* === Tab: 시간 분석 === */}
+                {activeTab === 'timing' && (
+                  <>
+                    {/* 주요 시간 메트릭 */}
+                    <div className='grid grid-cols-3 gap-3'>
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>페이지 로딩</div>
+                        <div className='text-2xl font-bold text-blue-700'>
+                          {formatMs((d.timing?.tsPage || 0) * 1000)}
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>Total Page Time</div>
+                      </div>
+                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>응답 초기화</div>
+                        <div className='text-2xl font-bold text-emerald-700'>
+                          {formatMs((d.timing?.tsPageResInit || 0) * 1000)}
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>Response Init</div>
+                      </div>
+                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>전송 시간</div>
+                        <div className='text-2xl font-bold text-purple-700'>
+                          {formatMs((d.timing?.tsPageTransferRes || 0) * 1000)}
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>Transfer Time</div>
+                      </div>
+                    </div>
+
+                    {/* 타임라인 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>⏱️ 타임라인</div>
+                      <div className='space-y-3 text-sm'>
+                        <LV label='페이지 시작' value={formatTimestamp(d.timing?.tsPageBegin)} />
+                        <LV label='요청 SYN' value={formatTimestamp(d.timing?.tsPageReqSyn)} />
+                        <LV label='응답 초기화' value={formatTimestamp(d.timing?.tsPageResInit)} />
+                        <LV label='응답 App' value={formatTimestamp(d.timing?.tsPageResApp)} />
+                        <LV label='응답 완료' value={formatTimestamp(d.timing?.tsPageRes)} />
+                        <LV label='페이지 종료' value={formatTimestamp(d.timing?.tsPageEnd)} />
+                      </div>
+                    </div>
+
+                    {/* 시간 상세 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>🔍 시간 상세</div>
+                      <div className='grid grid-cols-2 gap-3 text-sm'>
+                        <LV label='페이지 갭' value={formatMs((d.timing?.tsPageGap || 0) * 1000)} />
+                        <LV
+                          label='응답 초기화 갭'
+                          value={formatMs((d.timing?.tsPageResInitGap || 0) * 1000)}
+                        />
+                        <LV
+                          label='응답 App 갭'
+                          value={formatMs((d.timing?.tsPageResAppGap || 0) * 1000)}
+                        />
+                        <LV
+                          label='응답 갭'
+                          value={formatMs((d.timing?.tsPageResGap || 0) * 1000)}
+                        />
+                        <LV
+                          label='요청 전송 갭'
+                          value={formatMs((d.timing?.tsPageTransferReqGap || 0) * 1000)}
+                        />
+                        <LV
+                          label='응답 전송 갭'
+                          value={formatMs((d.timing?.tsPageTransferResGap || 0) * 1000)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* TCP 연결 시간 */}
+                    {d.timing?.tsPageTcpConnectAvg && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          🔌 TCP 연결 시간
+                        </div>
+                        <div className='grid grid-cols-3 gap-3 text-sm'>
+                          <LV
+                            label='평균'
+                            value={formatMs((d.timing.tsPageTcpConnectAvg || 0) * 1000)}
+                          />
+                          <LV
+                            label='최소'
+                            value={formatMs((d.timing.tsPageTcpConnectMin || 0) * 1000)}
+                          />
+                          <LV
+                            label='최대'
+                            value={formatMs((d.timing.tsPageTcpConnectMax || 0) * 1000)}
+                          />
+                        </div>
+                      </div>
                     )}
-                  </div>
+                  </>
+                )}
 
-                  {/* 카운트 섹션 */}
-                  {Object.keys(qCounts).length > 0 && (
+                {/* === Tab: HTTP 메소드 === */}
+                {activeTab === 'methods' && (
+                  <>
+                    {/* HTTP 메소드 통계 */}
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-2 text-sm font-semibold text-gray-800'>카운트</div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                        {Object.entries(qCounts).map(([k, v]) => (
-                          <LV key={k} label={k} value={(v || 0).toLocaleString()} />
-                        ))}
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📊 HTTP 메소드 통계
+                      </div>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                        <Row label='GET' value={d.methods?.getCnt || 0} />
+                        <Row label='POST' value={d.methods?.postCnt || 0} />
+                        <Row label='PUT' value={d.methods?.putCnt || 0} />
+                        <Row label='DELETE' value={d.methods?.deleteCnt || 0} />
+                        <Row label='HEAD' value={d.methods?.headCnt || 0} />
+                        <Row label='OPTIONS' value={d.methods?.optionsCnt || 0} />
+                        <Row label='PATCH' value={d.methods?.patchCnt || 0} />
+                        <Row label='TRACE' value={d.methods?.traceCnt || 0} />
+                        <Row label='CONNECT' value={d.methods?.connectCnt || 0} />
+                        <Row label='기타' value={d.methods?.othCnt || 0} />
                       </div>
                     </div>
-                  )}
-                </>
-              )}
 
-              {activeTab === 'timing' && (
-                <div className='space-y-4'>
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>연결 / 요청 준비</div>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-                      <LV
-                        label='TCP 연결 평균'
-                        value={t.connectAvg !== null ? `${t.connectAvg.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='TCP 연결 최소'
-                        value={t.connectMin !== null ? `${t.connectMin.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='TCP 연결 최대'
-                        value={t.connectMax !== null ? `${t.connectMax.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='요청 생성 평균'
-                        value={t.reqMakingAvg !== null ? `${t.reqMakingAvg.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='요청 생성 합계'
-                        value={t.reqMakingSum !== null ? `${t.reqMakingSum.toFixed(3)}s` : '-'}
-                      />
-                    </div>
-                  </div>
+                    {/* 메소드 에러 */}
+                    {d.methods?.hasErrors && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          ⚠️ 메소드 에러
+                        </div>
+                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                          {d.methods.getCntError > 0 && (
+                            <Row label='GET 에러' value={d.methods.getCntError} />
+                          )}
+                          {d.methods.postCntError > 0 && (
+                            <Row label='POST 에러' value={d.methods.postCntError} />
+                          )}
+                          {d.methods.putCntError > 0 && (
+                            <Row label='PUT 에러' value={d.methods.putCntError} />
+                          )}
+                          {d.methods.deleteCntError > 0 && (
+                            <Row label='DELETE 에러' value={d.methods.deleteCntError} />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
 
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>응답 타이밍</div>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-                      <LV
-                        label='첫 응답 시각 평균'
-                        value={t.resInit !== null ? `${t.resInit.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='첫 응답까지 지연'
-                        value={t.resInitGap !== null ? `${t.resInitGap.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='앱 처리 완료 시각'
-                        value={t.resApp !== null ? `${t.resApp.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='앱 처리 지연'
-                        value={t.resAppGap !== null ? `${t.resAppGap.toFixed(3)}s` : '-'}
-                      />
-                    </div>
-                  </div>
-
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>전송 구간</div>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-                      <LV
-                        label='요청 전송 시간'
-                        value={t.transferReq !== null ? `${t.transferReq.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='요청 전송 구간 지연'
-                        value={t.transferReqGap !== null ? `${t.transferReqGap.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='응답 전송 시간'
-                        value={t.transferRes !== null ? `${t.transferRes.toFixed(3)}s` : '-'}
-                      />
-                      <LV
-                        label='응답 전송 구간 지연'
-                        value={t.transferResGap !== null ? `${t.transferResGap.toFixed(3)}s` : '-'}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'transport' && (
-                <div className='space-y-4'>
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>
-                      전송 품질 (카운트/비율)
-                    </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='재전송 (cnt)' value={(tr.retransCnt || 0).toLocaleString()} />
-                        <LV label='재전송율' value={pct(retransRatePkts)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Out-of-Order (cnt)' value={(tr.oooCnt || 0).toLocaleString()} />
-                        <LV label='OOO율' value={pct(oooRatePkts)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='손실 (cnt)' value={(tr.lossCnt || 0).toLocaleString()} />
-                        <LV label='손실율' value={pct(lossRatePkts)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='체크섬 오류 (cnt)' value={(tr.csumCnt || 0).toLocaleString()} />
-                        <LV label='체크섬 오류율' value={pct(csumRatePkts)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='Dup ACK (cnt)' value={(tr.dupAckCnt || 0).toLocaleString()} />
-                        <LV label='Dup ACK율' value={pct(tr.dupAckRate)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV
-                          label='Window Update (cnt)'
-                          value={(tr.winUpdateCnt || 0).toLocaleString()}
-                        />
-                        <LV label='WinUpdate율' value={pct(tr.winUpdateRate)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV
-                          label='Zero Window (cnt)'
-                          value={(tr.zeroWinCnt || 0).toLocaleString()}
-                        />
-                        <LV label='ZeroWin율' value={pct(tr.zeroWinRate)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV
-                          label='Window Full (cnt)'
-                          value={(tr.windowFullCnt || 0).toLocaleString()}
-                        />
-                        <LV label='WinFull율' value={pct(tr.windowFullRate)} />
-                      </div>
-                      <div className='rounded-lg bg-gray-50 p-3'>
-                        <LV label='ACK 손실 (cnt)' value={(tr.ackLostCnt || 0).toLocaleString()} />
-                        <LV label='ACK 손실율' value={pct(tr.ackLostRate)} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {Object.keys(qCounts).length > 0 && (
+                {/* === Tab: 응답 코드 === */}
+                {activeTab === 'status' && (
+                  <>
+                    {/* 응답 코드 분포 */}
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-2 text-sm font-semibold text-gray-800'>
-                        원시 카운트 (qualityCounts)
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📊 응답 코드 분포
                       </div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                        {Object.entries(qCounts).map(([k, v]) => (
-                          <LV key={k} label={k} value={(v || 0).toLocaleString()} />
-                        ))}
+                      <div className='space-y-2'>
+                        {d.statusCodes?.code1xxCnt > 0 && (
+                          <div className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'>
+                            <span className='text-sm'>1xx (정보)</span>
+                            <Badge level='ok'>{d.statusCodes.code1xxCnt}</Badge>
+                          </div>
+                        )}
+                        {d.statusCodes?.code2xxCnt > 0 && (
+                          <div className='flex items-center justify-between p-3 bg-green-50 rounded-lg'>
+                            <span className='text-sm'>2xx (성공)</span>
+                            <Badge level='ok'>{d.statusCodes.code2xxCnt}</Badge>
+                          </div>
+                        )}
+                        {d.statusCodes?.code3xxCnt > 0 && (
+                          <div className='flex items-center justify-between p-3 bg-blue-50 rounded-lg'>
+                            <span className='text-sm'>3xx (리다이렉트)</span>
+                            <Badge level='ok'>{d.statusCodes.code3xxCnt}</Badge>
+                          </div>
+                        )}
+                        {d.statusCodes?.code4xxCnt > 0 && (
+                          <div className='flex items-center justify-between p-3 bg-amber-50 rounded-lg'>
+                            <span className='text-sm'>4xx (클라이언트 에러)</span>
+                            <Badge level='warn'>{d.statusCodes.code4xxCnt}</Badge>
+                          </div>
+                        )}
+                        {d.statusCodes?.code5xxCnt > 0 && (
+                          <div className='flex items-center justify-between p-3 bg-red-50 rounded-lg'>
+                            <span className='text-sm'>5xx (서버 에러)</span>
+                            <Badge level='crit'>{d.statusCodes.code5xxCnt}</Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+
+                    {/* 특정 코드 */}
+                    {(d.statusCodes?.code304Cnt > 0 ||
+                      d.statusCodes?.code401Cnt > 0 ||
+                      d.statusCodes?.code403Cnt > 0 ||
+                      d.statusCodes?.code404Cnt > 0) && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          🔍 특정 응답 코드
+                        </div>
+                        <div className='grid grid-cols-2 gap-3 text-sm'>
+                          {d.statusCodes.code304Cnt > 0 && (
+                            <Row label='304 (Not Modified)' value={d.statusCodes.code304Cnt} />
+                          )}
+                          {d.statusCodes.code401Cnt > 0 && (
+                            <Row label='401 (Unauthorized)' value={d.statusCodes.code401Cnt} />
+                          )}
+                          {d.statusCodes.code403Cnt > 0 && (
+                            <Row label='403 (Forbidden)' value={d.statusCodes.code403Cnt} />
+                          )}
+                          {d.statusCodes.code404Cnt > 0 && (
+                            <Row label='404 (Not Found)' value={d.statusCodes.code404Cnt} />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* === Tab: TCP 품질 === */}
+                {activeTab === 'quality' && (
+                  <>
+                    {/* TCP 에러 요약 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📊 TCP 에러 요약
+                      </div>
+                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+                        <div className='bg-blue-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>총 에러</div>
+                          <div className='text-lg font-bold text-blue-700'>
+                            {d.tcpQuality?.tcpErrorCnt || 0}
+                          </div>
+                        </div>
+                        <div className='bg-orange-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>재전송</div>
+                          <div className='text-lg font-bold text-orange-700'>
+                            {d.tcpQuality?.retransmissionCnt || 0}
+                          </div>
+                        </div>
+                        <div className='bg-purple-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>순서 오류</div>
+                          <div className='text-lg font-bold text-purple-700'>
+                            {d.tcpQuality?.outOfOrderCnt || 0}
+                          </div>
+                        </div>
+                        <div className='bg-red-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>패킷 손실</div>
+                          <div className='text-lg font-bold text-red-700'>
+                            {d.tcpQuality?.lostSegCnt || 0}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 재전송 상세 */}
+                    {d.tcpQuality?.retransmissionCnt > 0 && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>🔄 재전송</div>
+                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                          <LV
+                            label='총 재전송'
+                            value={(d.tcpQuality.retransmissionCnt || 0).toLocaleString()}
+                          />
+                          <LV
+                            label='요청'
+                            value={(d.tcpQuality.retransmissionCntReq || 0).toLocaleString()}
+                          />
+                          <LV
+                            label='응답'
+                            value={(d.tcpQuality.retransmissionCntRes || 0).toLocaleString()}
+                          />
+                          <LV
+                            label='바이트'
+                            value={prettyBytes(d.tcpQuality.retransmissionLen || 0)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 연결 에러 */}
+                    {d.tcpQuality?.connErrSessionCnt > 0 && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>⚠️ 연결 에러</div>
+                        <div className='grid grid-cols-2 gap-3 text-sm'>
+                          <LV label='에러 세션' value={d.tcpQuality.connErrSessionCnt} />
+                          <LV label='에러 패킷' value={d.tcpQuality.connErrPktCnt} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 트랜잭션 상태 */}
+                    {(d.tcpQuality?.stoppedTransactionCnt > 0 ||
+                      d.tcpQuality?.incompleteCnt > 0 ||
+                      d.tcpQuality?.timeoutCnt > 0) && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          🚫 트랜잭션 상태
+                        </div>
+                        <div className='grid grid-cols-3 gap-3 text-sm'>
+                          <LV label='중단됨' value={d.tcpQuality.stoppedTransactionCnt || 0} />
+                          <LV label='불완전' value={d.tcpQuality.incompleteCnt || 0} />
+                          <LV label='타임아웃' value={d.tcpQuality.timeoutCnt || 0} />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* === Tab: 성능 === */}
+                {activeTab === 'performance' && (
+                  <>
+                    {/* Mbps */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📊 대역폭 (Mbps)
+                      </div>
+                      <div className='grid grid-cols-3 gap-3 mb-3'>
+                        <div className='bg-blue-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>평균</div>
+                          <div className='text-lg font-bold text-blue-700'>
+                            {(d.performance?.mbps || 0).toFixed(3)}
+                          </div>
+                        </div>
+                        <div className='bg-green-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>최소</div>
+                          <div className='text-lg font-bold text-green-700'>
+                            {(d.performance?.mbpsMin || 0).toFixed(3)}
+                          </div>
+                        </div>
+                        <div className='bg-purple-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>최대</div>
+                          <div className='text-lg font-bold text-purple-700'>
+                            {(d.performance?.mbpsMax || 0).toFixed(3)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className='grid grid-cols-2 gap-3 text-sm'>
+                        <LV label='요청 Mbps' value={(d.performance?.mbpsReq || 0).toFixed(3)} />
+                        <LV label='응답 Mbps' value={(d.performance?.mbpsRes || 0).toFixed(3)} />
+                      </div>
+                    </div>
+
+                    {/* PPS */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📦 패킷 속도 (PPS)
+                      </div>
+                      <div className='grid grid-cols-3 gap-3 mb-3'>
+                        <div className='bg-blue-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>평균</div>
+                          <div className='text-lg font-bold text-blue-700'>
+                            {(d.performance?.pps || 0).toFixed(1)}
+                          </div>
+                        </div>
+                        <div className='bg-green-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>최소</div>
+                          <div className='text-lg font-bold text-green-700'>
+                            {(d.performance?.ppsMin || 0).toFixed(1)}
+                          </div>
+                        </div>
+                        <div className='bg-purple-50 p-3 rounded-lg'>
+                          <div className='text-xs text-gray-500'>최대</div>
+                          <div className='text-lg font-bold text-purple-700'>
+                            {(d.performance?.ppsMax || 0).toFixed(1)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className='grid grid-cols-2 gap-3 text-sm'>
+                        <LV label='요청 PPS' value={(d.performance?.ppsReq || 0).toFixed(1)} />
+                        <LV label='응답 PPS' value={(d.performance?.ppsRes || 0).toFixed(1)} />
+                      </div>
+                    </div>
+
+                    {/* 트래픽 통계 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>📈 트래픽 통계</div>
+                      <div className='grid grid-cols-3 gap-3 text-sm'>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-2'>전체</div>
+                          <LV label='HTTP' value={prettyBytes(d.traffic?.pageHttpLen || 0)} />
+                          <LV label='패킷' value={prettyBytes(d.traffic?.pagePktLen || 0)} />
+                          <LV label='TCP' value={prettyBytes(d.traffic?.pageTcpLen || 0)} />
+                        </div>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-2'>요청</div>
+                          <LV label='HTTP' value={prettyBytes(d.traffic?.pageHttpLenReq || 0)} />
+                          <LV label='패킷' value={prettyBytes(d.traffic?.pagePktLenReq || 0)} />
+                          <LV label='TCP' value={prettyBytes(d.traffic?.pageTcpLenReq || 0)} />
+                        </div>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-2'>응답</div>
+                          <LV label='HTTP' value={prettyBytes(d.traffic?.pageHttpLenRes || 0)} />
+                          <LV label='패킷' value={prettyBytes(d.traffic?.pagePktLenRes || 0)} />
+                          <LV label='TCP' value={prettyBytes(d.traffic?.pageTcpLenRes || 0)} />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* === Tab: 위치 정보 === */}
+                {activeTab === 'geo' && hasEnv && (
+                  <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 출발지 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📍 출발지 (요청)
+                      </div>
+                      <div className='space-y-2 text-sm'>
+                        <LV label='국가' value={d.env?.countryReq} />
+                        <LV label='대륙' value={d.env?.continentReq} />
+                        <LV label='시/도' value={d.env?.domesticPrimaryReq} />
+                        <LV label='시/군/구' value={d.env?.domesticSub1Req} />
+                        <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
+                      </div>
+                    </div>
+
+                    {/* 목적지 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        📍 목적지 (응답)
+                      </div>
+                      <div className='space-y-2 text-sm'>
+                        <LV label='국가' value={d.env?.countryRes} />
+                        <LV label='대륙' value={d.env?.continentRes} />
+                        <LV label='시/도' value={d.env?.domesticPrimaryRes} />
+                        <LV label='시/군/구' value={d.env?.domesticSub1Res} />
+                        <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className='text-xs text-gray-400 pt-4 border-t'>
+                  <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
                 </div>
-              )}
-
-              {activeTab === 'http' && (
-                <div className='space-y-4'>
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>상태 코드 분포</div>
-                    <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-sm'>
-                      <LV label='1xx' value={h.code1xx || 0} />
-                      <LV label='2xx' value={h.code2xx || 0} />
-                      <LV label='3xx' value={h.code3xx || 0} />
-                      <LV label='304' value={h.code304 || 0} />
-                      <LV label='4xx' value={h.code4xx || 0} />
-                      <LV label='5xx' value={h.code5xx || 0} />
-                    </div>
-                  </div>
-
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>HTTP 메서드 분포</div>
-                    <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                      <LV label='GET' value={h.methodGetCnt || 0} />
-                      <LV label='POST' value={h.methodPostCnt || 0} />
-                      <LV label='PUT' value={h.methodPutCnt || 0} />
-                      <LV label='DELETE' value={h.methodDeleteCnt || 0} />
-                      <LV label='HEAD' value={h.methodHeadCnt || 0} />
-                      <LV label='OPTIONS' value={h.methodOptionsCnt || 0} />
-                      <LV label='PATCH' value={h.methodPatchCnt || 0} />
-                      <LV label='TRACE' value={h.methodTraceCnt || 0} />
-                      <LV label='CONNECT' value={h.methodConnectCnt || 0} />
-                      <LV label='OTHER' value={h.methodOthCnt || 0} />
-                    </div>
-                  </div>
-
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>
-                      HTTP 버전 / 컨텐츠 타입
-                    </div>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3'>
-                      <LV label='HTTP Version' value={h.httpVersion || '-'} />
-                      <LV label='Req Version' value={h.httpVersionReq || '-'} />
-                      <LV label='Res Version' value={h.httpVersionRes || '-'} />
-                    </div>
-                    <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
-                      <LV
-                        label='HTML (req / res)'
-                        value={`${h.contentHtmlReq || 0} / ${h.contentHtmlRes || 0}`}
-                      />
-                      <LV
-                        label='CSS (req / res)'
-                        value={`${h.contentCssReq || 0} / ${h.contentCssRes || 0}`}
-                      />
-                      <LV
-                        label='JS (req / res)'
-                        value={`${h.contentJsReq || 0} / ${h.contentJsRes || 0}`}
-                      />
-                      <LV
-                        label='IMG (req / res)'
-                        value={`${h.contentImgReq || 0} / ${h.contentImgRes || 0}`}
-                      />
-                      <LV
-                        label='기타 (req / res)'
-                        value={`${h.contentOthReq || 0} / ${h.contentOthRes || 0}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 요청 / 응답 메타 & 크기 */}
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>
-                      요청 / 응답 메타 & 크기
-                    </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
-                      <LV label='Referer' value={h.referer || '-'} />
-                      <LV label='Cookie' value={h.cookie || '-'} />
-                      <LV label='User-Agent' value={h.userAgent || '-'} />
-                      <LV label='대표 Content-Type' value={h.contentType || '-'} />
-                    </div>
-                    <div className='mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
-                      <LV label='요청 헤더 크기' value={prettyBytes(h.headerBytesReq || 0)} />
-                      <LV label='응답 헤더 크기' value={prettyBytes(h.headerBytesRes || 0)} />
-                      <LV label='요청 바디 크기' value={prettyBytes(h.bodyBytesReq || 0)} />
-                      <LV label='응답 바디 크기' value={prettyBytes(h.bodyBytesRes || 0)} />
-                      <LV
-                        label='요청 Content-Length'
-                        value={h.contentLengthReq !== null ? prettyBytes(h.contentLengthReq) : '-'}
-                      />
-                      <LV
-                        label='응답 Content-Length'
-                        value={h.contentLengthRes !== null ? prettyBytes(h.contentLengthRes) : '-'}
-                      />
-                      <LV label='요청 페이로드 총 길이' value={prettyBytes(h.pktLenReq || 0)} />
-                      <LV label='응답 페이로드 총 길이' value={prettyBytes(h.pktLenRes || 0)} />
-                    </div>
-                  </div>
-
-                  {/* 환경 정보 */}
-                  <div className='rounded-xl border bg-white p-4'>
-                    <div className='mb-2 text-sm font-semibold text-gray-800'>환경 정보</div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
-                      <LV label='요청 국가' value={e.countryReq || '-'} />
-                      <LV label='응답 국가' value={e.countryRes || '-'} />
-                      <LV label='요청 대륙' value={e.continentReq || '-'} />
-                      <LV label='응답 대륙' value={e.continentRes || '-'} />
-                      <LV label='OS' value={e.os || '-'} />
-                      <LV label='브라우저' value={e.browser || '-'} />
-                      <LV label='디바이스' value={e.deviceType || '-'} />
-                      <LV label='렌더링 엔진' value={e.layoutEngine || '-'} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 내부 키 */}
-              <div className='text-xs text-gray-400 mt-2'>rowKey: {_rk}</div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

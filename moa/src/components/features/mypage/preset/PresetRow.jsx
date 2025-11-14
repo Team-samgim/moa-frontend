@@ -19,6 +19,14 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
     opened && 'first:rounded-bl-none last:rounded-br-none',
   )
 
+  const searchConfig = p.config?.search
+  const pivotConfig = p.config?.pivot
+
+  const layer =
+    p.presetType === 'SEARCH'
+      ? (searchConfig?.layer ?? p.config?.layer)
+      : (pivotConfig?.layer ?? p.config?.layer)
+
   return (
     <>
       <tr className={cx(rowBg, CLASSES.ROW_H)}>
@@ -38,7 +46,7 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
         </td>
 
         <td className={cellBoxCls}>
-          <LayerCell layer={p.config?.layer} />
+          <LayerCell layer={layer} />
         </td>
 
         <td className={cellBoxCls}>{fmtDate(p)}</td>
@@ -83,9 +91,9 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
           <td colSpan={5} className='pt-0'>
             <div className='bg-white -mt-[15px]'>
               {p.presetType === 'SEARCH' ? (
-                <GridPresetDetail payload={p.config} />
+                <GridPresetDetail payload={searchConfig ?? p.config} />
               ) : (
-                <PivotPresetDetail payload={p.config} />
+                <PivotPresetDetail payload={pivotConfig ?? p.config} />
               )}
             </div>
           </td>

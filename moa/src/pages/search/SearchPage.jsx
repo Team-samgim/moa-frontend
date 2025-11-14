@@ -5,6 +5,7 @@ import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
 import EthernetRowPreviewModal from '@/components/features/grid/EthernetRowPreviewModal'
 import HttpPageRowPreviewModal from '@/components/features/grid/HttpPageRowPreviewModal'
+import HttpUriRowPreviewModal from '@/components/features/grid/HttpUriRowPreviewModal'
 import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
@@ -29,10 +30,11 @@ const SearchPage = () => {
 
   const [tcpRowKey, setTcpRowKey] = useState(null)
   const [httpPageRowKey, setHttpPageRowKey] = useState(null)
+  const [httpUriRowKey, setHttpUriRowKey] = useState(null)
   const [ethernetRowKey, setEthernetRowKey] = useState(null)
 
   const withRowKeyIfDetail = (keys, lyr) =>
-    ['TCP', 'HTTP_PAGE', 'ETHERNET'].includes(lyr)
+    ['TCP', 'HTTP_PAGE', 'ETHERNET', 'HTTP_URI'].includes(lyr)
       ? Array.from(new Set(['row_key', ...(keys || [])]))
       : keys || []
 
@@ -429,6 +431,8 @@ const SearchPage = () => {
                     setHttpPageRowKey(key)
                   } else if (layer === 'ETHERNET') {
                     setEthernetRowKey(key)
+                  } else if (layer === 'HTTP_URI') {
+                    setHttpUriRowKey(key)
                   }
                 }}
               />
@@ -458,12 +462,18 @@ const SearchPage = () => {
                   rowKey={httpPageRowKey}
                 />
               )}
-
               {layer === 'ETHERNET' && (
                 <EthernetRowPreviewModal
                   open={!!ethernetRowKey}
                   onClose={() => setEthernetRowKey(null)}
                   rowKey={ethernetRowKey}
+                />
+              )}
+              {layer === 'HTTP_URI' && (
+                <HttpUriRowPreviewModal
+                  open={!!httpUriRowKey}
+                  onClose={() => setHttpUriRowKey(null)}
+                  rowKey={httpUriRowKey}
                 />
               )}
             </>
