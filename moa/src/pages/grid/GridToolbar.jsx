@@ -8,6 +8,21 @@ function nowForFilename() {
   return iso.replace(/[:.]/g, '').replace('T', '_').replace('Z', '')
 }
 
+// 날짜 → epoch seconds 보정 함수
+const toEpochSec = (d) => {
+  if (!d) return null
+  const date = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(date.getTime())) return null
+  return Math.floor(date.getTime() / 1000)
+}
+
+const presetSeconds = {
+  '1H': 3600,
+  '2H': 7200,
+  '24H': 86400,
+  '7D': 604800,
+}
+
 const GridToolbar = ({
   currentLayer,
   onReset,
@@ -30,22 +45,61 @@ const GridToolbar = ({
         .map((def) => def?.field ?? def?.colId)
         .filter((f) => !!f && f !== '__rowNo')
 
-      // 2) UI 쿼리(여기 안에 conditions 있음)
+      // 2) UI 쿼리(여기 안에 conditions, timePreset, customTimeRange 있음)
       const uiQuery = getUiQuery ? getUiQuery() : null
       const condition = uiQuery?.conditions ?? [] // ✅ 검색 조건 필드들
 
-      // 3) search 블록 생성
+      const baseSpec = getBaseSpec ? getBaseSpec() : null
+      const timePreset = uiQuery?.timePreset ?? '1H'
+      const customTimeRange = uiQuery?.customTimeRange ?? null
+
+      // 3) 시간 스냅샷 계산 (프리셋 저장 시점 기준)
+      let time = null
+
+      // (1) 서버에 이미 from/to가 있는 경우 우선 사용
+      if (baseSpec?.time?.fromEpoch !== null && baseSpec?.time?.toEpoch !== null) {
+        time = {
+          field: baseSpec.time.field || 'ts_server_nsec',
+          fromEpoch: baseSpec.time.fromEpoch,
+          toEpoch: baseSpec.time.toEpoch,
+        }
+      }
+      // (2) 커스텀 범위가 있으면 그대로 사용
+      else if (customTimeRange?.from && customTimeRange?.to) {
+        const fromEpoch = toEpochSec(customTimeRange.from)
+        const toEpoch = toEpochSec(customTimeRange.to)
+        if (fromEpoch !== null && toEpoch !== null) {
+          time = {
+            field: 'ts_server_nsec',
+            fromEpoch,
+            toEpoch,
+          }
+        }
+      }
+      // (3) 프리셋(1H/2H/24H/7D 등) 기준으로 현재 시점 계산
+      if (!time) {
+        const now = Math.floor(Date.now() / 1000)
+        const span = presetSeconds[timePreset] ?? 3600
+        time = {
+          field: 'ts_server_nsec',
+          fromEpoch: now - span,
+          toEpoch: now,
+        }
+      }
+
+      // 4) search 블록 생성
       const search = {
         version: 1,
         layer: currentLayer,
         columns,
-        condition, // ← 여기에 그대로 조건 배열
+        condition, // 검색 조건 배열
         query: uiQuery, // timePreset, customTimeRange, globalNot, viewKeys 등 전체 UI 상태
+        time, // ✅ 실제 당시 시간 범위 스냅샷
       }
 
-      // 4) 최종 config는 search로 한 번 감싸기
+      // 5) 최종 config는 search로 한 번 감싸기
       const config = {
-        search, // ← ❗ 최상단에 search 키
+        search,
       }
 
       const fallback = `검색 프리셋 ${new Date().toLocaleString()}`
@@ -93,7 +147,6 @@ const GridToolbar = ({
       const baseSpec = getBaseSpec ? getBaseSpec() : null
       const fileName = `grid_export_${nowForFilename()}`
 
-      // axios.post를 여기서 직접 써도 되지만, exportGrid로 감싸두면 더 깔끔
       const data = await exportGrid({
         layer: currentLayer,
         columns,
