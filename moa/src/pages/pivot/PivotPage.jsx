@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { arrayMove } from '@dnd-kit/sortable'
+import { useMutation } from '@tanstack/react-query'
+import { exportChartImage } from '@/api/export'
+import { savePivotPreset } from '@/api/presets'
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
 import RowIcon from '@/assets/icons/row.svg?react'
@@ -14,6 +17,7 @@ import PivotChartView from '@/components/features/pivot/chart/PivotChartView'
 import PivotHeatmapTableModal from '@/components/features/pivot/chart/PivotHeatmapTableModal'
 import ColumnSelectModal from '@/components/features/pivot/modal/ColumnSelectModal'
 import FieldFilterModal from '@/components/features/pivot/modal/FieldFilterModal'
+import PivotPresetModal from '@/components/features/pivot/modal/PivotPresetModal'
 import RowSelectModal from '@/components/features/pivot/modal/RowSelectModal'
 import ValueSelectModal from '@/components/features/pivot/modal/ValueSelectModal'
 import PivotConfigPanel from '@/components/features/pivot/panel/PivotConfigPanel'
@@ -27,6 +31,11 @@ import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotModalStore } from '@/stores/pivotModalStore'
 import { usePivotStore } from '@/stores/pivotStore'
 import { buildTimePayload } from '@/utils/pivotTime'
+import { buildChartPresetConfig } from '@/utils/preset/chartPreset'
+import {
+  applyPivotPresetConfigToStore,
+  buildPivotPresetConfigFromStore,
+} from '@/utils/preset/pivotPreset'
 
 const PivotPage = () => {
   const {
@@ -59,6 +68,8 @@ const PivotPage = () => {
     open: false,
     field: null,
   })
+
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false)
 
   const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)
 
@@ -243,11 +254,78 @@ const PivotPage = () => {
 
   const initialTopNForModal = currentFilterForModal?.topN
 
+  const pivotPresetMut = useMutation({
+    mutationFn: async () => {
+      const config = buildPivotPresetConfigFromStore()
+
+      const fallback = `피벗 프리셋 ${new Date().toLocaleString()}`
+      const input = window.prompt('피벗 프리셋 이름을 입력하세요', fallback)
+      if (input === null) {
+        // 취소 누른 경우
+        return null
+      }
+      const presetName = (input || fallback).trim()
+
+      if (!presetName) {
+        window.alert('프리셋 이름이 비어 있습니다.')
+        return null
+      }
+
+      const res = await savePivotPreset({
+        presetName,
+        config,
+        favorite: false,
+      })
+      return res
+    },
+    onSuccess: (data) => {
+      if (!data) return
+      window.alert(`피벗 프리셋 저장 완료! (ID: ${data.presetId})`)
+    },
+    onError: (e) => {
+      console.error(e)
+      window.alert(`피벗 프리셋 저장 실패: ${e?.response?.status || e?.message || ''}`)
+    },
+  })
+
+  const exportChartMut = useMutation({
+    mutationFn: async () => {
+      if (!chartViewRef.current || !chartViewRef.current.getImageDataUrl) {
+        throw new Error('차트 뷰가 준비되지 않았습니다.')
+      }
+
+      const dataUrl = chartViewRef.current.getImageDataUrl()
+      if (!dataUrl) {
+        throw new Error('차트 이미지를 가져올 수 없습니다.')
+      }
+
+      const config = buildChartPresetConfig()
+
+      const res = await exportChartImage({
+        config,
+        dataUrl,
+      })
+
+      return res
+    },
+    onSuccess: (data) => {
+      alert('차트 이미지 내보내기가 완료되었습니다.')
+      if (data?.httpUrl) {
+        // 서버에서 만든 presigned URL로 바로 다운로드 / 보기
+        window.open(data.httpUrl, '_blank', 'noopener,noreferrer')
+      }
+    },
+    onError: (e) => {
+      console.error(e)
+      alert('차트 이미지 내보내기 중 오류가 발생했습니다.')
+    },
+  })
+
   return (
     <>
       <div className='flex flex-col gap-4 p-4 mx-30'>
         <div className='flex items-center'>
-          <PivotHeaderTabs />
+          <PivotHeaderTabs pivotMode={pivotMode} />
         </div>
 
         <section className='rounded-lg border border-gray-200 bg-white shadow-sm'>
@@ -271,6 +349,7 @@ const PivotPage = () => {
                 if (isFromGrid) return // 직접 설정 변경 금지
                 handleApplyCustomRange(fromDate, toDate)
               }}
+              onPresetLoad={() => setIsPresetModalOpen(true)}
             />
 
             <div className='hidden w-px bg-gray-200 lg:block' />
@@ -387,15 +466,19 @@ const PivotPage = () => {
             {/* 오른쪽 영역: 차트 이미지 다운로드 + 차트 설정 + 전체보기 버튼 */}
             <div className='flex items-center gap-2'>
               <button
-                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
-                onClick={() => {
-                  if (chartViewRef.current && chartViewRef.current.downloadImage) {
-                    chartViewRef.current.downloadImage()
-                  }
-                }}
-                disabled={!isChartMode}
+                type='button'
+                onClick={() => pivotPresetMut.mutate()}
+                disabled={pivotPresetMut.isPending}
+                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
               >
-                <span>차트 이미지 다운로드</span>
+                {pivotPresetMut.isPending ? '프리셋 저장 중…' : '피벗 프리셋 저장'}
+              </button>
+              <button
+                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+                onClick={() => exportChartMut.mutate()}
+                disabled={!isChartMode || exportChartMut.isPending}
+              >
+                <span>{exportChartMut.isPending ? '내보내는 중…' : '차트 이미지 다운로드'}</span>
               </button>
               <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
                 <span>차트 설정 (임시)</span>
@@ -498,6 +581,22 @@ const PivotPage = () => {
       )}
       {isHeatmapOpen && (
         <PivotHeatmapTableModal isOpen={isHeatmapOpen} onClose={() => setIsHeatmapOpen(false)} />
+      )}
+      {isPresetModalOpen && (
+        <PivotPresetModal
+          onClose={() => setIsPresetModalOpen(false)}
+          onSelect={(preset) => {
+            try {
+              applyPivotPresetConfigToStore(preset.config || {})
+              runQueryNow()
+            } catch (e) {
+              console.error(e)
+              window.alert('프리셋 적용 중 오류가 발생했습니다.')
+            } finally {
+              setIsPresetModalOpen(false)
+            }
+          }}
+        />
       )}
     </>
   )

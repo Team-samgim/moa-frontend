@@ -12,6 +12,7 @@ const PivotConfigPanel = ({
   onSelectTimePreset,
   onApplyCustomRange,
   isFromGrid = false,
+  onPresetLoad,
 }) => {
   const [isCustomOpen, setIsCustomOpen] = useState(false)
   const customWrapperRef = useRef(null)
@@ -83,7 +84,9 @@ const PivotConfigPanel = ({
 
         <div className='flex flex-wrap items-center gap-3 text-xs font-medium text-[#2263AC]'>
           <button className='hover:underline'>프리셋 저장</button>
-          <button className='hover:underline'>프리셋 불러오기</button>
+          <button onClick={onPresetLoad} className='hover:underline'>
+            프리셋 불러오기
+          </button>
         </div>
       </div>
 
