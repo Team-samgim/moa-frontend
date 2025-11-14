@@ -30,39 +30,36 @@ const GridToolbar = ({
         .map((def) => def?.field ?? def?.colId)
         .filter((f) => !!f && f !== '__rowNo')
 
-      // 2) 정렬 상태
-      const base = getBaseSpec ? getBaseSpec() : null
-      const sm = api.getSortModel?.()[0] || null
-      const sortField = sm
-        ? api.getColumnDef(sm.colId)?.field || sm.colId
-        : base?.options?.orderBy || 'ts_server_nsec'
-      const sortDirection = (sm?.sort || base?.options?.order || 'desc').toUpperCase()
-
-      // 3) 필터 / 베이스 스펙(기간+조건+옵션)
-      const filterModel = getActiveFilters ? getActiveFilters() : {}
+      // 2) UI 쿼리(여기 안에 conditions 있음)
       const uiQuery = getUiQuery ? getUiQuery() : null
-      const baseSpec = getBaseSpec ? getBaseSpec() : null
+      const condition = uiQuery?.conditions ?? [] // ✅ 검색 조건 필드들
 
-      // 4) 저장 페이로드
-      const config = {
+      // 3) search 블록 생성
+      const search = {
+        version: 1,
         layer: currentLayer,
         columns,
-        sort: { field: sortField, direction: sortDirection },
-        filters: filterModel,
-        baseSpec, // SearchPage의 buildSearchPayload 결과(기간/조건/옵션 포함)
-        version: 1,
-        query: uiQuery,
+        condition, // ← 여기에 그대로 조건 배열
+        query: uiQuery, // timePreset, customTimeRange, globalNot, viewKeys 등 전체 UI 상태
       }
 
-      // 이름 입력(빈 입력 시 자동 이름)
+      // 4) 최종 config는 search로 한 번 감싸기
+      const config = {
+        search, // ← ❗ 최상단에 search 키
+      }
+
       const fallback = `검색 프리셋 ${new Date().toLocaleString()}`
       const presetName = (window.prompt('프리셋 이름을 입력하세요', fallback) || fallback).trim()
 
-      const res = await saveGridPreset({
+      const requestBody = {
         presetName,
+        presetType: 'SEARCH',
         config,
         favorite: false,
-      })
+      }
+      console.log('[PRESET_SAVE] request body =>', requestBody)
+
+      const res = await saveGridPreset(requestBody)
       return res
     },
     onSuccess: (data) => {
