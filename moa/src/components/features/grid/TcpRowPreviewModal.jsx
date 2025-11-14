@@ -608,43 +608,27 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     </div>
 
                     {/* 중복 ACK */}
-                    {(d.dupAckCnt || d.dupAckCntReq || d.dupAckCntRes) && (
-                      <div className='rounded-xl border bg-white p-4'>
-                        <div className='mb-3 text-sm font-semibold text-gray-800'>🔁 중복 ACK</div>
-                        <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                          <LV label='총 중복 ACK' value={(d.dupAckCnt || 0).toLocaleString()} />
-                          <LV
-                            label='중복 ACK 요청'
-                            value={(d.dupAckCntReq || 0).toLocaleString()}
-                          />
-                          <LV
-                            label='중복 ACK 응답'
-                            value={(d.dupAckCntRes || 0).toLocaleString()}
-                          />
-                          {d.dupAckRate !== null && d.dupAckRate !== undefined && (
-                            <LV label='중복 ACK 비율' value={`${d.dupAckRate.toFixed(2)}%`} />
-                          )}
-                        </div>
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>🔁 중복 ACK</div>
+                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
+                        <LV label='총 중복 ACK' value={(d.dupAckCnt || 0).toLocaleString()} />
+                        <LV label='중복 ACK 요청' value={(d.dupAckCntReq || 0).toLocaleString()} />
+                        <LV label='중복 ACK 응답' value={(d.dupAckCntRes || 0).toLocaleString()} />
+                        {d.dupAckRate !== null && d.dupAckRate !== undefined && (
+                          <LV label='중복 ACK 비율' value={`${d.dupAckRate.toFixed(2)}%`} />
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     {/* ACK 손실 */}
-                    {(d.ackLostCnt || d.ackLostCntReq || d.ackLostCntRes) && (
-                      <div className='rounded-xl border bg-white p-4'>
-                        <div className='mb-3 text-sm font-semibold text-gray-800'>❌ ACK 손실</div>
-                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
-                          <LV label='총 ACK 손실' value={(d.ackLostCnt || 0).toLocaleString()} />
-                          <LV
-                            label='ACK 손실 요청'
-                            value={(d.ackLostCntReq || 0).toLocaleString()}
-                          />
-                          <LV
-                            label='ACK 손실 응답'
-                            value={(d.ackLostCntRes || 0).toLocaleString()}
-                          />
-                        </div>
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>❌ ACK 손실</div>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                        <LV label='총 ACK 손실' value={(d.ackLostCnt || 0).toLocaleString()} />
+                        <LV label='ACK 손실 요청' value={(d.ackLostCntReq || 0).toLocaleString()} />
+                        <LV label='ACK 손실 응답' value={(d.ackLostCntRes || 0).toLocaleString()} />
                       </div>
-                    )}
+                    </div>
 
                     {/* 순서 오류 */}
                     <div className='rounded-xl border bg-white p-4'>
