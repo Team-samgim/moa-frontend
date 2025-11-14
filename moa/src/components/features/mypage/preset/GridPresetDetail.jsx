@@ -3,16 +3,20 @@ import { TOKENS, getLayerHex } from '@/constants/tokens'
 import { near, prettyOp } from '@/utils/misc'
 
 const GridPresetDetail = ({ payload }) => {
-  const p = payload || {}
-  const layer = p.layer || p.baseSpec?.layer
+  // ✅ 새 구조(config = { search: {...} }) / 예전 구조 둘 다 대응
+  const root = payload?.search ?? payload ?? {}
+
+  const layer = root.layer || root.baseSpec?.layer
   const layerHex = getLayerHex(layer)
 
-  const cols = useMemo(
-    () => (Array.isArray(p.columns) ? p.columns : p.baseSpec?.columns || []),
-    [p],
-  )
+  const cols = useMemo(() => {
+    if (Array.isArray(root.columns)) return root.columns
+    if (Array.isArray(root.baseSpec?.columns)) return root.baseSpec.columns
+    return []
+  }, [root])
 
-  const t = p.baseSpec?.time
+  // ✅ 시간: search.time 스냅샷 우선, 없으면 예전 baseSpec.time
+  const t = root.time || root.baseSpec?.time
 
   const diff = useMemo(
     () =>
@@ -22,15 +26,16 @@ const GridPresetDetail = ({ payload }) => {
     [t?.fromEpoch, t?.toEpoch],
   )
 
+  // ✅ 어떤 프리셋인지 추론 (query.timePreset 우선)
   const presetRaw = useMemo(
     () =>
-      p.query?.timePreset ??
-      p.timePreset ??
-      p.baseSpec?.timePreset ??
-      p.baseSpec?.time?.preset ??
-      p.baseSpec?.time?.label ??
-      p.baseSpec?.time?.relative,
-    [p],
+      root.query?.timePreset ??
+      root.timePreset ??
+      root.baseSpec?.timePreset ??
+      root.baseSpec?.time?.preset ??
+      root.baseSpec?.time?.label ??
+      root.baseSpec?.time?.relative,
+    [root],
   )
 
   const badgeText = useMemo(() => {
@@ -51,12 +56,17 @@ const GridPresetDetail = ({ payload }) => {
     [t?.fromEpoch, t?.toEpoch],
   )
 
-  const globalNot = !!(p.query?.globalNot ?? p.baseSpec?.not)
+  // ✅ NOT 여부: query.globalNot / baseSpec.not
+  const globalNot = !!(root.query?.globalNot ?? root.baseSpec?.not)
+
+  // ✅ 조건: search.condition → query.conditions → baseSpec.conditions
   const normConds = useMemo(() => {
     const rawConds =
-      (Array.isArray(p.query?.conditions) && p.query.conditions) ||
-      (Array.isArray(p.baseSpec?.conditions) && p.baseSpec.conditions) ||
+      (Array.isArray(root.condition) && root.condition) ||
+      (Array.isArray(root.query?.conditions) && root.query.conditions) ||
+      (Array.isArray(root.baseSpec?.conditions) && root.baseSpec.conditions) ||
       []
+
     return rawConds.map((c, i) => {
       const field = c.fieldKey ?? c.field ?? ''
       const operator = c.operator ?? c.op ?? ''
@@ -65,7 +75,7 @@ const GridPresetDetail = ({ payload }) => {
       const join = c.join ?? (i === 0 ? '' : 'AND')
       return { field, operator, values, join }
     })
-  }, [p])
+  }, [root])
 
   const renderJoin = (text) => (
     <span className='inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-[12px]'>
