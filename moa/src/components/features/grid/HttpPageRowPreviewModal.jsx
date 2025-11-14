@@ -445,6 +445,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 )}
 
                 {/* === Tab: 응답 코드 === */}
+                {/* === Tab: 응답 코드 === */}
                 {activeTab === 'status' && (
                   <>
                     {/* 응답 코드 분포 */}
