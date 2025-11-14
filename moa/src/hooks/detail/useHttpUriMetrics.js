@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { getHttpPageMetrics } from '@/api/httpPage'
+import { getHttpUriMetrics } from '@/api/httpUri'
 
 /** Query Key 팩토리 */
-export const httpPageKeys = {
-  all: ['httpPage'],
-  detail: (rowKey) => ['httpPage', 'detail', rowKey],
+export const httpUriKeys = {
+  all: ['httpUri'],
+  detail: (rowKey) => ['httpUri', 'detail', rowKey],
 }
 
 /**
- * HTTP Page 메트릭 조회 훅 - TanStack Query
+ * HTTP URI 메트릭 조회 훅 - TanStack Query
  *
  * 특징:
  * - enabled: rowKey 있을 때만 요청
@@ -16,13 +16,13 @@ export const httpPageKeys = {
  * - retry: 1회 (필요시 조절)
  * - staleTime: 15초 (짧은 캐싱)
  *
- * @param {string} rowKey - HTTP Page row key
+ * @param {string} rowKey - HTTP URI row key
  * @returns {Object} { data, isLoading, isError, error, refetch, isSuccess, ... }
  */
-export default function useHttpPageMetrics(rowKey) {
+export default function useHttpUriMetrics(rowKey) {
   const query = useQuery({
-    queryKey: httpPageKeys.detail(rowKey),
-    queryFn: ({ signal }) => getHttpPageMetrics(rowKey, { signal }),
+    queryKey: httpUriKeys.detail(rowKey),
+    queryFn: ({ signal }) => getHttpUriMetrics(rowKey, { signal }),
     enabled: !!rowKey,
     retry: 1,
     staleTime: 15_000, // 15초
@@ -45,13 +45,13 @@ export default function useHttpPageMetrics(rowKey) {
 /**
  * 그리드 hover 시 미리 불러오기 (프리페칭)
  * @param {QueryClient} queryClient - TanStack Query Client
- * @param {string} rowKey - HTTP Page row key
+ * @param {string} rowKey - HTTP URI row key
  */
-export function prefetchHttpPageMetrics(queryClient, rowKey) {
+export function prefetchHttpUriMetrics(queryClient, rowKey) {
   if (!rowKey) return
   return queryClient.prefetchQuery({
-    queryKey: httpPageKeys.detail(rowKey),
-    queryFn: ({ signal }) => getHttpPageMetrics(rowKey, { signal }),
+    queryKey: httpUriKeys.detail(rowKey),
+    queryFn: ({ signal }) => getHttpUriMetrics(rowKey, { signal }),
     staleTime: 15_000,
   })
 }
@@ -59,10 +59,10 @@ export function prefetchHttpPageMetrics(queryClient, rowKey) {
 /**
  * 상세 닫은 뒤 캐시 무효화 (필요시)
  * @param {QueryClient} queryClient - TanStack Query Client
- * @param {string} rowKey - HTTP Page row key
+ * @param {string} rowKey - HTTP URI row key
  */
-export function invalidateHttpPageMetrics(queryClient, rowKey) {
+export function invalidateHttpUriMetrics(queryClient, rowKey) {
   return queryClient.invalidateQueries({
-    queryKey: httpPageKeys.detail(rowKey),
+    queryKey: httpUriKeys.detail(rowKey),
   })
 }
