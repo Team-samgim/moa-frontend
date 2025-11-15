@@ -20,6 +20,7 @@ import GridToolbar from '@/pages/grid/GridToolbar'
 import { usePivotStore } from '@/stores/pivotStore'
 import { usePresetBridgeStore } from '@/stores/presetBridgeStore'
 import { buildSearchPayload } from '@/utils/searchPayload'
+import { toSearchSpecFromConfig } from '@/utils/searchSpec'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const defaultValuesFor = (arity) =>
@@ -276,15 +277,22 @@ const SearchPage = () => {
     fields,
   ])
 
-  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
+  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) */
   useEffect(() => {
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
-    // PresetPage에서 navigate(..., { state: { preset: p.config } })
+    // PresetPage에서 navigate(..., { state: { preset: p.config } }) 또는 { preset: { payload } }
     const fromRoute = location.state?.preset
     const raw = fromStore || fromRoute
     if (!raw) return
 
-    const spec = raw?.payload ?? raw // payload 래핑/비래핑 모두 허용
+    let spec = raw?.payload ?? raw // payload 래핑/비래핑 모두 허용
+
+    // 라우트에서 온 값이 "config"({ search: { ... } }) 형태이면 spec으로 변환
+    // 마이페이지: preset = p.config 라우트로 넘기는 경우
+    // 브리지(fromStore)는 이미 spec이므로 건드리지 않음
+    if (!fromStore && spec && spec.search) {
+      spec = toSearchSpecFromConfig(spec)
+    }
 
     // layer 리셋 효과 방지
     skipLayerResetRef.current = true
@@ -312,7 +320,9 @@ const SearchPage = () => {
     setCustomTimeRange(nextCustom ?? null)
 
     // 다음 틱에 검색 실행
-    setTimeout(() => onClickSearch(), 0)
+    if (fromStore) {
+      setTimeout(() => onClickSearch(), 0)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // 최초 1회만
 
