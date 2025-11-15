@@ -17,6 +17,7 @@ import { userNavigations } from '@/constants/navigations'
 import useAggregateQuery from '@/hooks/grid/useAggregateQuery'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
 import GridToolbar from '@/pages/grid/GridToolbar'
+import { usePivotStore } from '@/stores/pivotStore'
 import { usePresetBridgeStore } from '@/stores/presetBridgeStore'
 import { buildSearchPayload } from '@/utils/searchPayload'
 import { toSearchSpecFromConfig } from '@/utils/searchSpec'
@@ -261,7 +262,8 @@ const SearchPage = () => {
     }
 
     console.log('[PIVOT payload]', payload) // 확인 로그
-
+    const { initFromGrid } = usePivotStore.getState()
+    initFromGrid(payload)
     navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
   }, [
     navigate,

@@ -114,9 +114,17 @@ const ValueToken = ({
   )
 }
 
-const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
+const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose, availableFields }) => {
   const { data, isLoading } = usePivotFields()
-  const fields = useMemo(() => (data?.fields ? data.fields : []), [data?.fields])
+
+  const fields = useMemo(() => {
+    if (!data?.fields) return []
+    if (availableFields && availableFields.length > 0) {
+      const set = new Set(availableFields)
+      return data.fields.filter((f) => set.has(f.name))
+    }
+    return data.fields
+  }, [data, availableFields])
 
   const fieldMetaMap = useMemo(() => {
     const map = new Map()
@@ -155,8 +163,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
   )
 
   const [openAggForId, setOpenAggForId] = useState(null)
-
-  const [sortOrder, setSortOrder] = useState(null) // 'asc' | 'desc' | null
+  const [sortOrder, setSortOrder] = useState(null)
   const [searchValue, setSearchValue] = useState('')
 
   const sensors = useSensors(
@@ -164,6 +171,8 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
       activationConstraint: { distance: 5 },
     }),
   )
+
+  const isLoadingEffective = !availableFields?.length && isLoading
 
   const filteredList = useMemo(() => {
     let base = fieldNames
@@ -303,7 +312,7 @@ const ValueSelectModal = ({ initialSelected = [], onApplyValues, onClose }) => {
 
       {/* 필드 목록 */}
       <div className='border border-t-0 border-gray-200'>
-        {isLoading ? (
+        {isLoadingEffective ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>로딩중...</div>
         ) : filteredList.length === 0 ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>필드가 없습니다</div>

@@ -45,6 +45,14 @@ const runPivotHeatmapTable = async (payload) => {
   return res.data
 }
 
+// 피벗 프리셋 불러오기
+const fetchPivotPresets = async ({ page = 0, size = 50, type } = {}) => {
+  const { data } = await axiosInstance.get('/mypage/presets/pivot', {
+    params: { page, size, ...(type ? { type } : {}) },
+  })
+  return data
+}
+
 export {
   fetchPivotFields,
   runPivotQuery,
@@ -52,4 +60,5 @@ export {
   fetchRowGroupItems,
   runPivotChart,
   runPivotHeatmapTable,
+  fetchPivotPresets,
 }

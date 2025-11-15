@@ -11,6 +11,8 @@ const PivotConfigPanel = ({
   onChangeLayer,
   onSelectTimePreset,
   onApplyCustomRange,
+  isFromGrid = false,
+  onPresetLoad,
 }) => {
   const [isCustomOpen, setIsCustomOpen] = useState(false)
   const customWrapperRef = useRef(null)
@@ -42,6 +44,7 @@ const PivotConfigPanel = ({
   }, [isCustomOpen])
 
   const handleToggleCustom = () => {
+    if (isFromGrid) return // 그리드에서 온 경우 직접설정 팝업 열리지 않음
     setIsCustomOpen((prev) => !prev)
   }
 
@@ -81,7 +84,9 @@ const PivotConfigPanel = ({
 
         <div className='flex flex-wrap items-center gap-3 text-xs font-medium text-[#2263AC]'>
           <button className='hover:underline'>프리셋 저장</button>
-          <button className='hover:underline'>프리셋 불러오기</button>
+          <button onClick={onPresetLoad} className='hover:underline'>
+            프리셋 불러오기
+          </button>
         </div>
       </div>
 
@@ -89,21 +94,36 @@ const PivotConfigPanel = ({
       <div>
         <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
         <div className='flex flex-wrap justify-between w-full'>
-          {LAYER_OPTIONS.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => onChangeLayer(opt)}
-              className={[
-                'rounded border px-3 py-2 text-xs font-medium',
-                layer === opt
-                  ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
-                  : 'bg-[#ffffff] text-gray-700 border-gray-300 hover:bg-gray-50',
-              ].join(' ')}
-            >
-              {opt}
-            </button>
-          ))}
+          {LAYER_OPTIONS.map((opt) => {
+            const isActive = layer === opt
+            const disabled = isFromGrid && opt !== layer
+
+            return (
+              <button
+                key={opt}
+                onClick={() => !disabled && onChangeLayer(opt)}
+                disabled={disabled}
+                className={[
+                  'rounded border px-3 py-2 text-xs font-medium',
+                  isActive
+                    ? isFromGrid
+                      ? 'bg-gray-200 text-gray-700 border-gray-300 cursor-default'
+                      : 'bg-[#EAF1F9] text-gray-700 border-gray-300'
+                    : disabled
+                      ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                ].join(' ')}
+              >
+                {opt}
+              </button>
+            )
+          })}
         </div>
+        {isFromGrid && (
+          <p className='mt-1 text-[10px] text-gray-400'>
+            검색에서 선택한 계층으로 고정되어 있습니다.
+          </p>
+        )}
       </div>
 
       {/* 조회 기간 */}
@@ -111,13 +131,15 @@ const PivotConfigPanel = ({
         <div className='mb-3 flex justify-between items-center gap-2 text-sm font-medium text-gray-800'>
           <span>조회 기간</span>
           <button
-            className='rounded border border-gray-300 bg-white p-1 hover:bg-gray-50'
+            className='rounded border border-gray-300 bg-white p-1 hover:bg-gray-50 disabled:opacity-40'
             title='시간 새로고침'
             onClick={() => {
+              if (isFromGrid) return
               if (isPresetActive) {
                 onSelectTimePreset(timeRange.value)
               }
             }}
+            disabled={isFromGrid}
           >
             <ResetIcon className='h-3.5 w-3.5 text-gray-500' />
           </button>
@@ -131,12 +153,14 @@ const PivotConfigPanel = ({
             return (
               <button
                 key={p.value}
-                onClick={() => onSelectTimePreset(p.value)}
+                onClick={() => !isFromGrid && onSelectTimePreset(p.value)}
+                disabled={isFromGrid}
                 className={[
                   'rounded border px-3 py-2 text-xs font-medium',
                   isActive
                     ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
                     : 'bg-[#ffffff] text-gray-700 border-gray-300 hover:bg-gray-50',
+                  isFromGrid ? 'opacity-40 cursor-not-allowed' : '',
                 ].join(' ')}
               >
                 {p.label}
@@ -145,10 +169,12 @@ const PivotConfigPanel = ({
           })}
         </div>
 
+        {/* 직접 설정 버튼 */}
         <div className='mt-2 relative' ref={customWrapperRef}>
           <button
             onClick={handleToggleCustom}
-            className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50'
+            disabled={isFromGrid}
+            className='flex w-full items-center justify-between rounded border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed'
           >
             <span className='flex flex-col items-start text-xs gap-0.5'>
               <span>직접 설정</span>
@@ -209,6 +235,12 @@ const PivotConfigPanel = ({
                 </button>
               </div>
             </div>
+          )}
+
+          {isFromGrid && customRangeLabel && (
+            <p className='mt-1 text-[10px] text-gray-400'>
+              검색에서 설정한 기간: {customRangeLabel}
+            </p>
           )}
         </div>
       </div>
