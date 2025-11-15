@@ -50,6 +50,7 @@ const PivotPage = () => {
     setValues,
     setFilters,
     pivotMode,
+    setPivotMode,
     gridContext,
   } = usePivotStore()
 
@@ -437,7 +438,12 @@ const PivotPage = () => {
           onClose={() => setIsPresetModalOpen(false)}
           onSelect={(preset) => {
             try {
+              const modeFromPreset = preset?.config?.pivot?.mode
+              console.log(preset.config)
               applyPivotPresetConfigToStore(preset.config || {})
+              if (modeFromPreset === 'fromGrid' || modeFromPreset === 'free') {
+                setPivotMode(modeFromPreset)
+              }
               runQueryNow()
             } catch (e) {
               console.error(e)

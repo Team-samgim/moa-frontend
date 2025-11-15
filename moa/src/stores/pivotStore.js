@@ -20,6 +20,7 @@ export const usePivotStore = create((set) => ({
   pivotMode: 'free', // 'free' | 'fromGrid'
   gridContext: null,
 
+  setPivotMode: (mode) => set({ pivotMode: mode }),
   setLayer: (layer) =>
     set(() => ({
       layer,

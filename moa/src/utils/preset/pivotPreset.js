@@ -37,7 +37,7 @@ export function applyPivotPresetConfigToStore(rawConfig) {
   const cfg = rawConfig || {}
   const pivotPart = cfg.pivot && cfg.pivot.config ? cfg.pivot.config : {}
   const mode = cfg.pivot && cfg.pivot.mode ? cfg.pivot.mode : 'free'
-  const gridPart = cfg.grid && cfg.grid.config ? cfg.grid.config : null
+  const gridPart = cfg.search && cfg.search.config ? cfg.search.config : null
 
   usePivotStore.setState((prev) => ({
     ...prev,

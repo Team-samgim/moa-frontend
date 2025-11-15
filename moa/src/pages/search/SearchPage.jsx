@@ -261,7 +261,6 @@ const SearchPage = () => {
     }
 
     console.log('[PIVOT payload]', payload) // 확인 로그
-
     const { initFromGrid } = usePivotStore.getState()
     initFromGrid(payload)
     navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
