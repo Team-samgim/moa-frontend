@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 
 import { arrayMove } from '@dnd-kit/sortable'
 import { useMutation } from '@tanstack/react-query'
-import { exportChartImage } from '@/api/export'
+import { exportChartImage, exportPivotCsv } from '@/api/export'
 import { savePivotPreset } from '@/api/presets'
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
@@ -275,6 +275,7 @@ const PivotPage = () => {
         presetName,
         config,
         favorite: false,
+        origin: 'USER',
       })
       return res
     },
@@ -318,6 +319,78 @@ const PivotPage = () => {
     onError: (e) => {
       console.error(e)
       alert('차트 이미지 내보내기 중 오류가 발생했습니다.')
+    },
+  })
+
+  const exportPivotMut = useMutation({
+    mutationFn: async () => {
+      const cfg = usePivotStore.getState()
+
+      // 최소 가드 (있으면 좋음)
+      if (!cfg.layer || !cfg.rows?.length || !cfg.values?.length) {
+        throw new Error('열/행/값을 먼저 설정해야 CSV를 내보낼 수 있습니다.')
+      }
+
+      // 1) 프리셋 config 생성 (이미 있는 util)
+      const presetConfig = buildPivotPresetConfigFromStore()
+
+      // 프리셋 이름은 자동으로 (사용자 입력 X)
+      const presetName = `피벗 내보내기 - ${new Date().toLocaleString()}`
+
+      // 2) 피벗 프리셋 저장
+      const presetRes = await savePivotPreset({
+        presetName,
+        config: presetConfig,
+        favorite: false,
+        origin: 'EXPORT',
+      })
+
+      if (!presetRes || !presetRes.presetId) {
+        throw new Error('피벗 프리셋 저장에 실패했습니다.')
+      }
+
+      const presetId = presetRes.presetId
+
+      // 3) Pivot 쿼리 DTO 생성 (현재 runQueryNow와 거의 동일)
+      const time = buildTimePayload(cfg.timeRange, cfg.customRange)
+
+      const pivotRequest = {
+        layer: cfg.layer,
+        time, // 서버에서 TimeDef로 쓰는 필드
+        column: cfg.column,
+        rows: cfg.rows,
+        values: cfg.values,
+        filters: cfg.filters,
+        // 필요하면 sort 같은 거 추가 가능
+      }
+
+      // 4) 파일 이름은 자동 생성 (사용자에게 안 물어봄)
+      const fileNameBase = `pivot_${cfg.layer || 'layer'}_${new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[-T:]/g, '')}`
+
+      const res = await exportPivotCsv({
+        presetId,
+        pivot: pivotRequest,
+        fileName: fileNameBase, // 서버에서 ".csv" 붙이거나 무시해도 됨
+      })
+
+      return res
+    },
+    onSuccess: (data) => {
+      alert('피벗 CSV 내보내기가 완료되었습니다.')
+      if (data?.httpUrl) {
+        window.open(data.httpUrl, '_blank', 'noopener,noreferrer')
+      }
+    },
+    onError: (e) => {
+      console.error(e)
+      alert(
+        `피벗 CSV 내보내기 중 오류가 발생했습니다.\n${
+          e?.response?.data?.message || e?.message || ''
+        }`,
+      )
     },
   })
 
@@ -465,6 +538,14 @@ const PivotPage = () => {
 
             {/* 오른쪽 영역: 차트 이미지 다운로드 + 차트 설정 + 전체보기 버튼 */}
             <div className='flex items-center gap-2'>
+              <button
+                type='button'
+                onClick={() => exportPivotMut.mutate()}
+                disabled={exportPivotMut.isPending}
+                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+              >
+                {exportPivotMut.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
+              </button>
               <button
                 type='button'
                 onClick={() => pivotPresetMut.mutate()}

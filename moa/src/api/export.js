@@ -14,3 +14,14 @@ export async function exportChartImage({ config, dataUrl, fileName }) {
   const { data } = await axiosInstance.post('/exports/chart', payload)
   return data
 }
+
+export async function exportPivotCsv({ presetId, pivot, fileName }) {
+  const payload = {
+    presetId,
+    pivot, // { layer, time, column, rows, values, filters }
+    fileName,
+  }
+
+  const { data } = await axiosInstance.post('/exports/pivot', payload)
+  return data // ExportCreateResponseDTO
+}
