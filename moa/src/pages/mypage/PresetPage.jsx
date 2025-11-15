@@ -7,7 +7,6 @@ import { userNavigations } from '@/constants/navigations'
 import { CLASSES } from '@/constants/tokens'
 import { useMyPresets, useToggleFavoritePreset, useDeletePreset } from '@/hooks/queries/useMyPage'
 import { normalizePresetConfig } from '@/utils/presetNormalizer'
-import { toSearchSpecFromPreset } from '@/utils/presetPayload'
 
 const PresetPage = () => {
   const [type, setType] = useState('SEARCH')
@@ -77,8 +76,17 @@ const PresetPage = () => {
   const onApply = useCallback(
     (p) => {
       const routeMap = { SEARCH: userNavigations.SEARCH, PIVOT: userNavigations.PIVOT }
-      const payload = toSearchSpecFromPreset(p.config || {})
-      navigate(routeMap[p.presetType] ?? userNavigations.SEARCH, { state: { preset: { payload } } })
+      if (p.presetType === 'SEARCH') {
+        //    toSearchSpecFromConfig로 spec으로 변환
+        navigate(routeMap.SEARCH, {
+          state: { preset: p.config }, // ← 여기!
+        })
+      } else {
+        // PIVOT 프리셋은 기존대로 (원하면 따로 유틸 만들어도 됨)
+        navigate(routeMap.PIVOT, {
+          state: { preset: p.config },
+        })
+      }
     },
     [navigate],
   )
