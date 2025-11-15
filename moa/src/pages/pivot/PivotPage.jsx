@@ -1,9 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
 
-import { arrayMove } from '@dnd-kit/sortable'
-import { useMutation } from '@tanstack/react-query'
-import { exportChartImage, exportPivotCsv } from '@/api/export'
-import { savePivotPreset } from '@/api/presets'
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
 import RowIcon from '@/assets/icons/row.svg?react'
@@ -26,16 +22,16 @@ import SortableValuesList from '@/components/features/pivot/panel/SortableValues
 import PivotResultTable from '@/components/features/pivot/table/PivotResultTable'
 
 import usePivotChart from '@/hooks/pivot/usePivotChart'
-import { usePivotQuery } from '@/hooks/queries/usePivot'
+import usePivotDragHandlers from '@/hooks/pivot/usePivotDragHandlers'
+import usePivotFieldModals from '@/hooks/pivot/usePivotFieldModals'
+import usePivotFilterModal from '@/hooks/pivot/usePivotFilterModal'
+import usePivotRunner from '@/hooks/pivot/usePivotRunner'
+import useExport from '@/hooks/queries/useExport'
+import usePreset from '@/hooks/queries/usePreset'
+
 import { usePivotChartStore } from '@/stores/pivotChartStore'
-import { usePivotModalStore } from '@/stores/pivotModalStore'
 import { usePivotStore } from '@/stores/pivotStore'
-import { buildTimePayload } from '@/utils/pivotTime'
-import { buildChartPresetConfig } from '@/utils/preset/chartPreset'
-import {
-  applyPivotPresetConfigToStore,
-  buildPivotPresetConfigFromStore,
-} from '@/utils/preset/pivotPreset'
+import { applyPivotPresetConfigToStore } from '@/utils/preset/pivotPreset'
 
 const PivotPage = () => {
   const {
@@ -59,175 +55,30 @@ const PivotPage = () => {
 
   const isFromGrid = pivotMode === 'fromGrid'
   const gridColumns = gridContext?.columns || []
+
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
   const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
 
   const chartViewRef = useRef(null)
 
-  const [filterModal, setFilterModal] = useState({
-    open: false,
-    field: null,
-  })
-
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false)
-
   const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)
 
+  // 차트 관련 훅
   const {
     isConfigOpen: isChartConfigOpen,
     handleToggleChart,
     setIsConfigOpen,
     closeConfig: closeChartConfig,
-    applyConfig: _applyChartConfig,
   } = usePivotChart()
 
   const handleApplyChart = () => {
     setIsChartMode(true)
   }
 
-  const { mutate: executeQuery, data: pivotResult, isLoading: isPivotLoading } = usePivotQuery()
+  const { runQueryNow, pivotResult, isPivotLoading } = usePivotRunner()
 
-  const runQueryNow = useCallback(() => {
-    const cfg = usePivotStore.getState()
-    // console.log(cfg)
-    const time = buildTimePayload(cfg.timeRange, cfg.customRange)
-
-    executeQuery({
-      layer: cfg.layer,
-      time,
-      column: cfg.column,
-      rows: cfg.rows,
-      values: cfg.values,
-      filters: cfg.filters,
-    })
-  }, [executeQuery])
-
-  const openFilterForField = useCallback(
-    (fieldName) => {
-      const valueAliases = values?.length
-        ? values.map((v) => v.alias ?? `${v.agg?.toUpperCase() || ''}: ${v.field}`)
-        : ['Values 값들']
-
-      setFilterModal({ open: true, field: fieldName, valueAliases })
-    },
-    [values],
-  )
-
-  const closeFilter = useCallback(() => setFilterModal((m) => ({ ...m, open: false })), [])
-
-  const applyFilter = useCallback(
-    (payload) => {
-      setFilters((prev) => {
-        const others = (prev || []).filter((f) => f.field !== payload.field)
-        return [
-          ...others,
-          {
-            field: payload.field,
-            op: 'IN',
-            value: payload.selected,
-            topN: payload.topN,
-            order: payload.order,
-          },
-        ]
-      })
-      closeFilter()
-      runQueryNow()
-    },
-    [setFilters, closeFilter, runQueryNow],
-  )
-
-  const { isOpen, mode, openModal, closeModal, draftRows, draftColumn, draftValues } =
-    usePivotModalStore()
-
-  const applyRows = useCallback(
-    (newRows) => {
-      setRows(newRows)
-      closeModal()
-      runQueryNow()
-    },
-    [setRows, closeModal, runQueryNow],
-  )
-
-  const applyColumn = useCallback(
-    (newCol) => {
-      if (newCol && newCol.field) {
-        setColumnField(newCol.field)
-      } else {
-        setColumnField(null)
-      }
-      closeModal()
-      runQueryNow()
-    },
-    [setColumnField, closeModal, runQueryNow],
-  )
-
-  const applyValues = useCallback(
-    (newValues) => {
-      setValues(newValues)
-      closeModal()
-      runQueryNow()
-    },
-    [setValues, closeModal, runQueryNow],
-  )
-
-  const openRowsModal = useCallback(() => {
-    openModal('rows', {
-      rows,
-      column,
-      values,
-    })
-  }, [openModal, rows, column, values])
-
-  const openColumnModal = useCallback(() => {
-    openModal('column', {
-      rows,
-      column,
-      values,
-    })
-  }, [openModal, rows, column, values])
-
-  const openValuesModal = useCallback(() => {
-    openModal('values', {
-      rows,
-      column,
-      values,
-    })
-  }, [openModal, rows, column, values])
-
-  const handleDragEndRows = useCallback(
-    (event) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
-
-      const oldIndex = rows.findIndex((r) => r.field === active.id)
-      const newIndex = rows.findIndex((r) => r.field === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
-
-      const reordered = arrayMove(rows, oldIndex, newIndex)
-      setRows(reordered)
-      runQueryNow()
-    },
-    [rows, setRows, runQueryNow],
-  )
-
-  const handleDragEndValues = useCallback(
-    (event) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
-
-      const getId = (v) => v.field + '::' + v.agg
-
-      const oldIndex = values.findIndex((v) => getId(v) === active.id)
-      const newIndex = values.findIndex((v) => getId(v) === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
-
-      const reordered = arrayMove(values, oldIndex, newIndex)
-      setValues(reordered)
-      runQueryNow()
-    },
-    [values, setValues, runQueryNow],
-  )
-
+  // 시간 프리셋 / 커스텀 범위 변경 시 쿼리
   const handleSelectTimePreset = useCallback(
     (value) => {
       setTimePreset(value)
@@ -244,155 +95,58 @@ const PivotPage = () => {
     [setCustomRange, runQueryNow],
   )
 
-  const currentFilterForModal = filters.find((f) => f.field === filterModal.field && f.op === 'IN')
-
-  const selectedValuesForModal = Array.isArray(currentFilterForModal?.value)
-    ? currentFilterForModal.value
-    : undefined
-
-  const timeForFilter = buildTimePayload(timeRange, customRange)
-
-  const initialTopNForModal = currentFilterForModal?.topN
-
-  const pivotPresetMut = useMutation({
-    mutationFn: async () => {
-      const config = buildPivotPresetConfigFromStore()
-
-      const fallback = `피벗 프리셋 ${new Date().toLocaleString()}`
-      const input = window.prompt('피벗 프리셋 이름을 입력하세요', fallback)
-      if (input === null) {
-        // 취소 누른 경우
-        return null
-      }
-      const presetName = (input || fallback).trim()
-
-      if (!presetName) {
-        window.alert('프리셋 이름이 비어 있습니다.')
-        return null
-      }
-
-      const res = await savePivotPreset({
-        presetName,
-        config,
-        favorite: false,
-        origin: 'USER',
-      })
-      return res
-    },
-    onSuccess: (data) => {
-      if (!data) return
-      window.alert(`피벗 프리셋 저장 완료! (ID: ${data.presetId})`)
-    },
-    onError: (e) => {
-      console.error(e)
-      window.alert(`피벗 프리셋 저장 실패: ${e?.response?.status || e?.message || ''}`)
-    },
+  // 필터 모달 관련 훅
+  const {
+    filterModal,
+    openFilterForField,
+    closeFilter,
+    applyFilter,
+    selectedValuesForModal,
+    timeForFilter,
+    initialTopNForModal,
+  } = usePivotFilterModal({
+    values,
+    filters,
+    timeRange,
+    customRange,
+    setFilters,
+    runQueryNow,
   })
 
-  const exportChartMut = useMutation({
-    mutationFn: async () => {
-      if (!chartViewRef.current || !chartViewRef.current.getImageDataUrl) {
-        throw new Error('차트 뷰가 준비되지 않았습니다.')
-      }
-
-      const dataUrl = chartViewRef.current.getImageDataUrl()
-      if (!dataUrl) {
-        throw new Error('차트 이미지를 가져올 수 없습니다.')
-      }
-
-      const config = buildChartPresetConfig()
-
-      const res = await exportChartImage({
-        config,
-        dataUrl,
-      })
-
-      return res
-    },
-    onSuccess: (data) => {
-      alert('차트 이미지 내보내기가 완료되었습니다.')
-      if (data?.httpUrl) {
-        // 서버에서 만든 presigned URL로 바로 다운로드 / 보기
-        window.open(data.httpUrl, '_blank', 'noopener,noreferrer')
-      }
-    },
-    onError: (e) => {
-      console.error(e)
-      alert('차트 이미지 내보내기 중 오류가 발생했습니다.')
-    },
+  // 행/열/값 모달 관련 훅
+  const {
+    modalState,
+    openRowsModal,
+    openColumnModal,
+    openValuesModal,
+    applyRows,
+    applyColumn,
+    applyValues,
+    closeModal,
+  } = usePivotFieldModals({
+    rows,
+    column,
+    values,
+    setRows,
+    setColumnField,
+    setValues,
+    runQueryNow,
   })
 
-  const exportPivotMut = useMutation({
-    mutationFn: async () => {
-      const cfg = usePivotStore.getState()
+  const { isOpen, mode, draftRows, draftColumn, draftValues } = modalState
 
-      // 최소 가드 (있으면 좋음)
-      if (!cfg.layer || !cfg.rows?.length || !cfg.values?.length) {
-        throw new Error('열/행/값을 먼저 설정해야 CSV를 내보낼 수 있습니다.')
-      }
-
-      // 1) 프리셋 config 생성 (이미 있는 util)
-      const presetConfig = buildPivotPresetConfigFromStore()
-
-      // 프리셋 이름은 자동으로 (사용자 입력 X)
-      const presetName = `피벗 내보내기 - ${new Date().toLocaleString()}`
-
-      // 2) 피벗 프리셋 저장
-      const presetRes = await savePivotPreset({
-        presetName,
-        config: presetConfig,
-        favorite: false,
-        origin: 'EXPORT',
-      })
-
-      if (!presetRes || !presetRes.presetId) {
-        throw new Error('피벗 프리셋 저장에 실패했습니다.')
-      }
-
-      const presetId = presetRes.presetId
-
-      // 3) Pivot 쿼리 DTO 생성 (현재 runQueryNow와 거의 동일)
-      const time = buildTimePayload(cfg.timeRange, cfg.customRange)
-
-      const pivotRequest = {
-        layer: cfg.layer,
-        time, // 서버에서 TimeDef로 쓰는 필드
-        column: cfg.column,
-        rows: cfg.rows,
-        values: cfg.values,
-        filters: cfg.filters,
-        // 필요하면 sort 같은 거 추가 가능
-      }
-
-      // 4) 파일 이름은 자동 생성 (사용자에게 안 물어봄)
-      const fileNameBase = `pivot_${cfg.layer || 'layer'}_${new Date()
-        .toISOString()
-        .slice(0, 19)
-        .replace(/[-T:]/g, '')}`
-
-      const res = await exportPivotCsv({
-        presetId,
-        pivot: pivotRequest,
-        fileName: fileNameBase, // 서버에서 ".csv" 붙이거나 무시해도 됨
-      })
-
-      return res
-    },
-    onSuccess: (data) => {
-      alert('피벗 CSV 내보내기가 완료되었습니다.')
-      if (data?.httpUrl) {
-        window.open(data.httpUrl, '_blank', 'noopener,noreferrer')
-      }
-    },
-    onError: (e) => {
-      console.error(e)
-      alert(
-        `피벗 CSV 내보내기 중 오류가 발생했습니다.\n${
-          e?.response?.data?.message || e?.message || ''
-        }`,
-      )
-    },
+  // DnD 핸들러 훅
+  const { handleDragEndRows, handleDragEndValues } = usePivotDragHandlers({
+    rows,
+    setRows,
+    values,
+    setValues,
+    runQueryNow,
   })
+
+  // Export / Preset 훅
+  const { exportChartImageMutation, exportPivotCsvMutation } = useExport(chartViewRef)
+  const { savePivotPresetMutation } = usePreset()
 
   return (
     <>
@@ -401,6 +155,7 @@ const PivotPage = () => {
           <PivotHeaderTabs pivotMode={pivotMode} />
         </div>
 
+        {/* 상단 설정 영역 */}
         <section className='rounded-lg border border-gray-200 bg-white shadow-sm'>
           <div className='flex flex-row gap-6 p-5 lg:flex-row'>
             {/* 왼쪽 패널 */}
@@ -410,16 +165,16 @@ const PivotPage = () => {
               customRange={customRange}
               isFromGrid={isFromGrid}
               onChangeLayer={(nextLayer) => {
-                if (isFromGrid) return // 그리드 모드: 레이어 변경 금지
+                if (isFromGrid) return
                 setLayer(nextLayer)
                 runQueryNow()
               }}
               onSelectTimePreset={(value) => {
-                if (isFromGrid) return // 프리셋 변경 금지
+                if (isFromGrid) return
                 handleSelectTimePreset(value)
               }}
               onApplyCustomRange={(fromDate, toDate) => {
-                if (isFromGrid) return // 직접 설정 변경 금지
+                if (isFromGrid) return
                 handleApplyCustomRange(fromDate, toDate)
               }}
               onPresetLoad={() => setIsPresetModalOpen(true)}
@@ -427,7 +182,7 @@ const PivotPage = () => {
 
             <div className='hidden w-px bg-gray-200 lg:block' />
 
-            {/* 오른쪽 패널 */}
+            {/* 오른쪽 패널: Column / Rows / Values */}
             <div className='flex flex-1 flex-col gap-4 lg:flex-row min-h-0 items-stretch'>
               {/* Column 카드 */}
               <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
@@ -444,7 +199,6 @@ const PivotPage = () => {
                   </button>
                 </div>
 
-                {/* 리스트 영역만 스크롤 */}
                 <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   {column && column.field ? (
                     <div className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'>
@@ -514,13 +268,12 @@ const PivotPage = () => {
           </div>
         </section>
 
-        {/* 결과 프리뷰 / 차트 모드 토글 */}
+        {/* 결과 / 차트 모드 영역 */}
         <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
           <div className='mb-3 flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               <span className='font-medium text-gray-800'>차트 모드</span>
 
-              {/* 토글 버튼 */}
               <button
                 type='button'
                 onClick={handleToggleChart}
@@ -536,39 +289,45 @@ const PivotPage = () => {
               </button>
             </div>
 
-            {/* 오른쪽 영역: 차트 이미지 다운로드 + 차트 설정 + 전체보기 버튼 */}
             <div className='flex items-center gap-2'>
+              {/* CSV 내보내기 */}
               <button
                 type='button'
-                onClick={() => exportPivotMut.mutate()}
-                disabled={exportPivotMut.isPending}
+                onClick={() => exportPivotCsvMutation.mutate()}
+                disabled={exportPivotCsvMutation.isPending}
                 className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
               >
-                {exportPivotMut.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
-              </button>
-              <button
-                type='button'
-                onClick={() => pivotPresetMut.mutate()}
-                disabled={pivotPresetMut.isPending}
-                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-              >
-                {pivotPresetMut.isPending ? '프리셋 저장 중…' : '피벗 프리셋 저장'}
-              </button>
-              <button
-                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
-                onClick={() => exportChartMut.mutate()}
-                disabled={!isChartMode || exportChartMut.isPending}
-              >
-                <span>{exportChartMut.isPending ? '내보내는 중…' : '차트 이미지 다운로드'}</span>
-              </button>
-              <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
-                <span>차트 설정 (임시)</span>
+                {exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
               </button>
 
+              {/* 피벗 프리셋 저장 */}
+              <button
+                type='button'
+                onClick={() => savePivotPresetMutation.mutate()}
+                disabled={savePivotPresetMutation.isPending}
+                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+              >
+                {savePivotPresetMutation.isPending ? '프리셋 저장 중…' : '피벗 프리셋 저장'}
+              </button>
+
+              {/* 차트 이미지 다운로드 */}
+              <button
+                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+                onClick={() => exportChartImageMutation.mutate()}
+                disabled={!isChartMode || exportChartImageMutation.isPending}
+              >
+                {exportChartImageMutation.isPending ? '내보내는 중…' : '차트 이미지 다운로드'}
+              </button>
+
+              {/* 차트 설정 */}
+              <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
+                차트 설정 (임시)
+              </button>
+
+              {/* 전체보기 (히트맵) */}
               <button
                 type='button'
                 onClick={() => {
-                  // 최소한 column/rows/values 있어야 전체보기 의미가 있으니까 가드
                   if (!column?.field || !rows?.length || !values?.length) {
                     window.alert('전체보기를 사용하려면 열/행/값을 먼저 설정해주세요.')
                     return
@@ -582,7 +341,7 @@ const PivotPage = () => {
             </div>
           </div>
 
-          {/* 이하 기존 내용 그대로 */}
+          {/* 실제 결과 영역 */}
           {isChartMode ? (
             <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
               <PivotChartView ref={chartViewRef} />
@@ -607,36 +366,40 @@ const PivotPage = () => {
         </section>
       </div>
 
+      {/* 행 선택 모달 */}
       {isOpen && mode === 'rows' && (
         <RowSelectModal
           initialSelected={draftRows.map((r) => r.field)}
-          onApplyRows={(newRows) => applyRows(newRows)}
+          onApplyRows={applyRows}
           onClose={closeModal}
           availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
+      {/* 열 선택 모달 */}
       {isOpen && mode === 'column' && (
         <ColumnSelectModal
           initialSelected={draftColumn?.field || ''}
-          onApplyColumn={(newCol) => applyColumn(newCol)}
+          onApplyColumn={applyColumn}
           onClose={closeModal}
           availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
+      {/* 값 선택 모달 */}
       {isOpen && mode === 'values' && (
         <ValueSelectModal
           initialSelected={draftValues.map((v) => ({
             field: v.field,
             agg: v.agg,
           }))}
-          onApplyValues={(newVals) => applyValues(newVals)}
+          onApplyValues={applyValues}
           onClose={closeModal}
           availableFields={isFromGrid ? gridColumns : undefined}
         />
       )}
 
+      {/* 필터 모달 */}
       {filterModal.open && (
         <FieldFilterModal
           layer={layer}
@@ -651,6 +414,8 @@ const PivotPage = () => {
           onClose={closeFilter}
         />
       )}
+
+      {/* 차트 설정 모달 */}
       {isChartConfigOpen && (
         <PivotChartConfigModal
           layer={layer}
@@ -660,9 +425,13 @@ const PivotPage = () => {
           onApply={handleApplyChart}
         />
       )}
+
+      {/* 전체보기(테이블 히트맵) 모달 */}
       {isHeatmapOpen && (
         <PivotHeatmapTableModal isOpen={isHeatmapOpen} onClose={() => setIsHeatmapOpen(false)} />
       )}
+
+      {/* 프리셋 불러오기 모달 */}
       {isPresetModalOpen && (
         <PivotPresetModal
           onClose={() => setIsPresetModalOpen(false)}
