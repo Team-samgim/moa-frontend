@@ -1,14 +1,21 @@
 import { useEffect, useRef } from 'react'
 import { COUNTRY_COORDS } from '@/constants/countryCoords'
 import useEcharts from '@/hooks/detail/useEcharts'
+import useWorldMap from '@/hooks/detail/useWorldMap'
 
 const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
   const echarts = useEcharts()
 
+  const { data: worldJson, isError } = useWorldMap()
+
   useEffect(() => {
     if (!echarts || !chartRef.current) return
+    if (!worldJson) return // 아직 로딩 중이면 대기
+
+    // 지도 등록 (여러 번 호출돼도 상관없긴 하지만, 필요하면 ref로 한 번만 하도록 막아도 됨)
+    echarts.registerMap('world', worldJson)
 
     const instance = echarts.init(chartRef.current)
     chartInstance.current = instance
@@ -191,29 +198,13 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       ],
     }
 
-    fetch('https://cdn.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json')
-      .then((res) => res.json())
-      .then((worldJson) => {
-        echarts.registerMap('world', worldJson)
-        instance.setOption(option)
-      })
-      .catch(() => {
-        instance.setOption({
-          title: {
-            text: '지도 로드 실패',
-            subtext: '네트워크 연결을 확인해주세요',
-            left: 'center',
-            top: 'middle',
-            textStyle: { color: '#ef4444', fontSize: 14 },
-          },
-        })
-      })
+    instance.setOption(option)
 
     return () => {
       instance.dispose()
       chartInstance.current = null
     }
-  }, [echarts, countryReq, countryRes, srcIp, dstIp, env])
+  }, [echarts, worldJson, countryReq, countryRes, srcIp, dstIp, env])
 
   useEffect(() => {
     const handleResize = () => {
@@ -222,6 +213,14 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  if (isError) {
+    return (
+      <div className='flex items-center justify-center w-full h-[450px] text-sm text-red-600'>
+        세계 지도 데이터를 불러오지 못했습니다.
+      </div>
+    )
+  }
 
   return <div ref={chartRef} style={{ width: '100%', height: '450px' }} />
 }
