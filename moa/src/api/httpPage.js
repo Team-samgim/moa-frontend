@@ -1,13 +1,9 @@
 import axiosInstance from '@/api/axios'
 
-/**
- * HTTP Page 메트릭 조회 API
- * @param {string} rowKey - HTTP Page row key
- * @param {Object} options - Axios 옵션 (signal 등)
- * @returns {Promise<Object>} HTTP Page 메트릭 데이터
- */
 export async function getHttpPageMetrics(rowKey, { signal } = {}) {
-  if (!rowKey) throw new Error('rowKey is required')
+  if (!rowKey) {
+    throw new Error('rowKey가 없습니다.')
+  }
 
   try {
     const res = await axiosInstance.get(`/details/http-page/${encodeURIComponent(rowKey)}`, {
