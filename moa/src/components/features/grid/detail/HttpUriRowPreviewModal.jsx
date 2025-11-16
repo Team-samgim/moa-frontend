@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
+import EnhancedGeoMap from '@/components/features/grid/http/EnhancedGeoMap'
 import useHttpUriMetrics from '@/hooks/detail/useHttpUriMetrics'
 
 // ===== 유틸리티 함수 =====
@@ -39,7 +40,7 @@ const formatMs = (ms) => {
   return `${(ms / 1000).toFixed(2)}s`
 }
 
-// ===== 컴포넌트 =====
+// ===== 공통 UI 컴포넌트들 =====
 const Badge = ({ level, children }) => {
   const cls =
     level === 'crit'
@@ -54,9 +55,22 @@ const Badge = ({ level, children }) => {
   )
 }
 
-const Chip = ({ children }) => (
-  <span className='rounded-full bg-[#F5F5F7] px-3 py-1 text-xs'>{children}</span>
-)
+const Chip = ({ children, color = 'gray' }) => {
+  const colors = {
+    gray: 'bg-[#F5F5F7] text-gray-700',
+    blue: 'bg-blue-100 text-blue-700',
+    green: 'bg-green-100 text-green-700',
+    red: 'bg-red-100 text-red-700',
+    amber: 'bg-amber-100 text-amber-700',
+    purple: 'bg-purple-100 text-purple-700',
+  }
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs ${colors[color] || colors.gray}`}>
+      {children}
+    </span>
+  )
+}
 
 const LV = ({ label, value, showEmpty = true }) => {
   const displayValue = emptyValue(value, showEmpty ? '값 없음' : '')
@@ -71,13 +85,6 @@ const LV = ({ label, value, showEmpty = true }) => {
     </div>
   )
 }
-
-const KV = ({ label, value }) => (
-  <div className='flex items-center gap-5 text-sm leading-tight'>
-    <span className='text-gray-500 whitespace-nowrap'>{label}</span>
-    <span className='font-medium'>{emptyValue(value)}</span>
-  </div>
-)
 
 const Row = ({ label, value }) => (
   <div className='flex items-center justify-between py-1'>
@@ -104,6 +111,7 @@ const TabButton = ({ id, activeId, onClick, children }) => {
   )
 }
 
+// ===== Main Modal Component =====
 const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onClose, rowKey }) {
   const q = useHttpUriMetrics(rowKey)
   const [activeTab, setActiveTab] = useState('summary')
@@ -138,9 +146,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
     if (open) {
       const t = requestAnimationFrame(() => setMounted(true))
       return () => cancelAnimationFrame(t)
-    } else {
-      setMounted(false)
     }
+    setMounted(false)
   }, [open])
 
   // 탭 초기화
@@ -157,7 +164,7 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
     d.env &&
     (d.env.countryReq || d.env.countryRes || d.env.domesticPrimaryReq || d.env.domesticPrimaryRes)
 
-  // 진단 메시지 확인
+  // 진단 메시지
   const diagEntries = Object.entries(d.diagnostics || {})
 
   return (
@@ -172,16 +179,33 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
           aria-modal='true'
           aria-labelledby='http-uri-dialog-title'
           className={[
-            'w-full max-w-[960px] max-h-[90vh] overflow-hidden rounded-2xl',
-            'border bg-white shadow-2xl flex flex-col',
+            'w-full max-w-[1400px] max-h-[95vh] overflow-hidden rounded-2xl',
+            'border bg-white shadow-2xl flex flex-col min-h-0',
             'transform transition duration-200 ease-out',
             mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           ].join(' ')}
         >
-          {/* header */}
-          <div className='flex items-center justify-between border-b px-6 py-4'>
-            <div id='http-uri-dialog-title' className='text-lg font-semibold'>
-              HTTP URI 상세
+          {/* header (page와 동일 레이아웃) */}
+          <div className='flex-none flex items-center justify-between border-b px-6 py-4'>
+            <div className='flex items-center gap-3'>
+              <div id='http-uri-dialog-title' className='text-lg font-semibold'>
+                HTTP URI 상세
+              </div>
+              {d.response?.phrase && (
+                <Badge
+                  level={
+                    d.response.phrase === 'OK' || d.response.phrase.startsWith?.('2')
+                      ? 'ok'
+                      : d.response.phrase.startsWith?.('5')
+                        ? 'crit'
+                        : 'warn'
+                  }
+                >
+                  {d.response.phrase}
+                </Badge>
+              )}
+              {d.request?.method && <Chip color='blue'>{d.request.method}</Chip>}
+              {d.env?.ndpiProtocolApp && <Chip color='purple'>App: {d.env.ndpiProtocolApp}</Chip>}
             </div>
             <button
               ref={closeBtnRef}
@@ -192,35 +216,35 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className='px-6 pt-3 border-b flex gap-2 overflow-x-auto'>
+          {/* Tabs (page와 동일 레이아웃) */}
+          <div className='flex-none px-6 pt-3 border-b flex gap-2 overflow-x-auto'>
             <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
               요약
             </TabButton>
             <TabButton id='request' activeId={activeTab} onClick={setActiveTab}>
-              HTTP 요청
+              📤 HTTP 요청
             </TabButton>
             <TabButton id='response' activeId={activeTab} onClick={setActiveTab}>
-              HTTP 응답
+              📥 HTTP 응답
             </TabButton>
             <TabButton id='timing' activeId={activeTab} onClick={setActiveTab}>
-              시간 분석
+              ⏱️ 시간 분석
             </TabButton>
             <TabButton id='quality' activeId={activeTab} onClick={setActiveTab}>
-              TCP 품질
+              📈 TCP 품질
             </TabButton>
             <TabButton id='performance' activeId={activeTab} onClick={setActiveTab}>
-              성능
+              ⚡ 성능
             </TabButton>
             {hasEnv && (
               <TabButton id='geo' activeId={activeTab} onClick={setActiveTab}>
-                위치 정보
+                🌍 위치 정보
               </TabButton>
             )}
           </div>
 
-          {/* body */}
-          <div className='p-6 space-y-5 overflow-auto flex-1'>
+          {/* body (page와 동일: flex-1 + min-h-0) */}
+          <div className='p-6 space-y-5 overflow-auto flex-1 min-h-0'>
             {/* 로딩/에러/빈 */}
             {q.isLoading && <div className='text-sm text-gray-500'>불러오는 중…</div>}
             {q.isError && (
@@ -235,8 +259,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: 요약 === */}
                 {activeTab === 'summary' && (
                   <>
-                    {/* 세션 헤더 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    {/* 세션 헤더 (page 네트워크 카드 스타일) */}
+                    <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                       <div className='text-sm text-gray-500 mb-1'>HTTP URI 세션</div>
                       <div className='text-[15px] font-semibold'>
                         {emptyValue(d.srcIp)}:{emptyValue(d.srcPort)}{' '}
@@ -248,14 +272,13 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                           MAC: {emptyValue(d.srcMac)} → {emptyValue(d.dstMac)}
                         </div>
                       )}
-                      <div className='mt-2 flex flex-wrap gap-2'>
-                        {d.request?.method && <Chip>Method: {d.request.method}</Chip>}
-                        {d.request?.host && <Chip>Host: {d.request.host}</Chip>}
-                        {d.env?.ndpiProtocolApp && <Chip>App: {d.env.ndpiProtocolApp}</Chip>}
+                      <div className='mt-3 flex flex-wrap gap-2'>
+                        {d.request?.method && <Chip color='blue'>Method: {d.request.method}</Chip>}
+                        {d.request?.host && <Chip color='green'>Host: {d.request.host}</Chip>}
                         {d.env?.ndpiProtocolMaster && (
-                          <Chip>Proto: {d.env.ndpiProtocolMaster}</Chip>
+                          <Chip color='purple'>Proto: {d.env.ndpiProtocolMaster}</Chip>
                         )}
-                        {d.env?.isHttps && <Chip>HTTPS</Chip>}
+                        {d.env?.isHttps && <Chip color='green'>🔒 HTTPS</Chip>}
                       </div>
                     </div>
 
@@ -275,7 +298,7 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                           <div className='text-right'>
                             <div className='text-xs text-gray-500 mb-1'>상태</div>
                             <div className='text-sm text-gray-700'>
-                              {emptyValue(d.status?.connectionStatus, '알수없음')}
+                              {emptyValue(d.status?.connectionStatus, '알 수 없음')}
                             </div>
                           </div>
                         </div>
@@ -289,15 +312,18 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                           🔍 진단 메시지
                         </div>
                         <ul className='space-y-2'>
-                          {diagEntries.map(([k, msg]) => (
-                            <li
-                              key={k}
-                              className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm'
-                            >
-                              <span className='text-2xl'>{msg.split(' ')[0]}</span>
-                              <span className='flex-1'>{msg.substring(msg.indexOf(' ') + 1)}</span>
-                            </li>
-                          ))}
+                          {diagEntries.map(([k, msg]) => {
+                            const [icon, ...rest] = String(msg).split(' ')
+                            return (
+                              <li
+                                key={k}
+                                className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm'
+                              >
+                                <span className='text-2xl'>{icon}</span>
+                                <span className='flex-1'>{rest.join(' ')}</span>
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     )}
@@ -330,16 +356,16 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* HTTP 상태 */}
+                    {/* HTTP 상태 요약 */}
                     {d.response?.phrase && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>HTTP 응답</div>
                         <div className='flex items-center gap-3'>
                           <Badge
                             level={
-                              d.response.phrase === 'OK' || d.response.phrase.startsWith('2')
+                              d.response.phrase === 'OK' || d.response.phrase.startsWith?.('2')
                                 ? 'ok'
-                                : d.response.phrase.startsWith('5')
+                                : d.response.phrase.startsWith?.('5')
                                   ? 'crit'
                                   : 'warn'
                             }
@@ -358,7 +384,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: HTTP 요청 === */}
                 {activeTab === 'request' && (
                   <>
-                    {/* 요청 정보 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>📤 요청 정보</div>
                       <div className='space-y-2'>
@@ -370,7 +395,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* User Agent */}
                     {d.request?.userAgent && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
@@ -392,7 +416,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     )}
 
-                    {/* 요청 통계 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>📊 요청 통계</div>
                       <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
@@ -404,7 +427,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* Cookie */}
                     {d.request?.cookie && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>🍪 Cookie</div>
@@ -419,7 +441,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: HTTP 응답 === */}
                 {activeTab === 'response' && (
                   <>
-                    {/* 응답 정보 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>📥 응답 정보</div>
                       <div className='space-y-2'>
@@ -447,7 +468,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* 응답 통계 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>📊 응답 통계</div>
                       <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
@@ -464,7 +484,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: 시간 분석 === */}
                 {activeTab === 'timing' && (
                   <>
-                    {/* 주요 시간 메트릭 */}
                     <div className='grid grid-cols-3 gap-3'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='text-xs text-gray-500'>응답 시간</div>
@@ -489,7 +508,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* 타임라인 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>⏱️ 타임라인</div>
                       <div className='space-y-3 text-sm'>
@@ -506,7 +524,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* 지연 시간 상세 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         🔍 지연 시간 상세
@@ -536,7 +553,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: TCP 품질 === */}
                 {activeTab === 'quality' && (
                   <>
-                    {/* 품질 점수 */}
                     {d.tcpQuality?.quality && (
                       <div className='rounded-xl border bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6'>
                         <div className='text-center'>
@@ -551,7 +567,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     )}
 
-                    {/* RTT/RTO */}
                     {(d.tcpQuality?.ackRttCntReq || d.tcpQuality?.ackRtoCntReq) && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>⚡ RTT / RTO</div>
@@ -593,7 +608,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     )}
 
-                    {/* TCP 에러 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>⚠️ TCP 에러</div>
                       {d.tcpQuality?.tcpErrorCnt === 0 ? (
@@ -638,7 +652,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                 {/* === Tab: 성능 === */}
                 {activeTab === 'performance' && (
                   <>
-                    {/* Mbps */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📊 대역폭 (Mbps)
@@ -669,7 +682,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* PPS */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📦 패킷 속도 (PPS)
@@ -700,7 +712,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* 트래픽 통계 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>📈 트래픽 통계</div>
                       <div className='grid grid-cols-3 gap-3 text-sm'>
@@ -736,39 +747,61 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <div className='grid md:grid-cols-2 gap-4'>
-                    {/* 출발지 */}
+                  <>
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        📍 출발지 (요청)
-                      </div>
-                      <div className='space-y-2 text-sm'>
-                        <LV label='국가' value={d.env?.countryReq} />
-                        <LV label='대륙' value={d.env?.continentReq} />
-                        <LV label='시/도' value={d.env?.domesticPrimaryReq} />
-                        <LV label='시/군/구' value={d.env?.domesticSub1Req} />
-                        <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
-                      </div>
+                      <EnhancedGeoMap
+                        countryReq={d.env?.countryReq}
+                        countryRes={d.env?.countryRes}
+                        srcIp={d.srcIp}
+                        dstIp={d.dstIp}
+                        env={d.env}
+                      />
                     </div>
 
-                    {/* 목적지 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        📍 목적지 (응답)
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      {/* 출발지 */}
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          📍 출발지 (요청)
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV label='IP 주소' value={d.srcIp} />
+                          <LV label='포트' value={d.srcPort} />
+                          <LV label='MAC 주소' value={d.srcMac} />
+                          <div className='pt-2 border-t'>
+                            <LV label='국가' value={d.env?.countryReq} />
+                            <LV label='대륙' value={d.env?.continentReq} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryReq} />
+                            <LV label='시/군/구' value={d.env?.domesticSub1Req} />
+                            <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
+                          </div>
+                        </div>
                       </div>
-                      <div className='space-y-2 text-sm'>
-                        <LV label='국가' value={d.env?.countryRes} />
-                        <LV label='대륙' value={d.env?.continentRes} />
-                        <LV label='시/도' value={d.env?.domesticPrimaryRes} />
-                        <LV label='시/군/구' value={d.env?.domesticSub1Res} />
-                        <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
+
+                      {/* 목적지 */}
+                      <div className='rounded-xl border bg-gradient-to-br from-red-50 to-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          📍 목적지 (응답)
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV label='IP 주소' value={d.dstIp} />
+                          <LV label='포트' value={d.dstPort} />
+                          <LV label='MAC 주소' value={d.dstMac} />
+                          <div className='pt-2 border-t'>
+                            <LV label='국가' value={d.env?.countryRes} />
+                            <LV label='대륙' value={d.env?.continentRes} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryRes} />
+                            <LV label='시/군/구' value={d.env?.domesticSub1Res} />
+                            <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
-                {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t'>
+                {/* Footer (page와 동일 구조) */}
+                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
                   <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
                 </div>
               </>
