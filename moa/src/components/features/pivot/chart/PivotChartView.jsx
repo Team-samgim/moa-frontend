@@ -1,10 +1,10 @@
-import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { buildPivotEChartOption } from './buildPivotEChartOption'
 import { usePivotChartQuery } from '@/hooks/queries/useCharts'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 
-const PivotChartViewInner = (_, ref) => {
+const PivotChartViewInner = ({ onChartClick }, ref) => {
   const chartType = usePivotChartStore((s) => s.chartType)
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
 
@@ -13,7 +13,6 @@ const PivotChartViewInner = (_, ref) => {
   const echartsRef = useRef(null)
 
   useImperativeHandle(ref, () => ({
-    // 기존 로컬 다운로드 (원하면 계속 사용 가능)
     downloadImage: () => {
       const instance =
         echartsRef.current &&
@@ -37,7 +36,7 @@ const PivotChartViewInner = (_, ref) => {
       link.click()
     },
 
-    // 서버 업로드용 dataURL 반환
+    // 서버 업로드용 dataURL
     getImageDataUrl: () => {
       const instance =
         echartsRef.current &&
@@ -56,7 +55,28 @@ const PivotChartViewInner = (_, ref) => {
       })
     },
   }))
-  // 이하 기존 내용 동일
+
+  const handleChartClick = useCallback(
+    (params) => {
+      if (!data || !onChartClick) return
+      if (chartType === 'multiplePie') return // 멀티 파이에서는 드릴다운 비활성화
+
+      // groupedColumn / line / area / bar > params.name === 축 카테고리 이름
+      const selectedColKey = params.name
+      const rowKeys = data.yCategories || []
+
+      if (!selectedColKey || !rowKeys.length) return
+
+      onChartClick({
+        selectedColKey,
+        rowKeys,
+        rawEvent: params,
+        chartData: data,
+      })
+    },
+    [data, onChartClick, chartType],
+  )
+
   if (!isChartMode) {
     return (
       <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
@@ -85,7 +105,12 @@ const PivotChartViewInner = (_, ref) => {
 
   return (
     <div className='h-[360px] w-full'>
-      <ReactECharts ref={echartsRef} option={option} style={{ width: '100%', height: '100%' }} />
+      <ReactECharts
+        ref={echartsRef}
+        option={option}
+        style={{ width: '100%', height: '100%' }}
+        onEvents={{ click: handleChartClick }}
+      />
     </div>
   )
 }
