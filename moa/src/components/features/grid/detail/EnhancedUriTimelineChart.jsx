@@ -327,7 +327,7 @@ const EnhancedUriTimelineChart = memo(function EnhancedUriTimelineChart({ timing
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  return <div ref={chartRef} style={{ width: '100%', height: '350px' }} />
+  return <div ref={chartRef} style={{ width: '90%', height: '300px' }} />
 })
 
 export default EnhancedUriTimelineChart

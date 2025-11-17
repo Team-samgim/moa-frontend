@@ -229,6 +229,17 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
   // CRC 에러 여부
   const hasCrcError = (crcErrorCnt || 0) > 0
 
+  // 시간 정보: 값이 0이어도 필드가 존재하면 노출
+  const hasTimeInfoSummary =
+    tsFirst !== null ||
+    tsLast !== null ||
+    tsSampleBegin !== null ||
+    tsSampleEnd !== null ||
+    durSec !== null
+
+  // CRC 에러 데이터 길이: 0이어도 필드가 존재하면 노출
+  const hasCrcErrorLen = crcErrorLen !== null || crcErrorLenReq !== null || crcErrorLenRes !== null
+
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
       <div className='absolute inset-0 bg-black/40 backdrop-blur-[2px]' onClick={onClose} />
@@ -456,8 +467,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                       </div>
                     )}
 
-                    {/* 시간 정보 */}
-                    {(tsFirst || tsLast || tsSampleBegin || durSec) && (
+                    {/* 시간 정보: 값이 0이어도 필드만 존재하면 보여줌 */}
+                    {hasTimeInfoSummary && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>⏱️ 시간 정보</div>
                         <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
@@ -590,8 +601,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                           </div>
                         </div>
 
-                        {/* 에러 데이터 크기 */}
-                        {(crcErrorLen || crcErrorLenReq || crcErrorLenRes) && (
+                        {/* 에러 데이터 크기: 값이 0이어도 필드만 존재하면 노출 */}
+                        {hasCrcErrorLen && (
                           <div className='grid grid-cols-3 gap-3 mb-4'>
                             <div className='bg-white/60 p-3 rounded'>
                               <div className='text-xs text-gray-600 mb-1'>총 에러 데이터</div>
@@ -826,7 +837,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <>
+                  <div className='grid md:grid-cols-2 gap-4 items-stretch'>
+                    {/* 왼쪽: 지도 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <EnhancedGeoMap
                         countryReq={d.env?.countryReq}
@@ -837,7 +849,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                       />
                     </div>
 
-                    <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 오른쪽: 출발지/도착지 카드를 위아래로 */}
+                    <div className='flex flex-col gap-4'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 출발지 (요청)
@@ -874,18 +887,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
-
-                {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
-                  <span className='font-mono'>rowKey: {emptyValue(_rk)}</span>
-                  {hasCrcError && (
-                    <span className='text-red-500 font-medium'>
-                      ⚠️ CRC 에러 {(crcErrorCnt || 0).toLocaleString()}건 감지
-                    </span>
-                  )}
-                </div>
               </>
             )}
           </div>

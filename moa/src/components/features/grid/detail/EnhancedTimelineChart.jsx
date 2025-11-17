@@ -336,7 +336,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  return <div ref={chartRef} style={{ width: '100%', height: '400px' }} />
+  return <div ref={chartRef} style={{ width: '90%', height: '300px' }} />
 }
 
 export default EnhancedTimelineChart
