@@ -9,11 +9,13 @@ export async function fetchMyProfile() {
 
 /** ========= 프리셋 ========= **/
 // 프리셋 목록
-export async function fetchMyPresets({ page = 0, size = 50, type } = {}) {
-  const { data } = await api.get('/mypage/presets', {
-    params: { page, size, ...(type ? { type } : {}) }, // type: 'SEARCH' | 'PIVOT' (옵션)
-  })
-  // 기대 응답: { items: [...], total, ... }
+export async function fetchMyPresets({ page = 0, size = 50, type, origin } = {}) {
+  const params = { page, size }
+
+  if (type) params.type = type // SEARCH | PIVOT
+  if (origin) params.origin = origin // USER | EXPORT
+
+  const { data } = await api.get('/mypage/presets', { params })
   return data
 }
 
