@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
@@ -35,6 +36,7 @@ import { usePivotStore } from '@/stores/pivotStore'
 import { applyPivotPresetConfigToStore } from '@/utils/preset/pivotPreset'
 
 const PivotPage = () => {
+  const location = useLocation()
   const {
     layer,
     timeRange,
@@ -62,6 +64,32 @@ const PivotPage = () => {
   const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
 
   const chartViewRef = useRef(null)
+
+  // ====== 마이페이지에서 넘어온 피벗 프리셋 적용 ======
+  const presetConfigFromLocation = location.state?.preset
+
+  useEffect(() => {
+    if (!presetConfigFromLocation) return
+
+    try {
+      const modeFromPreset = presetConfigFromLocation?.pivot?.mode
+
+      // config 전체를 store에 밀어넣기
+      applyPivotPresetConfigToStore(presetConfigFromLocation || {})
+
+      // fromGrid / free 모드 동기화
+      if (modeFromPreset === 'fromGrid' || modeFromPreset === 'free') {
+        setPivotMode(modeFromPreset)
+      }
+
+      // 바로 쿼리 실행
+      runQueryNow()
+    } catch (e) {
+      console.error(e)
+      window.alert('프리셋 적용 중 오류가 발생했습니다.')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetConfigFromLocation])
 
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false)
   const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)

@@ -9,13 +9,18 @@ import { useMyPresets, useToggleFavoritePreset, useDeletePreset } from '@/hooks/
 import { normalizePresetConfig } from '@/utils/presetNormalizer'
 
 const PresetPage = () => {
-  const [type, setType] = useState('SEARCH')
+  const [type, setType] = useState('PIVOT')
   const [page, setPage] = useState(0)
   const size = 10
   const navigate = useNavigate()
 
   const apiType = type === 'SEARCH' ? 'SEARCH' : 'PIVOT'
-  const { data, isLoading } = useMyPresets({ page, size, type: apiType })
+  const { data, isLoading } = useMyPresets({
+    page,
+    size,
+    type: apiType,
+    origin: 'USER',
+  })
   const favMut = useToggleFavoritePreset()
   const delMut = useDeletePreset()
 

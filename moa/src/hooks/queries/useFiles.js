@@ -22,6 +22,15 @@ export function useExportPreview({ fileId, limit = 20, enabled = false }) {
   })
 }
 
+// 차트 이미지 URL용 훅 (다운로드 대신 미리보기)
+export function useExportImageUrl({ fileId, enabled = false }) {
+  return useQuery({
+    queryKey: ['exportImageUrl', fileId],
+    queryFn: () => getExportDownloadUrl(fileId), // presigned URL 그대로 사용
+    enabled: !!fileId && enabled,
+  })
+}
+
 export function useDeleteExport() {
   const qc = useQueryClient()
   return useMutation({
