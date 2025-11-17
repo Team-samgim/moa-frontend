@@ -27,6 +27,7 @@ const DataGrid = forwardRef(function DataGrid(
     onGridApis,
     onActiveFiltersChange,
     onRowClick,
+    showRawNumber = false,
   },
   ref,
 ) {
@@ -144,6 +145,7 @@ const DataGrid = forwardRef(function DataGrid(
         const isDate = col.type === 'date'
         const isNumber = col.type === 'number'
         const vf = isNumber ? pickFormatterByField(col.name) : null
+
         return {
           field: col.name,
           headerName: col.labelKo || col.name,
@@ -156,14 +158,20 @@ const DataGrid = forwardRef(function DataGrid(
           valueGetter: unwrapGetter(col.name),
           ...(isDate && { valueFormatter: ({ value }) => formatUtcToSeoul(value) }),
           ...(isNumber && {
-            valueFormatter: ({ value }) => (value === null ? '' : vf(Number(value))),
+            valueFormatter: ({ value }) => {
+              if (value === null || value === undefined) return ''
+              const num = Number(value)
+              if (Number.isNaN(num)) return ''
+              // false면 기존처럼 1.4k / 2.3M 등 단위 포맷 사용
+              return showRawNumber ? num.toLocaleString() : vf(num)
+            },
             cellClass: 'ag-right-aligned-cell',
           }),
         }
       }),
     ]
     setColumnDefs(defs)
-  }, [columns, layer, unwrapGetter])
+  }, [columns, layer, unwrapGetter, showRawNumber])
 
   const defaultColDef = useMemo(
     () => ({
@@ -288,9 +296,6 @@ const DataGrid = forwardRef(function DataGrid(
         popupParent={popupParent}
         onFilterOpened={onFilterOpened}
         onRowClicked={(e) => {
-          // 무한 스크롤 모델에서도 e.data 사용 가능
-          console.log('[row]', e.data)
-
           onRowClick?.(e.data)
         }}
       />

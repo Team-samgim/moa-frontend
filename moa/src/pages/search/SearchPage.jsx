@@ -54,6 +54,7 @@ const SearchPage = () => {
   const [isSearching, setIsSearching] = useState(false)
   const [searchTotal, setSearchTotal] = useState(null)
   const [aggFilters, setAggFilters] = useState({})
+  const [showRawNumber, setShowRawNumber] = useState(false)
 
   const gridRef = useRef(null)
 
@@ -415,12 +416,26 @@ const SearchPage = () => {
                 })}
               />
               {searchTotal !== null && (
-                <div className='mb-2 text-sm text-gray-600'>
-                  총{' '}
-                  <span className='font-semibold text-blue-600'>
-                    {searchTotal.toLocaleString()}
-                  </span>
-                  건
+                <div className='mb-2 flex items-center justify-between text-sm text-gray-600'>
+                  {/* 왼쪽: 총 건수 */}
+                  <div>
+                    총{' '}
+                    <span className='font-semibold text-blue-600'>
+                      {searchTotal.toLocaleString()}
+                    </span>
+                    건
+                  </div>
+
+                  {/* 오른쪽: 원본 데이터 체크박스 */}
+                  <label className='flex items-center gap-2 text-xs text-gray-600'>
+                    <input
+                      type='checkbox'
+                      className='h-4 w-4'
+                      checked={showRawNumber}
+                      onChange={(e) => setShowRawNumber(e.target.checked)}
+                    />
+                    <span>원본 데이터</span>
+                  </label>
                 </div>
               )}
               <DataGrid
@@ -447,6 +462,7 @@ const SearchPage = () => {
                     setHttpUriRowKey(key)
                   }
                 }}
+                showRawNumber={showRawNumber}
               />
               {aggQuery.isSuccess && (
                 <AggregatesPanel

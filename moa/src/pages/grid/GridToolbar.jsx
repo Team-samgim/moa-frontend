@@ -111,7 +111,6 @@ const GridToolbar = ({
         config,
         favorite: false,
       }
-      console.log('[PRESET_SAVE] request body =>', requestBody)
 
       const res = await saveGridPreset(requestBody)
       return res
