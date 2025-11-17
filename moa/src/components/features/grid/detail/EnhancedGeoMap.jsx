@@ -141,7 +141,6 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
 
     const option = {
       title: {
-        text: markers.length === 2 ? '네트워크 경로' : '위치 정보',
         left: 'center',
         textStyle: { fontSize: 14, fontWeight: 600 },
         subtext: markers.length === 2 ? `${countryReq || '출발'} → ${countryRes || '도착'}` : '',
@@ -216,13 +215,13 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
 
   if (isError) {
     return (
-      <div className='flex items-center justify-center w-full h-[450px] text-sm text-red-600'>
+      <div className='flex items-center justify-center w-full h-[300px] text-sm text-red-600'>
         세계 지도 데이터를 불러오지 못했습니다.
       </div>
     )
   }
 
-  return <div ref={chartRef} style={{ width: '100%', height: '450px' }} />
+  return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />
 }
 
 export default EnhancedGeoMap

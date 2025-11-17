@@ -1,7 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import EnhancedTimelineChart from '@/components/features/grid/detail/EnhancedTimelineChart'
-import TcpQualityGauge from '@/components/features/grid/detail/TcpQualityGauge'
 import useHttpPageMetrics from '@/hooks/detail/useHttpPageMetrics'
 import { emptyValue, formatMs, formatTimestamp } from '@/utils/httpPageFormat'
 
@@ -150,12 +149,39 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
   const tcpQualityScore = Math.max(0, Math.min(100, 100 - tcpErrorPct))
   const tcpErrorDisplay = d.tcpQuality ? `${tcpErrorPct.toFixed(2)}%` : '값 없음'
 
+  const tcpErrorSessionRatio = d.tcpQuality
+    ? (d.tcpQuality.tcpErrorSessionRatio ??
+      ((d.tcpQuality.tcpSessionCnt ?? 0) > 0
+        ? (d.tcpQuality.tcpErrorSessionCnt ?? 0) / d.tcpQuality.tcpSessionCnt
+        : null))
+    : null
+
+  const tcpErrorCntRatio = d.tcpQuality
+    ? (d.tcpQuality.tcpErrorCntRatio ??
+      ((d.traffic?.pageTcpCnt ?? 0) > 0
+        ? (d.tcpQuality.tcpErrorCnt ?? 0) / d.traffic.pageTcpCnt
+        : null))
+    : null
+
   // 지연 요약 (정규화에서 계산된 delaySummary 사용)
   const delaySummary = d.delaySummary
   const dominantRatioPct =
     delaySummary && delaySummary.dominantRatio !== null
       ? (delaySummary.dominantRatio * 100).toFixed(1)
       : null
+
+  // === 0일 때도 섹션이 사라지지 않도록 존재 여부 플래그들 ===
+  const hasCaptureTime = d.tsServer !== null && d.tsServer !== undefined
+
+  const hasTcpConnectStats =
+    d.timing &&
+    (d.timing.tsPageTcpConnectSum !== null ||
+      d.timing.tsPageTcpConnectAvg !== null ||
+      d.timing.tsPageTcpConnectMin !== null ||
+      d.timing.tsPageTcpConnectMax !== null)
+
+  const hasReqMakingStats =
+    d.timing && (d.timing.tsPageReqMakingSum !== null || d.timing.tsPageReqMakingAvg !== null)
 
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
@@ -211,14 +237,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
             <TabButton id='timing' activeId={activeTab} onClick={setActiveTab}>
               ⏱️ 시간 분석
             </TabButton>
-            <TabButton id='methods' activeId={activeTab} onClick={setActiveTab}>
-              📊 HTTP 메소드
-            </TabButton>
             <TabButton id='status' activeId={activeTab} onClick={setActiveTab}>
-              🎯 응답 코드
-            </TabButton>
-            <TabButton id='quality' activeId={activeTab} onClick={setActiveTab}>
-              📈 TCP 품질
+              🎯 상태 / 메소드
             </TabButton>
             <TabButton id='performance' activeId={activeTab} onClick={setActiveTab}>
               ⚡ 성능
@@ -384,8 +404,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
                     </div>
 
-                    {/* 타임스탬프 정보 */}
-                    {d.tsServer && (
+                    {/* 타임스탬프 정보: 0이어도 필드만 있으면 노출 */}
+                    {hasCaptureTime && (
                       <div className='rounded-xl border bg-gray-50 p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>⏰ 캡처 시간</div>
                         <div className='text-sm text-gray-600'>
@@ -404,7 +424,64 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {/* === Tab: 시간 분석 === */}
                 {activeTab === 'timing' && d.timing && (
                   <>
-                    {/* ⏱️ 지연 요약 카드 (URI 모달 느낌) */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <EnhancedTimelineChart timing={d.timing} delaySummary={delaySummary} />
+                    </div>
+
+                    {/* 주요 시간 메트릭 카드 */}
+                    <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>TCP 연결 평균</div>
+                        <div className='text-lg font-bold text-purple-700'>
+                          {formatMs((d.timing?.tsPageTcpConnectAvg || 0) * 1000)}
+                        </div>
+                        {d.timing?.tsPageTcpConnectMin !== null &&
+                          d.timing?.tsPageTcpConnectMax !== null && (
+                            <div className='text-xs text-gray-500 mt-1'>
+                              {formatMs(d.timing.tsPageTcpConnectMin * 1000)} ~{' '}
+                              {formatMs(d.timing.tsPageTcpConnectMax * 1000)}
+                            </div>
+                          )}
+                      </div>
+
+                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>요청 전송</div>
+                        <div className='text-lg font-bold text-emerald-700'>
+                          {formatMs((d.timing?.tsPageTransferReq || 0) * 1000)}
+                        </div>
+                        {d.timing?.tsPageTransferReqGap > 0 && (
+                          <div className='text-xs text-red-500 mt-1'>
+                            갭: {formatMs(d.timing.tsPageTransferReqGap * 1000)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>TTFB (서버 처리)</div>
+                        <div className='text-lg font-bold text-amber-700'>
+                          {formatMs((d.timing?.tsPageResInit || 0) * 1000)}
+                        </div>
+                        {d.timing?.tsPageResInitGap > 0 && (
+                          <div className='text-xs text-red-500 mt-1'>
+                            갭: {formatMs(d.timing.tsPageResInitGap * 1000)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='text-xs text-gray-500'>응답 전송</div>
+                        <div className='text-lg font-bold text-blue-700'>
+                          {formatMs((d.timing?.tsPageTransferRes || 0) * 1000)}
+                        </div>
+                        {d.timing?.tsPageTransferResGap > 0 && (
+                          <div className='text-xs text-red-500 mt-1'>
+                            갭: {formatMs(d.timing.tsPageTransferResGap * 1000)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 지연 요약 카드 */}
                     {delaySummary && (
                       <div className='rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4'>
                         <div className='flex items-center justify-between mb-2'>
@@ -446,62 +523,6 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
                       </div>
                     )}
-
-                    <div className='rounded-xl border bg-white p-4'>
-                      <EnhancedTimelineChart timing={d.timing} delaySummary={delaySummary} />
-                    </div>
-
-                    {/* 주요 시간 메트릭 카드 */}
-                    <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
-                        <div className='text-xs text-gray-500'>TCP 연결 평균</div>
-                        <div className='text-lg font-bold text-purple-700'>
-                          {formatMs((d.timing?.tsPageTcpConnectAvg || 0) * 1000)}
-                        </div>
-                        {d.timing?.tsPageTcpConnectMin && d.timing?.tsPageTcpConnectMax && (
-                          <div className='text-xs text-gray-500 mt-1'>
-                            {formatMs(d.timing.tsPageTcpConnectMin * 1000)} ~{' '}
-                            {formatMs(d.timing.tsPageTcpConnectMax * 1000)}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
-                        <div className='text-xs text-gray-500'>요청 전송</div>
-                        <div className='text-lg font-bold text-emerald-700'>
-                          {formatMs((d.timing?.tsPageTransferReq || 0) * 1000)}
-                        </div>
-                        {d.timing?.tsPageTransferReqGap > 0 && (
-                          <div className='text-xs text-red-500 mt-1'>
-                            갭: {formatMs(d.timing.tsPageTransferReqGap * 1000)}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
-                        <div className='text-xs text-gray-500'>TTFB (서버 처리)</div>
-                        <div className='text-lg font-bold text-amber-700'>
-                          {formatMs((d.timing?.tsPageResInit || 0) * 1000)}
-                        </div>
-                        {d.timing?.tsPageResInitGap > 0 && (
-                          <div className='text-xs text-red-500 mt-1'>
-                            갭: {formatMs(d.timing.tsPageResInitGap * 1000)}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
-                        <div className='text-xs text-gray-500'>응답 전송</div>
-                        <div className='text-lg font-bold text-blue-700'>
-                          {formatMs((d.timing?.tsPageTransferRes || 0) * 1000)}
-                        </div>
-                        {d.timing?.tsPageTransferResGap > 0 && (
-                          <div className='text-xs text-red-500 mt-1'>
-                            갭: {formatMs(d.timing.tsPageTransferResGap * 1000)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
                     {/* Gap 분석 */}
                     {(d.timing?.tsPageGap > 0 ||
@@ -611,8 +632,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
                     </div>
 
-                    {/* TCP 연결 시간 통계 */}
-                    {(d.timing?.tsPageTcpConnectSum > 0 || d.timing?.tsPageTcpConnectAvg > 0) && (
+                    {/* TCP 연결 시간 통계: 값이 0이어도 필드만 있으면 노출 */}
+                    {hasTcpConnectStats && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           🔌 TCP 연결 시간 통계
@@ -638,8 +659,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
                     )}
 
-                    {/* 요청 생성 시간 */}
-                    {(d.timing?.tsPageReqMakingSum > 0 || d.timing?.tsPageReqMakingAvg > 0) && (
+                    {/* 요청 생성 시간: 값이 0이어도 필드만 있으면 노출 */}
+                    {hasReqMakingStats && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📝 요청 생성 시간
@@ -659,9 +680,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                   </>
                 )}
 
-                {/* === Tab: HTTP 메소드 === */}
-                {activeTab === 'methods' && (
-                  <>
+                {/* === Tab: 응답 코드 === */}
+                {activeTab === 'status' && (
+                  <div className='space-y-6'>
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📊 HTTP 메소드 통계
@@ -679,49 +700,12 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         <Row label='기타' value={d.methods?.othCnt || 0} />
                       </div>
                     </div>
-
-                    {d.methods?.hasErrors && (
-                      <div className='rounded-xl border border-red-200 bg-red-50 p-4'>
-                        <div className='mb-3 text-sm font-semibold text-red-800'>
-                          ⚠️ 메소드별 에러
-                        </div>
-                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
-                          {d.methods.getCntError > 0 && (
-                            <Row label='GET 에러' value={d.methods.getCntError} />
-                          )}
-                          {d.methods.postCntError > 0 && (
-                            <Row label='POST 에러' value={d.methods.postCntError} />
-                          )}
-                          {d.methods.putCntError > 0 && (
-                            <Row label='PUT 에러' value={d.methods.putCntError} />
-                          )}
-                          {d.methods.deleteCntError > 0 && (
-                            <Row label='DELETE 에러' value={d.methods.deleteCntError} />
-                          )}
-                          {d.methods.headCntError > 0 && (
-                            <Row label='HEAD 에러' value={d.methods.headCntError} />
-                          )}
-                          {d.methods.optionsCntError > 0 && (
-                            <Row label='OPTIONS 에러' value={d.methods.optionsCntError} />
-                          )}
-                          {d.methods.patchCntError > 0 && (
-                            <Row label='PATCH 에러' value={d.methods.patchCntError} />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* === Tab: 응답 코드 === */}
-                {activeTab === 'status' && (
-                  <div className='space-y-6'>
                     {/* 현재 요청의 응답 코드 */}
-                    <div className='rounded-xl border bg-white p-6'>
+                    <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-4 text-sm font-semibold text-gray-800'>
                         📊 현재 HTTP 응답 코드
                       </div>
-                      <div className='flex items-center justify-center py-8'>
+                      <div className='flex items-center justify-center'>
                         <div className='text-center'>
                           <div
                             className={[
@@ -756,66 +740,62 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
                       </div>
                     </div>
-
-                    {/* 코드 구간별 설명 가이드 */}
-                    <div className='rounded-xl border bg-gray-50 p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        🧭 HTTP 상태 코드 가이드
-                      </div>
-                      <div className='grid md:grid-cols-2 gap-3'>
-                        <div className='mt-2 p-4 bg-gray-50 rounded-lg text-xs text-gray-600'>
-                          <strong>응답 코드 범주:</strong>
-                          <ul className='mt-2 space-y-1 ml-4 list-disc'>
-                            <li>1xx: 정보성 응답</li>
-                            <li>2xx: 성공 (200 OK, 201 Created, 204 No Content 등)</li>
-                            <li>3xx: 리다이렉션 (301 Moved, 302 Found, 304 Not Modified 등)</li>
-                            <li>4xx: 클라이언트 에러 (400 Bad Request, 404 Not Found 등)</li>
-                            <li>5xx: 서버 에러 (500 Internal Server Error, 503 Unavailable 등)</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
-                {/* === Tab: TCP 품질 === */}
-                {activeTab === 'quality' && (
-                  <div className='space-y-4'>
-                    <div className='rounded-xl border bg-white p-4'>
-                      {d.tcpQuality ? (
-                        <TcpQualityGauge tcpQuality={d.tcpQuality} />
-                      ) : (
-                        <div className='text-sm text-gray-500 text-center py-8'>
-                          TCP 품질 데이터가 없습니다.
-                        </div>
-                      )}
-                    </div>
-
+                {/* === Tab: 성능 (TCP 품질 포함) === */}
+                {activeTab === 'performance' && (
+                  <>
+                    {/* 1) TCP 품질 요약 섹션 */}
                     {d.tcpQuality && (
-                      <div className='rounded-xl border bg-gray-50 p-4'>
-                        <div className='mb-3 text-sm font-semibold text-gray-800'>
-                          🔍 TCP 품질 상세
-                        </div>
-                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
-                          <LV label='에러율' value={tcpErrorDisplay} />
-                          <LV
-                            label='총 세션 수'
-                            value={d.tcpQuality.tcpSessionCnt?.toLocaleString() ?? '값 없음'}
-                          />
-                          <LV
-                            label='에러 세션 수'
-                            value={d.tcpQuality.tcpErrorSessionCnt?.toLocaleString() ?? '값 없음'}
-                          />
+                      <div className='rounded-xl border bg-white p-4 mb-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>📈 TCP 품질</div>
+                        <div className='grid md:grid-cols-3 gap-3'>
+                          {/* 품질 점수 */}
+                          <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                            <div className='text-xs text-gray-500'>TCP 품질 점수</div>
+                            <div className='text-2xl font-bold text-emerald-700'>
+                              {Number.isFinite(tcpQualityScore)
+                                ? `${tcpQualityScore.toFixed(0)}점`
+                                : '-'}
+                            </div>
+                            <div className='mt-1 text-[11px] text-gray-500'>
+                              (에러율 {tcpErrorDisplay})
+                            </div>
+                          </div>
+
+                          {/* 에러 세션 비율 */}
+                          <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                            <div className='text-xs text-gray-500'>에러 세션 비율</div>
+                            <div className='text-2xl font-bold text-amber-700'>
+                              {tcpErrorSessionRatio !== null
+                                ? `${(tcpErrorSessionRatio * 100).toFixed(2)}%`
+                                : '-'}
+                            </div>
+                            <div className='mt-1 text-[11px] text-gray-500'>
+                              {(d.tcpQuality?.tcpSessionCnt ?? 0).toLocaleString()}개 중{' '}
+                              {(d.tcpQuality?.tcpErrorSessionCnt ?? 0).toLocaleString()}개 에러
+                            </div>
+                          </div>
+
+                          {/* 에러 패킷 비율 */}
+                          <div className='rounded-xl border bg-gradient-to-br from-rose-50 to-white p-4'>
+                            <div className='text-xs text-gray-500'>에러 패킷 비율</div>
+                            <div className='text-2xl font-bold text-rose-700'>
+                              {tcpErrorCntRatio !== null
+                                ? `${(tcpErrorCntRatio * 100).toFixed(2)}%`
+                                : '-'}
+                            </div>
+                            <div className='mt-1 text-[11px] text-gray-500'>
+                              전체 TCP: {(d.traffic?.pageTcpCnt ?? 0).toLocaleString()} / 에러:{' '}
+                              {(d.tcpQuality?.tcpErrorCnt ?? 0).toLocaleString()}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* === Tab: 성능 === */}
-                {activeTab === 'performance' && (
-                  <>
-                    {/* 대역폭 & 패킷 속도 */}
+                    {/* 2) 대역폭 & 패킷 속도 */}
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
@@ -870,7 +850,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
                     </div>
 
-                    {/* 트래픽 상세 통계 */}
+                    {/* 3) 트래픽 상세 통계 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📈 트래픽 상세 통계
@@ -918,7 +898,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                               </div>
                             </div>
                             <div className='bg-blue-50 p-2 rounded'>
-                              <div className='flex justify-between'>
+                              <div className='flex justifyetween'>
                                 <span className='text-gray-500'>패킷</span>
                                 <span className='font-medium'>
                                   {prettyBytes(d.traffic?.pagePktLenReq || 0)}
@@ -972,7 +952,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <>
+                  <div className='grid md:grid-cols-2 gap-4 items-stretch'>
+                    {/* 왼쪽: 지도 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <EnhancedGeoMap
                         countryReq={d.env?.countryReq}
@@ -983,7 +964,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       />
                     </div>
 
-                    <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 오른쪽: 출발지/도착지 카드 */}
+                    <div className='flex flex-col gap-4'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 출발지 (요청)
@@ -1020,13 +1002,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
-
-                {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
-                  <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
-                </div>
               </>
             )}
           </div>

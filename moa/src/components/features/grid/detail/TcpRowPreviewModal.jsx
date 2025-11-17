@@ -193,6 +193,23 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
         ? 'warn'
         : 'ok'
 
+  // RTT / RTO 존재 여부 (0이어도 필드만 있으면 true)
+  const hasRtt = d.ackRttCntReq !== null || d.ackRttCntRes !== null
+
+  const hasRto = d.ackRtoTotal !== null || d.ackRtoCntReq !== null || d.ackRtoCntRes !== null
+
+  // 요약 탭 시간 정보 존재 여부 (0이어도 필드만 있으면 true)
+  const hasTimeInfo =
+    d.tsFirst !== null ||
+    d.tsLast !== null ||
+    d.durSec !== null ||
+    d.tsSampleBegin !== null ||
+    d.tsSampleEnd !== null
+
+  // PDU 분석 정보 존재 여부 (0이어도 필드만 있으면 true)
+  const hasPduInfo =
+    d.lenPdu !== null || d.lenPduReq !== null || d.lenPduRes !== null || d.overhead !== null
+
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
       <div className='absolute inset-0 bg-black/40 backdrop-blur-[2px]' onClick={onClose} />
@@ -438,7 +455,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     )}
 
                     {/* 시간 정보 */}
-                    {(d.tsFirst || d.tsLast || d.durSec) && (
+                    {hasTimeInfo && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>⏱️ 시간 정보</div>
                         <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
@@ -599,40 +616,49 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     </div>
 
                     {/* RTT/RTO */}
-                    {(d.ackRttCntReq || d.ackRttCntRes || d.ackRtoCntReq || d.ackRtoCntRes) && (
+                    {(hasRtt || hasRto) && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           ⚡ RTT / RTO (응답 시간 / 타임아웃)
                         </div>
                         <div className='grid grid-cols-2 gap-3 mb-4'>
-                          <div className='bg-blue-50 p-3 rounded-lg'>
-                            <div className='text-xs text-gray-600 mb-1'>RTT (Round Trip Time)</div>
-                            <div className='text-xl font-bold text-blue-700'>
-                              {(d.ackRttCntReq || 0) + (d.ackRttCntRes || 0)}회
+                          {/* RTT 카드: 필드가 있을 때만 노출 (값이 0이어도 보임) */}
+                          {hasRtt && (
+                            <div className='bg-blue-50 p-3 rounded-lg'>
+                              <div className='text-xs text-gray-600 mb-1'>
+                                RTT (Round Trip Time)
+                              </div>
+                              <div className='text-xl font-bold text-blue-700'>
+                                {(d.ackRttCntReq || 0) + (d.ackRttCntRes || 0)}회
+                              </div>
+                              <div className='text-xs text-gray-500 mt-1'>
+                                요청: {d.ackRttCntReq || 0} / 응답: {d.ackRttCntRes || 0}
+                              </div>
                             </div>
-                            <div className='text-xs text-gray-500 mt-1'>
-                              요청: {d.ackRttCntReq || 0} / 응답: {d.ackRttCntRes || 0}
-                            </div>
-                          </div>
-                          <div
-                            className={`p-3 rounded-lg ${
-                              (d.ackRtoTotal || 0) > 0 ? 'bg-red-50' : 'bg-green-50'
-                            }`}
-                          >
-                            <div className='text-xs text-gray-600 mb-1'>
-                              RTO (Retransmission Timeout)
-                            </div>
+                          )}
+
+                          {/* RTO 카드: 필드가 있을 때만 노출 (값이 0이어도 보임) */}
+                          {hasRto && (
                             <div
-                              className={`text-xl font-bold ${
-                                (d.ackRtoTotal || 0) > 0 ? 'text-red-700' : 'text-green-700'
+                              className={`p-3 rounded-lg ${
+                                (d.ackRtoTotal || 0) > 0 ? 'bg-red-50' : 'bg-green-50'
                               }`}
                             >
-                              {d.ackRtoTotal || 0}회
+                              <div className='text-xs text-gray-600 mb-1'>
+                                RTO (Retransmission Timeout)
+                              </div>
+                              <div
+                                className={`text-xl font-bold ${
+                                  (d.ackRtoTotal || 0) > 0 ? 'text-red-700' : 'text-green-700'
+                                }`}
+                              >
+                                {d.ackRtoTotal || 0}회
+                              </div>
+                              <div className='text-xs text-gray-500 mt-1'>
+                                요청: {d.ackRtoCntReq || 0} / 응답: {d.ackRtoCntRes || 0}
+                              </div>
                             </div>
-                            <div className='text-xs text-gray-500 mt-1'>
-                              요청: {d.ackRtoCntReq || 0} / 응답: {d.ackRtoCntRes || 0}
-                            </div>
-                          </div>
+                          )}
                         </div>
                         {d.badges?.rto && (
                           <Badge level={d.badges.rto}>RTO 상태: {d.badges.rto}</Badge>
@@ -640,8 +666,8 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                       </div>
                     )}
 
-                    {/* PDU 분석 */}
-                    {(d.lenPdu || d.overhead) && (
+                    {/* PDU 분석: 값이 0이어도 필드만 있으면 노출 */}
+                    {hasPduInfo && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📦 PDU 분석 (페이로드 vs 오버헤드)
@@ -786,7 +812,8 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <>
+                  <div className='grid md:grid-cols-2 gap-4 items-stretch'>
+                    {/* 왼쪽: 지도 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <EnhancedGeoMap
                         countryReq={d.env?.countryReq}
@@ -797,7 +824,8 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                       />
                     </div>
 
-                    <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 오른쪽: 출발지/도착지 카드를 위아래로 */}
+                    <div className='flex flex-col gap-4'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 출발지 (요청)
@@ -834,7 +862,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* === Tab: 상세 통계 === */}
@@ -914,14 +942,6 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     </div>
                   </>
                 )}
-
-                {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
-                  <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
-                  {hasQualityIssue && (
-                    <span className='text-amber-500 font-medium'>⚠️ TCP 품질 이슈 감지</span>
-                  )}
-                </div>
               </>
             )}
           </div>

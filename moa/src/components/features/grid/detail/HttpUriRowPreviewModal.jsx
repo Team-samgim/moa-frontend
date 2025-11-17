@@ -1,7 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import EnhancedUriTimelineChart from '@/components/features/grid/detail/EnhancedUriTimelineChart'
-import TcpQualityGauge from '@/components/features/grid/detail/TcpQualityGauge'
 import useHttpUriMetrics from '@/hooks/detail/useHttpUriMetrics'
 import { emptyValue, formatMs, formatTimestamp } from '@/utils/httpPageFormat'
 
@@ -138,8 +137,21 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
   // TCP 품질 점수 계산
   const tcpQualityScore = d.tcpQuality?.quality?.score ?? 0
 
+  // RTT / RTO 값 존재 여부
+  const hasRttRaw = d.tcpQuality?.ackRttCntReq ?? d.tcpQuality?.ackRttCntRes
+
+  const hasRtoRaw =
+    d.tcpQuality?.ackRtoTotal ?? d.tcpQuality?.ackRtoCntReq ?? d.tcpQuality?.ackRtoCntRes
+
+  const hasRtt = hasRttRaw !== null
+  const hasRto = hasRtoRaw !== null
+
   // 지연 여부 확인
   const hasDelay = (d.timing?.reqDelayTransfer || 0) > 0 || (d.timing?.resDelayTransfer || 0) > 0
+
+  // 응답 처리 시간 존재 여부 (0이어도 필드만 있으면 true)
+  const hasResProcess =
+    d.timing && (d.timing.resProcessFirst !== null || d.timing.resProcessPush !== null)
 
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
@@ -202,11 +214,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
             <TabButton id='response' activeId={activeTab} onClick={setActiveTab}>
               📥 HTTP 응답
             </TabButton>
-            <TabButton id='quality' activeId={activeTab} onClick={setActiveTab}>
-              📈 TCP 품질
-            </TabButton>
             <TabButton id='performance' activeId={activeTab} onClick={setActiveTab}>
-              ⚡ 성능
+              ⚡ 성능 / TCP 품질
             </TabButton>
             {hasEnv && (
               <TabButton id='geo' activeId={activeTab} onClick={setActiveTab}>
@@ -325,10 +334,10 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                         <div className='flex items-start gap-3'>
                           <div className='text-2xl'>⚠️</div>
                           <div className='flex-1'>
-                            <div className='mb-2 text-sm font-semibold'>
+                            <div className='text-sm font-semibold'>
                               네트워크 지연이 감지되었습니다
                             </div>
-                            <div className='grid grid-cols-2 gap-3 text-sm mb-3'>
+                            <div className='grid grid-cols-2 gap-3 text-sm'>
                               {d.timing?.reqDelayTransfer > 0 && (
                                 <div className='bg-white/60 p-2 rounded'>
                                   <div className='text-xs text-gray-600'>요청 전송 지연</div>
@@ -345,15 +354,6 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                                   </div>
                                 </div>
                               )}
-                            </div>
-                            <div className='text-xs space-y-1'>
-                              <div>
-                                💡 지연은 패킷이 예상보다 늦게 도착하거나 전송된 시간을 의미합니다.
-                              </div>
-                              <div>
-                                • 네트워크 혼잡, 라우팅 문제, 또는 대역폭 부족이 원인일 수 있습니다.
-                              </div>
-                              <div>• 자세한 분석은 "⏱️ 시간 분석" 탭에서 확인하세요.</div>
                             </div>
                           </div>
                         </div>
@@ -429,7 +429,7 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                     </div>
 
                     {/* 타임스탬프 */}
-                    {d.timing?.tsFirst && (
+                    {d.timing && d.timing.tsFirst !== null && (
                       <div className='rounded-xl border bg-gray-50 p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>⏰ 세션 시간</div>
                         <div className='text-sm text-gray-600'>
@@ -482,65 +482,33 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
 
                     {/* 지연 시간 분석 - 강조 표시 */}
                     {hasDelay && (
-                      <div className='rounded-xl border p-5'>
-                        <div className='flex items-center gap-2 mb-4'>
-                          <div>네트워크 지연 상세 분석</div>
-                        </div>
-
-                        <div className='grid md:grid-cols-2 gap-4 mb-4'>
-                          {d.timing.reqDelayTransfer > 0 && (
-                            <div className='bg-white rounded-lg p-4 border'>
-                              <div className='flex items-center gap-2 mb-2'>
-                                <div>요청 전송 지연</div>
-                              </div>
-                              <div className='text-xl font-bold mb-1'>
-                                {formatMs(d.timing.reqDelayTransfer * 1000)}
-                              </div>
-                              <div className='text-xs text-gray-600'>
-                                클라이언트 → 서버 구간에서 발생한 추가 지연
-                              </div>
+                      <div className='grid md:grid-cols-2 gap-4 mb-4'>
+                        {d.timing.reqDelayTransfer > 0 && (
+                          <div className='bg-white rounded-lg p-4 border'>
+                            <div className='flex items-center gap-2 mb-2'>
+                              <div>요청 전송 지연</div>
                             </div>
-                          )}
-                          {d.timing.resDelayTransfer > 0 && (
-                            <div className='bg-white rounded-lg p-4 border'>
-                              <div className='flex items-center gap-2 mb-2'>
-                                <div>응답 전송 지연</div>
-                              </div>
-                              <div className='text-xl font-bold mb-1'>
-                                {formatMs(d.timing.resDelayTransfer * 1000)}
-                              </div>
-                              <div className='text-xs text-gray-600'>
-                                서버 → 클라이언트 구간에서 발생한 추가 지연
-                              </div>
+                            <div className='text-xl font-bold mb-1'>
+                              {formatMs(d.timing.reqDelayTransfer * 1000)}
                             </div>
-                          )}
-                        </div>
-
-                        <div className='bg-white/80 rounded-lg p-4 text-sm text-gray-700'>
-                          <div className='font-semibold mb-2'>💡 지연 원인 분석</div>
-                          <ul className='space-y-1.5 ml-4 list-disc'>
-                            <li>
-                              <strong>네트워크 혼잡:</strong> 경로 상의 라우터나 스위치가 과부하
-                              상태
-                            </li>
-                            <li>
-                              <strong>대역폭 부족:</strong> 사용 가능한 네트워크 대역폭이 불충분
-                            </li>
-                            <li>
-                              <strong>라우팅 문제:</strong> 비효율적인 경로로 패킷이 전송됨
-                            </li>
-                            <li>
-                              <strong>패킷 손실:</strong> 재전송으로 인한 추가 지연 발생
-                            </li>
-                            <li>
-                              <strong>거리:</strong> 물리적 거리가 멀어 전파 지연 증가
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div className='mt-3 text-xs text-red-700 font-medium'>
-                          ⚠️ 지연이 지속적으로 발생하면 네트워크 인프라 점검이 필요합니다.
-                        </div>
+                            <div className='text-xs text-gray-600'>
+                              클라이언트 → 서버 구간에서 발생한 추가 지연
+                            </div>
+                          </div>
+                        )}
+                        {d.timing.resDelayTransfer > 0 && (
+                          <div className='bg-white rounded-lg p-4 border'>
+                            <div className='flex items-center gap-2 mb-2'>
+                              <div>응답 전송 지연</div>
+                            </div>
+                            <div className='text-xl font-bold mb-1'>
+                              {formatMs(d.timing.resDelayTransfer * 1000)}
+                            </div>
+                            <div className='text-xs text-gray-600'>
+                              서버 → 클라이언트 구간에서 발생한 추가 지연
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -606,7 +574,7 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                     </div>
 
                     {/* 응답 처리 시간 */}
-                    {(d.timing?.resProcessFirst || d.timing?.resProcessPush) && (
+                    {hasResProcess && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           ⚡ 응답 처리 시간
@@ -726,64 +694,64 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                   </>
                 )}
 
-                {/* === Tab: TCP 품질 === */}
-                {activeTab === 'quality' && (
-                  <div className='space-y-4'>
-                    <div className='rounded-xl border bg-white p-4'>
-                      {d.tcpQuality ? (
-                        <TcpQualityGauge tcpQuality={d.tcpQuality} />
-                      ) : (
-                        <div className='text-sm text-gray-500 text-center py-8'>
-                          TCP 품질 데이터가 없습니다.
-                        </div>
-                      )}
-                    </div>
-
+                {/* === Tab: 성능 / TCP 품질 === */}
+                {activeTab === 'performance' && (
+                  <>
+                    {/* 1) TCP 품질 & 에러 분석 */}
                     {d.tcpQuality && (
-                      <>
-                        {/* RTT/RTO */}
-                        {(d.tcpQuality.ackRttCntReq || d.tcpQuality.ackRtoCntReq) && (
+                      <div className='space-y-4 mb-4'>
+                        {/* RTT / RTO: 실제 데이터가 있을 때만 노출 */}
+                        {(hasRtt || hasRto) && (
                           <div className='rounded-xl border bg-white p-4'>
                             <div className='mb-3 text-sm font-semibold text-gray-800'>
                               ⚡ RTT / RTO
                             </div>
                             <div className='grid grid-cols-2 gap-3'>
-                              <div className='bg-blue-50 p-3 rounded-lg'>
-                                <div className='text-xs text-gray-600 mb-1'>
-                                  RTT (Round Trip Time)
+                              {/* RTT 카드 */}
+                              {hasRtt && (
+                                <div className='bg-blue-50 p-3 rounded-lg'>
+                                  <div className='text-xs text-gray-600 mb-1'>
+                                    RTT (Round Trip Time)
+                                  </div>
+                                  <div className='text-xl font-bold text-blue-700'>
+                                    {(d.tcpQuality.ackRttCntReq ?? 0) +
+                                      (d.tcpQuality.ackRttCntRes ?? 0)}
+                                    회
+                                  </div>
+                                  <div className='text-xs text-gray-500 mt-1'>
+                                    요청: {d.tcpQuality.ackRttCntReq ?? 0} / 응답:{' '}
+                                    {d.tcpQuality.ackRttCntRes ?? 0}
+                                  </div>
                                 </div>
-                                <div className='text-xl font-bold text-blue-700'>
-                                  {(d.tcpQuality.ackRttCntReq || 0) +
-                                    (d.tcpQuality.ackRttCntRes || 0)}
-                                  회
-                                </div>
-                                <div className='text-xs text-gray-500 mt-1'>
-                                  요청: {d.tcpQuality.ackRttCntReq || 0} / 응답:{' '}
-                                  {d.tcpQuality.ackRttCntRes || 0}
-                                </div>
-                              </div>
-                              <div
-                                className={`p-3 rounded-lg ${
-                                  (d.tcpQuality.ackRtoTotal || 0) > 0 ? 'bg-red-50' : 'bg-green-50'
-                                }`}
-                              >
-                                <div className='text-xs text-gray-600 mb-1'>
-                                  RTO (Retransmission Timeout)
-                                </div>
+                              )}
+
+                              {/* RTO 카드 */}
+                              {hasRto && (
                                 <div
-                                  className={`text-xl font-bold ${
-                                    (d.tcpQuality.ackRtoTotal || 0) > 0
-                                      ? 'text-red-700'
-                                      : 'text-green-700'
+                                  className={`p-3 rounded-lg ${
+                                    (d.tcpQuality.ackRtoTotal ?? 0) > 0
+                                      ? 'bg-red-50'
+                                      : 'bg-green-50'
                                   }`}
                                 >
-                                  {d.tcpQuality.ackRtoTotal || 0}회
+                                  <div className='text-xs text-gray-600 mb-1'>
+                                    RTO (Retransmission Timeout)
+                                  </div>
+                                  <div
+                                    className={`text-xl font-bold ${
+                                      (d.tcpQuality.ackRtoTotal ?? 0) > 0
+                                        ? 'text-red-700'
+                                        : 'text-green-700'
+                                    }`}
+                                  >
+                                    {d.tcpQuality.ackRtoTotal ?? 0}회
+                                  </div>
+                                  <div className='text-xs text-gray-500 mt-1'>
+                                    요청: {d.tcpQuality.ackRtoCntReq ?? 0} / 응답:{' '}
+                                    {d.tcpQuality.ackRtoCntRes ?? 0}
+                                  </div>
                                 </div>
-                                <div className='text-xs text-gray-500 mt-1'>
-                                  요청: {d.tcpQuality.ackRtoCntReq || 0} / 응답:{' '}
-                                  {d.tcpQuality.ackRtoCntRes || 0}
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -829,15 +797,10 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                             </div>
                           )}
                         </div>
-                      </>
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {/* === Tab: 성능 === */}
-                {activeTab === 'performance' && (
-                  <>
-                    {/* 대역폭 & 패킷 속도 */}
+                    {/* 2) 대역폭 & 패킷 속도 (기존 내용) */}
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
@@ -900,7 +863,7 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       </div>
                     </div>
 
-                    {/* 트래픽 상세 통계 */}
+                    {/* 3) 트래픽 상세 통계 (기존 내용) */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📈 트래픽 상세 통계
@@ -978,7 +941,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <>
+                  <div className='grid md:grid-cols-2 gap-4 items-stretch'>
+                    {/* 왼쪽: 지도 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <EnhancedGeoMap
                         countryReq={d.env?.countryReq}
@@ -989,7 +953,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                       />
                     </div>
 
-                    <div className='grid md:grid-cols-2 gap-4'>
+                    {/* 오른쪽: 출발지/도착지 카드를 위아래로 */}
+                    <div className='flex flex-col gap-4'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 출발지 (요청)
@@ -1026,18 +991,8 @@ const HttpUriRowPreviewModal = memo(function HttpUriRowPreviewModal({ open, onCl
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
-
-                {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
-                  <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
-                  {hasDelay && (
-                    <span className='text-red-500 font-medium'>
-                      ⚠️ 네트워크 지연이 감지되었습니다
-                    </span>
-                  )}
-                </div>
               </>
             )}
           </div>
