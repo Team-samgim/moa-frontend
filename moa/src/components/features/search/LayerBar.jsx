@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LAYER_ACTIVE_STYLES } from '@/constants/colors'
 
 const LAYER_OPTIONS = [
   { key: 'HTTP_PAGE', label: 'HTTP PAGE' },
@@ -28,22 +29,33 @@ const LayerBar = ({ active, onChange }) => {
   }
 
   return (
-    <div className='section card'>
-      <div className='flex items-center gap-4'>
-        <div className='text-base font-medium'>조회 계층</div>
-        <div className='flex items-center gap-3'>
+    <div className=''>
+      <div className='flex-col h-full justify-between items-center align'>
+        <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
+        <div className='flex flex-wrap justify-between w-full gap-2'>
           {LAYER_OPTIONS.map((opt) => {
             const isActive = current === opt.key
+
+            const baseClass = 'px-4.5 py-2 rounded border text-xs transition-colors'
+
+            // LAYER_ACTIVE_STYLES 키가 key 기준인지 label 기준인지 섞여 있을 수 있어서 둘 다 시도
+            const activeStyle =
+              LAYER_ACTIVE_STYLES[opt.key] ??
+              LAYER_ACTIVE_STYLES[opt.label] ??
+              'bg-[#CDE2FA] text-[#003674] border-[#D1D1D6]'
+
+            const activeClass = `${activeStyle} font-semibold`
+            const inactiveClass =
+              'bg-white text-gray-800 border-gray-200 hover:bg-gray-100 font-medium'
+
             return (
               <button
                 key={opt.key}
                 type='button'
                 onClick={() => handleClick(opt)}
                 className={[
-                  'px-4 py-2 rounded-lg border text-sm transition-colors',
-                  isActive
-                    ? 'bg-[#3877BE] text-white border-[#3877BE]'
-                    : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100',
+                  baseClass,
+                  isActive ? activeClass : inactiveClass,
                   'cursor-pointer',
                 ].join(' ')}
               >

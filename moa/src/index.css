@@ -29,7 +29,7 @@ body {
     @apply text-gray-500 text-sm;
   }
   .card {
-    @apply bg-white border border-gray-200 rounded-2xl p-4;
+    @apply bg-white rounded-2xl;
   }
 
   .input,

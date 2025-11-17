@@ -1,4 +1,6 @@
-const QueryPreview = ({ chips, globalNot, onToggleNot }) => {
+import { LAYER_ACTIVE_STYLES } from '@/constants/colors'
+
+const QueryPreview = ({ chips, globalNot, onToggleNot, layerKey }) => {
   const splitRest = (tokens) => {
     const t = [...tokens]
     if (!t.length) return { op: '', value: '' }
@@ -17,13 +19,24 @@ const QueryPreview = ({ chips, globalNot, onToggleNot }) => {
     return { op: t[0], value: t.slice(1).join(' ') }
   }
 
+  // 레이어별 색상만 공통으로 가져오는 헬퍼
+  const getLayerAccentClasses = () => {
+    const base =
+      (layerKey && LAYER_ACTIVE_STYLES[layerKey]) || 'bg-[#EAF1F9] text-gray-700 border-[#D1D1D6]'
+
+    // LAYER_ACTIVE_STYLES 안에 bg / text / border 색만 있으니까
+    // 여기서 border 유틸만 추가해서 사용
+    return `border ${base}`
+  }
+
   const renderClause = (text) => {
     const tokens = String(text).trim().split(/\s+/)
     const field = tokens.shift() || ''
     const { op, value } = splitRest(tokens)
+
     return (
       <span className='inline-flex items-center rounded-full border border-gray-200 bg-white text-gray-700 text-sm'>
-        <span className='px-3 py-1 rounded-full bg-lime-100 text-gray-800 font-medium'>
+        <span className={['px-3 py-1 rounded-full font-medium', getLayerAccentClasses()].join(' ')}>
           {field}
         </span>
         {op && <span className='px-2 text-gray-500'>{op}</span>}
@@ -39,16 +52,18 @@ const QueryPreview = ({ chips, globalNot, onToggleNot }) => {
   )
 
   return (
-    <div className='card border border-gray-200 rounded-2xl p-4'>
-      <div className='text-base font-medium mb-2'>실시간 쿼리</div>
+    <div className='flex flex-col gap-1'>
+      <div className='text-sm font-medium mb-2'>실시간 쿼리</div>
       <div className='flex items-center gap-3 flex-wrap'>
+        {/* 🔹 NOT 버튼: 모양 그대로, active일 때만 레이어 색 */}
         <button
           type='button'
-          className={`h-8 px-3 rounded-lg border text-sm ${
+          className={[
+            'h-8 px-3 rounded-lg border text-sm',
             globalNot
-              ? 'bg-gray-800 text-white border-gray-800'
-              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-          }`}
+              ? getLayerAccentClasses()
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
+          ].join(' ')}
           onClick={onToggleNot}
           title='전체 쿼리에 NOT 적용'
         >
@@ -62,7 +77,7 @@ const QueryPreview = ({ chips, globalNot, onToggleNot }) => {
             </span>
           ))
         ) : (
-          <span className='muted'>조건이 없습니다.</span>
+          <span className='muted text-sm text-gray-400'>조건이 없습니다.</span>
         )}
       </div>
     </div>

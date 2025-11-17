@@ -71,6 +71,9 @@ const SearchPage = () => {
     setCustomTimeRange(null)
     setGridCols([])
     setSearchTotal(null)
+    setSearchPayload(null)
+    setAggFilters({})
+    gridRef.current?.resetFilters?.()
   }, [layer])
 
   const { data: meta, isLoading, error } = useSearchMeta({ layer })
@@ -193,7 +196,7 @@ const SearchPage = () => {
     }
   }, [gridCols, viewKeys.length, layer])
 
-  // === 헬퍼: 현재 상태에서 time 스펙 뽑기 (기존 코드 그대로 사용) ===
+  // === 헬퍼: 현재 상태에서 time 스펙 뽑기 ===
   const toEpochSec = (d) => Math.floor(d.getTime() / 1000)
   const presetSeconds = { '1H': 3600, '2H': 7200, '24H': 86400, '7D': 604800 }
 
@@ -217,12 +220,29 @@ const SearchPage = () => {
     return { field: 'ts_server_nsec', fromEpoch: now - span, toEpoch: now }
   }
 
+  // === 전체 초기화 버튼 (카드 하단 '초기화') ===
+  const handleResetAll = () => {
+    setLayer('HTTP_PAGE')
+    setFieldFilter('')
+    setConditions([])
+    setGlobalNot(false)
+    setTimePreset('1H')
+    setCustomTimeRange(null)
+    setViewKeys([])
+    setGridCols([])
+    setSearchPayload(null)
+    setSearchTotal(null)
+    setHasSearched(false)
+    setAggFilters({})
+    setGridApis(null)
+    gridRef.current?.resetFilters?.()
+    gridRef.current?.purge?.()
+  }
+
   // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
-    // viewKeys만 사용 (비어있으면 빈 배열)
     const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
 
-    // 현재 그리드 상태 기반 검색 프리셋 구성
     const api = gridApis?.api
     const sortModel = api?.getSortModel?.()[0] || null
     const sortField = sortModel
@@ -249,19 +269,18 @@ const SearchPage = () => {
       columns: cols,
       sort: { field: sortField, direction: sortDirection },
       filters,
-      baseSpec, // 기간/조건/옵션 포함된 서버 요청 스펙
+      baseSpec,
       query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
     }
 
     const payload = {
       layer,
-      time: getTimeSpec(), // { field, fromEpoch, toEpoch }
-      columns: cols, // 피벗 페이지에서 x/y/value는 따로 설정
-      conditions, // 현재 조건
-      searchPreset, // 검색 프리셋 같이 전달
+      time: getTimeSpec(),
+      columns: cols,
+      conditions,
+      searchPreset,
     }
 
-    console.log('[PIVOT payload]', payload) // 확인 로그
     const { initFromGrid } = usePivotStore.getState()
     initFromGrid(payload)
     navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
@@ -280,21 +299,16 @@ const SearchPage = () => {
   /** 프리셋 주입(브리지 우선, 없으면 라우트 state) */
   useEffect(() => {
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
-    // PresetPage에서 navigate(..., { state: { preset: p.config } }) 또는 { preset: { payload } }
     const fromRoute = location.state?.preset
     const raw = fromStore || fromRoute
     if (!raw) return
 
-    let spec = raw?.payload ?? raw // payload 래핑/비래핑 모두 허용
+    let spec = raw?.payload ?? raw
 
-    // 라우트에서 온 값이 "config"({ search: { ... } }) 형태이면 spec으로 변환
-    // 마이페이지: preset = p.config 라우트로 넘기는 경우
-    // 브리지(fromStore)는 이미 spec이므로 건드리지 않음
     if (!fromStore && spec && spec.search) {
       spec = toSearchSpecFromConfig(spec)
     }
 
-    // layer 리셋 효과 방지
     skipLayerResetRef.current = true
     setLayer(spec.layer ?? 'HTTP_PAGE')
     setViewKeys(spec.viewKeys ?? [])
@@ -304,7 +318,6 @@ const SearchPage = () => {
     let nextPreset = spec.timePreset ?? '1H'
     let nextCustom = spec.customTimeRange ?? null
 
-    // fallback: spec.time.{fromEpoch,toEpoch}만 있는 케이스
     if (!nextCustom && spec.time?.fromEpoch && spec.time?.toEpoch) {
       nextCustom = {
         from: toDate(spec.time.fromEpoch),
@@ -313,185 +326,251 @@ const SearchPage = () => {
         toEpoch: spec.time.toEpoch,
       }
     }
-    // custom 범위가 있으면 무조건 CUSTOM으로
     if (nextCustom?.from && nextCustom?.to) nextPreset = 'CUSTOM'
 
     setTimePreset(nextPreset)
     setCustomTimeRange(nextCustom ?? null)
 
-    // 다음 틱에 검색 실행
     if (fromStore) {
       setTimeout(() => onClickSearch(), 0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // 최초 1회만
+  }, [])
 
   return (
-    <div className='p-4 flex flex-col gap-4 mx-30'>
-      {/* 검색 영역 */}
-      <div className='gap-3 flex flex-col'>
-        <TimePresetBar
-          value={timePreset}
-          onChange={(key) => {
-            setTimePreset(key)
-            if (key !== 'CUSTOM') setCustomTimeRange(null) // 프리셋 선택 시 커스텀 해제
-          }}
-          customRange={customTimeRange} // 직접설정 표시 동기화
-          autoOpenOnCustom={false}
-          onApplyCustom={(range) => setCustomTimeRange(range)} // 적용하기 → 부모 상태 업데이트
-          onClearCustom={() => setCustomTimeRange(null)}
-          onRefresh={() => {
-            setTimePreset('1H')
-            setCustomTimeRange(null)
-          }}
-        />
-        <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
-        <FieldPicker fields={fields} selected={viewKeys} onChange={setViewKeys} />
-        <div className='grid grid-cols-3 gap-3'>
-          <div className='col-span-1'>
-            <FieldList
-              loading={isLoading}
-              error={error ? '메타 로드 실패' : null}
-              fields={filteredFields}
-              filter={fieldFilter}
-              onFilter={setFieldFilter}
-              selectedKeys={selectedKeys}
-              onToggle={(field, checked) =>
-                checked ? addConditionFromField(field) : removeByFieldKey(field.key)
-              }
-            />
+    <div className='p-4 mx-30'>
+      <div className='max-w-6xl mx-auto space-y-6'>
+        {/* 상단 타이틀 + 프리셋 버튼 */}
+        {/* <div className='flex items-center justify-between'>
+          <h1 className='text-2xl font-semibold text-slate-900'>그리드 테이블 구성</h1>
+          <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
+            <button type='button' className='hover:underline'>
+              프리셋 저장
+            </button>
+            <button type='button' className='hover:underline'>
+              프리셋 불러오기
+            </button>
           </div>
-          <div className='col-span-2'>
-            <SelectedConditions
-              conditions={conditions}
-              operatorsFor={operatorsFor}
-              updateCondition={updateCondition}
-              removeByFieldKey={removeByFieldKey}
-              onChangeOperator={onChangeOperator}
-            />
-          </div>
+        </div> */}
+
+        <div className='flex items-center justify-between gap-5 px-3'>
+          <h2 className='text-[20px] font-semibold text-gray-900'>검색</h2>
         </div>
 
-        <QueryPreview
-          chips={queryChips}
-          globalNot={globalNot}
-          onToggleNot={() => setGlobalNot((v) => !v)}
-        />
-
-        <div className='flex justify-center'>
-          <button
-            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] disabled:opacity-60'
-            onClick={onClickSearch}
-            disabled={isSearching}
-          >
-            {isSearching ? '검색 중…' : '검색 하기'}
-          </button>
-        </div>
-      </div>
-
-      {/* 결과 */}
-      {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full px-6'>
-          {searchTotal === 0 ? (
-            <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
-              조건에 맞는 결과가 없습니다.
+        {/* 검색 구성 카드 (스크린샷 영역) */}
+        <div className='flex flex-col rounded-lg bg-white border border-gray-200 shadow-sm p-5 gap-7'>
+          {/* 조회 계층 / 조회 기간 한 줄 배치 */}
+          <div className='w-full max-w-ws shrink-0 space-y-6'>
+            <div className='flex items-center justify-between'>
+              <div className='text-base font-semibold text-gray-900'>그리드 테이블 구성</div>
+              <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
+                <button type='button' className='hover:underline'>
+                  프리셋 저장
+                </button>
+                <button type='button' className='hover:underline'>
+                  프리셋 불러오기
+                </button>
+              </div>
             </div>
-          ) : (
-            <>
-              <GridToolbar
-                currentLayer={layer}
-                onReset={() => gridRef.current?.resetFilters?.()}
-                onPivot={handleGoPivot}
-                gridApis={gridApis}
-                getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
-                getBaseSpec={() => searchPayload}
-                getUiQuery={() => ({
-                  layer,
-                  timePreset,
-                  customTimeRange,
-                  globalNot,
-                  conditions,
-                  viewKeys,
-                })}
-              />
-              {searchTotal !== null && (
-                <div className='mb-2 text-sm text-gray-600'>
-                  총{' '}
-                  <span className='font-semibold text-blue-600'>
-                    {searchTotal.toLocaleString()}
-                  </span>
-                  건
-                </div>
-              )}
-              <DataGrid
-                ref={gridRef}
-                layer={layer}
-                columns={gridCols}
-                basePayload={searchPayload}
-                height='55vh'
-                cacheBlockSize={100}
-                onGridApis={setGridApis}
-                onActiveFiltersChange={setAggFilters}
-                onRowClick={(row) => {
-                  const key =
-                    row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
-                  if (!key) return
-
-                  if (layer === 'TCP') {
-                    setTcpRowKey(key)
-                  } else if (layer === 'HTTP_PAGE') {
-                    setHttpPageRowKey(key)
-                  } else if (layer === 'ETHERNET') {
-                    setEthernetRowKey(key)
-                  } else if (layer === 'HTTP_URI') {
-                    setHttpUriRowKey(key)
-                  }
+            <div className='flex gap-4'>
+              <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
+              <TimePresetBar
+                value={timePreset}
+                layerKey={layer}
+                onChange={(key) => {
+                  setTimePreset(key)
+                  if (key !== 'CUSTOM') setCustomTimeRange(null)
+                }}
+                customRange={customTimeRange}
+                autoOpenOnCustom={false}
+                onApplyCustom={(range) => setCustomTimeRange(range)}
+                onClearCustom={() => setCustomTimeRange(null)}
+                onRefresh={() => {
+                  setTimePreset('1H')
+                  setCustomTimeRange(null)
                 }}
               />
-              {aggQuery.isSuccess && (
-                <AggregatesPanel
-                  columns={gridCols.map((c) => ({
-                    field: c.name,
-                    headerName: c.labelKo || c.name,
-                  }))}
-                  aggregates={aggQuery.data?.aggregates || {}}
-                />
-              )}
-              {aggQuery.isLoading && (
-                <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
-              )}
-              {layer === 'TCP' && (
-                <TcpRowPreviewModal
-                  open={!!tcpRowKey}
-                  onClose={() => setTcpRowKey(null)}
-                  rowKey={tcpRowKey}
-                />
-              )}
-              {layer === 'HTTP_PAGE' && (
-                <HttpPageRowPreviewModal
-                  open={!!httpPageRowKey}
-                  onClose={() => setHttpPageRowKey(null)}
-                  rowKey={httpPageRowKey}
-                />
-              )}
-              {layer === 'ETHERNET' && (
-                <EthernetRowPreviewModal
-                  open={!!ethernetRowKey}
-                  onClose={() => setEthernetRowKey(null)}
-                  rowKey={ethernetRowKey}
-                />
-              )}
-              {layer === 'HTTP_URI' && (
-                <HttpUriRowPreviewModal
-                  open={!!httpUriRowKey}
-                  onClose={() => setHttpUriRowKey(null)}
-                  rowKey={httpUriRowKey}
-                />
-              )}
-            </>
-          )}
+            </div>
+          </div>
+
+          {/* 조회 필드 (그리드 컬럼) */}
+          <FieldPicker
+            fields={fields}
+            selected={viewKeys}
+            onChange={setViewKeys}
+            layerKey={layer}
+          />
+
+          {/* 실시간 쿼리 프리뷰 */}
+          <QueryPreview
+            chips={queryChips}
+            globalNot={globalNot}
+            onToggleNot={() => setGlobalNot((v) => !v)}
+            layerKey={layer}
+          />
+
+          <div className='h-px w-full bg-gray-200' />
+
+          {/* 카드 하단 버튼 영역 */}
+          <div className='flex justify-end gap-3'>
+            <button
+              type='button'
+              onClick={handleResetAll}
+              className='h-10 px-6 rounded-sm border border-blue-dark bg-white text-s font-medium text-blue-dark hover:bg-slate-50'
+            >
+              초기화
+            </button>
+            <button
+              type='button'
+              onClick={onClickSearch}
+              disabled={isSearching}
+              className='h-10 px-6 rounded-sm text-s font-medium text-white bg-[#3877BE] hover:bg-blue-dark border border-[#3877BE] disabled:opacity-60'
+            >
+              {isSearching ? '검색 중…' : '검색하기'}
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* 조건 필드 / 상세조건 편집 영역 (카드 밖, 아래쪽에 유지) */}
+        <div
+          className='
+            grid grid-cols-1 
+            lg:grid-cols-[minmax(0,0.6fr)_auto_minmax(0,1.6fr)]
+            items-stretch
+            gap-6 p-5 border border-gray-200 shadow-sm rounded-lg
+          '
+        >
+          {/* 왼쪽: 필드 리스트 */}
+          <FieldList
+            loading={isLoading}
+            error={error ? '메타 로드 실패' : null}
+            fields={filteredFields}
+            filter={fieldFilter}
+            onFilter={setFieldFilter}
+            selectedKeys={selectedKeys}
+            onToggle={(field, checked) =>
+              checked ? addConditionFromField(field) : removeByFieldKey(field.key)
+            }
+          />
+
+          <div className='hidden lg:block w-px bg-gray-200 h-full justify-self-center' />
+
+          {/* 오른쪽: 선택된 조건 영역 */}
+          <SelectedConditions
+            conditions={conditions}
+            operatorsFor={operatorsFor}
+            updateCondition={updateCondition}
+            removeByFieldKey={removeByFieldKey}
+            onChangeOperator={onChangeOperator}
+          />
+        </div>
+
+        {/* 결과 영역 */}
+        {hasSearched && (
+          <div className='w-full border border-gray-200 shadow-sm p-5 rounded-lg'>
+            {searchTotal === 0 ? (
+              <div className='text-sm text-gray-500 text-center bg-white'>
+                조건에 맞는 결과가 없습니다.
+              </div>
+            ) : (
+              <div className='rounded-2xl bg-white'>
+                <GridToolbar
+                  currentLayer={layer}
+                  onReset={() => gridRef.current?.resetFilters?.()}
+                  onPivot={handleGoPivot}
+                  gridApis={gridApis}
+                  getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
+                  getBaseSpec={() => searchPayload}
+                  getUiQuery={() => ({
+                    layer,
+                    timePreset,
+                    customTimeRange,
+                    globalNot,
+                    conditions,
+                    viewKeys,
+                  })}
+                />
+                {searchTotal !== null && (
+                  <div className='mb-2 text-sm text-gray-600'>
+                    총{' '}
+                    <span className='font-semibold text-blue-600'>
+                      {searchTotal.toLocaleString()}
+                    </span>
+                    건
+                  </div>
+                )}
+                <DataGrid
+                  ref={gridRef}
+                  layer={layer}
+                  columns={gridCols}
+                  basePayload={searchPayload}
+                  height='55vh'
+                  cacheBlockSize={100}
+                  onGridApis={setGridApis}
+                  onActiveFiltersChange={setAggFilters}
+                  onRowClick={(row) => {
+                    const key =
+                      row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
+                    if (!key) return
+
+                    if (layer === 'TCP') {
+                      setTcpRowKey(key)
+                    } else if (layer === 'HTTP_PAGE') {
+                      setHttpPageRowKey(key)
+                    } else if (layer === 'ETHERNET') {
+                      setEthernetRowKey(key)
+                    } else if (layer === 'HTTP_URI') {
+                      setHttpUriRowKey(key)
+                    }
+                  }}
+                />
+                {aggQuery.isSuccess && (
+                  <AggregatesPanel
+                    columns={gridCols.map((c) => ({
+                      field: c.name,
+                      headerName: c.labelKo || c.name,
+                    }))}
+                    aggregates={aggQuery.data?.aggregates || {}}
+                  />
+                )}
+                {aggQuery.isLoading && (
+                  <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 행 상세 모달들 */}
+        {layer === 'TCP' && (
+          <TcpRowPreviewModal
+            open={!!tcpRowKey}
+            onClose={() => setTcpRowKey(null)}
+            rowKey={tcpRowKey}
+          />
+        )}
+        {layer === 'HTTP_PAGE' && (
+          <HttpPageRowPreviewModal
+            open={!!httpPageRowKey}
+            onClose={() => setHttpPageRowKey(null)}
+            rowKey={httpPageRowKey}
+          />
+        )}
+        {layer === 'ETHERNET' && (
+          <EthernetRowPreviewModal
+            open={!!ethernetRowKey}
+            onClose={() => setEthernetRowKey(null)}
+            rowKey={ethernetRowKey}
+          />
+        )}
+        {layer === 'HTTP_URI' && (
+          <HttpUriRowPreviewModal
+            open={!!httpUriRowKey}
+            onClose={() => setHttpUriRowKey(null)}
+            rowKey={httpUriRowKey}
+          />
+        )}
+      </div>
     </div>
   )
 }
