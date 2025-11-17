@@ -339,7 +339,7 @@ const SearchPage = () => {
 
   return (
     <div className='p-4 mx-30'>
-      <div className='max-w-6xl mx-auto space-y-6'>
+      <div className='mx-auto space-y-6'>
         {/* 상단 타이틀 + 프리셋 버튼 */}
         {/* <div className='flex items-center justify-between'>
           <h1 className='text-2xl font-semibold text-slate-900'>그리드 테이블 구성</h1>
@@ -372,7 +372,7 @@ const SearchPage = () => {
                 </button>
               </div>
             </div>
-            <div className='flex gap-4'>
+            <div className='flex gap-8'>
               <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
               <TimePresetBar
                 value={timePreset}

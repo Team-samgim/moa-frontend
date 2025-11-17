@@ -227,7 +227,7 @@ const TimePresetBar = ({
               type='button'
               onClick={handleCustomToggle}
               className={[
-                'flex-3 px-4 py-2 rounded border text-xs transition-colors inline-flex items-center justify-between gap-1.5',
+                'flex-4 px-4 py-2 rounded border text-xs transition-colors inline-flex items-center justify-between gap-1.5',
                 isCustomActive ? getActiveButtonClass() : inactiveButtonClass,
               ].join(' ')}
             >
