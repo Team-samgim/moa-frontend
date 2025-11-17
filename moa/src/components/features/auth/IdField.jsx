@@ -1,4 +1,4 @@
-import MsgRow from '@/components/common/MsgRow'
+import MsgRow from '@/components/_common/MsgRow'
 
 const IdEmailField = ({
   label,
