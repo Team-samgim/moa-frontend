@@ -106,12 +106,11 @@ export function buildPivotEChartOption(chartType, data) {
       name: yName,
       type,
       data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
-      // 필요하면 시리즈별로 직접 색 고정
+      // TODO: 시리즈 별 색 고정
       // itemStyle: { color: PIVOT_SERIES_COLORS[yIdx % PIVOT_SERIES_COLORS.length] },
       ...extra,
     }))
 
-  // 라인/에어리어용: 0으로 채워서 자연스럽게 내려가게
   const makeLineLikeSeries = (extra = {}) =>
     yCategories.map((yName, yIdx) => {
       const raw = xCategories.map((_, xIdx) => getRawValue(yIdx, xIdx))
@@ -129,7 +128,7 @@ export function buildPivotEChartOption(chartType, data) {
     })
 
   const baseOption = {
-    color: PIVOT_SERIES_COLORS, // 메인 차트 색 팔레트 (드릴다운과 공유)
+    color: PIVOT_SERIES_COLORS,
     tooltip: {
       trigger: 'axis',
     },
@@ -148,7 +147,6 @@ export function buildPivotEChartOption(chartType, data) {
     series: [],
   }
 
-  // ─ 세로축 기반 차트 ─
   if (
     chartType === 'groupedColumn' ||
     chartType === 'stackedColumn' ||
@@ -162,7 +160,7 @@ export function buildPivotEChartOption(chartType, data) {
     }
     baseOption.yAxis = {
       type: 'value',
-      min: 0, // 항상 0에서 시작 – 붕 뜨는 느낌 방지
+      min: 0,
     }
 
     if (chartType === 'groupedColumn') {
@@ -190,7 +188,6 @@ export function buildPivotEChartOption(chartType, data) {
     }
   }
 
-  // ─ 가로축 기반 차트 ─
   if (chartType === 'groupedBar' || chartType === 'stackedBar' || chartType === 'dot') {
     baseOption.yAxis = {
       type: 'category',
@@ -223,7 +220,6 @@ export function buildPivotEChartOption(chartType, data) {
     }
   }
 
-  // 그 외는 기본 bar 로
   baseOption.xAxis = {
     type: 'category',
     data: xCategories,

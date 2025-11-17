@@ -32,7 +32,6 @@ const normalizePointsWithZeroEdges = (points, globalMinTime, globalMaxTime) => {
     result.push([p.ts, v])
   })
 
-  // 전체 구간의 끝 지점에서 0
   if (globalMaxTime !== null && last.ts < globalMaxTime) {
     result.push([globalMaxTime, 0])
   }
@@ -61,7 +60,6 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
       ? median * (1 - (typeof minusPercent === 'number' ? minusPercent : 0) / 100)
       : null
 
-  // --- 시리즈 생성: 색 + 앞/뒤 0 처리 ---
   const lineSeries = series.map((s) => {
     const color = colorForSeriesName(s.rowKey, colorMap)
 
@@ -76,7 +74,6 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
     }
   })
 
-  // --- 글로벌 median 라인 + 영역 (첫 시리즈에만 markLine/markArea 부착) ---
   if (
     lineSeries.length > 0 &&
     median !== null &&
@@ -124,7 +121,7 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
   }
 
   return {
-    color: PIVOT_SERIES_COLORS, // 팔레트 자체도 공유
+    color: PIVOT_SERIES_COLORS,
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
@@ -208,7 +205,7 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
     },
     yAxis: {
       type: 'value',
-      min: 0, // 항상 0에서 시작해서 "떠 있는 느낌" 없애기
+      min: 0,
     },
     series: lineSeries,
   }
