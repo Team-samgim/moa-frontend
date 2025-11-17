@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -13,41 +13,133 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
+import DashboardFilters from '@/components/features/dashboard/DashboardFilters'
 import SortableWidget from '@/components/features/dashboard/SortableWidget'
 import Toolbar from '@/components/features/dashboard/Toolbar'
-import WidgetLibraryDialog, {
-  DEFAULT_WIDGETS,
-} from '@/components/features/dashboard/WidgetLibraryDialog'
-import AvgResponseTime from '@/components/features/dashboard/widget/AvgResponseTime'
-import GeoTrafficDistribution from '@/components/features/dashboard/widget/GeoTrafficDistribution'
-import HttpStatusDonut from '@/components/features/dashboard/widget/HttpStatusDonut'
+import WidgetLibraryDialog from '@/components/features/dashboard/WidgetLibraryDialog'
+import BrowserPerformance from '@/components/features/dashboard/widget/BrowserPerformance'
+import DevicePerformanceDistribution from '@/components/features/dashboard/widget/DevicePerformanceDistribution'
+import ErrorPagesTop10 from '@/components/features/dashboard/widget/ErrorPagesTop10'
+import ErrorRateTrend from '@/components/features/dashboard/widget/ErrorRateTrend'
+import PageLoadTimeTrend from '@/components/features/dashboard/widget/PageLoadTimeTrend' // ⭐ 추가
 import TcpErrorGauge from '@/components/features/dashboard/widget/TcpErrorGauge'
 import TopDomains from '@/components/features/dashboard/widget/TopDomains'
+import GeoTrafficDistribution from '@/components/features/dashboard/widget/TrafficByCountry'
 import TrafficTrend from '@/components/features/dashboard/widget/TrafficTrend'
+import HttpStatusDonut from '@/components/features/dashboard/widget/httpStatusCodeDistribution'
+import AvgResponseTime from '@/components/features/dashboard/widget/responseTimeStats'
+import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
+import { useDashboardStore } from '@/stores/dashboardStore'
+
+// ✅ Mock 데이터 (API 없을 때 필터 표시용)
+const MOCK_AVAILABLE_FILTERS = {
+  countries: ['Korea', 'USA', 'Japan', 'China', 'Germany'],
+  browsers: ['Chrome', 'Safari', 'Firefox', 'Edge'],
+  devices: ['Desktop', 'Mobile', 'Tablet'],
+  httpHosts: ['example.com', 'api.example.com', 'cdn.example.com'],
+  httpMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+}
 
 const DashboardPage = () => {
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const DEFAULT_IDS = DEFAULT_WIDGETS.map((w) => w.id)
-  const [widgets, setWidgets] = useState(DEFAULT_IDS)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filters, setFilters] = useState({})
+  const [initialLoadDone, setInitialLoadDone] = useState(false) // ✅ 초기 로딩 완료 여부
+
+  // 기본으로 보여줄 위젯
+  const [widgets, setWidgets] = useState([
+    'pageLoadTimeTrend',
+    'errorRateTrend',
+    'httpStatus',
+    // 'tcpErrorRate',
+    'trafficTrend',
+    'slowPages', // TopDomains
+    'errorPages',
+    'geoHeatmap',
+    'browserPerf',
+    'devicePerf',
+    'responseTimeSummary',
+  ])
 
   const WIDGET_RENDERERS = {
-    trafficTrend: { comp: TrafficTrend, className: 'col-span-12 md:col-span-8' },
-    tcpErrorRate: { comp: TcpErrorGauge, className: 'col-span-12 md:col-span-4' },
-    geoHeatmap: { comp: GeoTrafficDistribution, className: 'col-span-12 md:col-span-12' },
+    pageLoadTimeTrend: { comp: PageLoadTimeTrend, className: 'col-span-12 md:col-span-8' },
+    errorRateTrend: { comp: ErrorRateTrend, className: 'col-span-12 md:col-span-4' },
     httpStatus: { comp: HttpStatusDonut, className: 'col-span-12 md:col-span-4' },
-    topDomains: { comp: TopDomains, className: 'col-span-12 md:col-span-4' },
-    responseTime: { comp: AvgResponseTime, className: 'col-span-12 md:col-span-4' },
+    // tcpErrorRate: { comp: TcpErrorGauge, className: 'col-span-12 md:col-span-4' },
+    trafficTrend: { comp: TrafficTrend, className: 'col-span-12 md:col-span-4' },
+    slowPages: { comp: TopDomains, className: 'col-span-12 md:col-span-6' },
+    errorPages: { comp: ErrorPagesTop10, className: 'col-span-12 md:col-span-6' },
+    geoHeatmap: { comp: GeoTrafficDistribution, className: 'col-span-12 md:col-span-8' },
+    browserPerf: { comp: BrowserPerformance, className: 'col-span-12 md:col-span-4' },
+    devicePerf: { comp: DevicePerformanceDistribution, className: 'col-span-4' },
+    responseTimeSummary: { comp: AvgResponseTime, className: 'col-span-12 md:col-span-6' },
   }
 
+  // ============================================
+  // React Query로 대시보드 데이터 조회
+  // ============================================
+  const { data: dashboardData, isLoading } = useDashboardAggregated()
+
+  // ✅ 초기 로딩 완료 체크
+  useEffect(() => {
+    if (!isLoading) {
+      setInitialLoadDone(true)
+    }
+  }, [isLoading])
+
+  // ✅ availableFilters 처리 (API 실패 시 Mock 데이터 사용)
+  const availableFilters = dashboardData?.availableFilters || MOCK_AVAILABLE_FILTERS
+
+  // ============================================
+  // 필터 관련 핸들러
+  // ============================================
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters)
+  }
+
+  const handleApplyFilters = () => {
+    console.log('적용된 필터:', filters)
+
+    // Zustand store에 필터 저장
+    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+    setStoreFilters(filters)
+
+    // 필터 적용 후 닫기
+    setIsFilterOpen(false)
+  }
+
+  const handleRemoveFilter = (filterKey) => {
+    const newFilters = { ...filters }
+    delete newFilters[filterKey]
+    setFilters(newFilters)
+
+    // store 업데이트
+    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+    setStoreFilters(newFilters)
+  }
+
+  const handleResetFilters = () => {
+    setFilters({})
+
+    // store에서도 초기화
+    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+    setStoreFilters({})
+  }
+
+  // ============================================
+  // 위젯 관련 핸들러
+  // ============================================
   const handleRemoveWidget = (widgetId) => {
     setWidgets((prev) => prev.filter((id) => id !== widgetId))
   }
 
+  // ============================================
   // 드래그앤드롭 센서 설정
+  // ============================================
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px 이동 후 드래그 시작 (클릭과 구분)
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -55,7 +147,6 @@ const DashboardPage = () => {
     }),
   )
 
-  // 드래그 끝났을 때 순서 변경
   const handleDragEnd = (event) => {
     const { active, over } = event
 
@@ -68,6 +159,20 @@ const DashboardPage = () => {
     }
   }
 
+  // ============================================
+  // ✅ 로딩 상태 표시 (초기 로딩 시에만)
+  // ============================================
+  if (isLoading && !initialLoadDone) {
+    return (
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-center'>
+          <div className='w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
+          <p className='text-gray-600'>대시보드 로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className='flex flex-col gap-4 p-4 mx-30'>
@@ -76,14 +181,193 @@ const DashboardPage = () => {
           <p className='text-muted-foreground'>실시간 트래픽 및 성능 분석</p>
         </div>
       </div>
+
       <div className='flex flex-col gap-4 p-4 mx-30'>
         <Toolbar
           onAddWidget={() => setLibraryOpen(true)}
+          onFilterSettings={() => setIsFilterOpen(true)}
           onSaveLayout={() => {
             console.log('현재 위젯 순서:', widgets)
-            // TODO: localStorage나 API로 저장
+            console.log('현재 필터:', filters)
           }}
         />
+
+        {/* ✅ 필터 컴포넌트 - availableFilters 체크 제거 (항상 Mock 사용 가능) */}
+        {isFilterOpen && (
+          <DashboardFilters
+            availableFilters={availableFilters}
+            currentFilters={filters}
+            onFilterChange={handleFilterChange}
+            onApply={handleApplyFilters}
+            onClose={() => setIsFilterOpen(false)}
+          />
+        )}
+
+        {/* 적용된 필터 뱃지 표시 */}
+        {Object.keys(filters).length > 0 && (
+          <div className='flex items-center gap-2 flex-wrap bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+            <span className='text-sm font-semibold text-gray-700'>적용된 필터:</span>
+
+            {/* 국가 필터 태그 */}
+            {filters.countries?.map((country) => (
+              <span
+                key={`country-${country}`}
+                className='inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium'
+              >
+                🌍 {country}
+                <button
+                  onClick={() => {
+                    const newCountries = filters.countries.filter((c) => c !== country)
+                    const newFilters = {
+                      ...filters,
+                      countries: newCountries.length > 0 ? newCountries : undefined,
+                    }
+                    setFilters(newFilters)
+
+                    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+                    setStoreFilters(newFilters)
+                  }}
+                  className='hover:text-blue-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+
+            {/* 브라우저 필터 태그 */}
+            {filters.browsers?.map((browser) => (
+              <span
+                key={`browser-${browser}`}
+                className='inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium'
+              >
+                🌐 {browser}
+                <button
+                  onClick={() => {
+                    const newBrowsers = filters.browsers.filter((b) => b !== browser)
+                    const newFilters = {
+                      ...filters,
+                      browsers: newBrowsers.length > 0 ? newBrowsers : undefined,
+                    }
+                    setFilters(newFilters)
+
+                    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+                    setStoreFilters(newFilters)
+                  }}
+                  className='hover:text-green-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+
+            {/* 디바이스 필터 태그 */}
+            {filters.devices?.map((device) => (
+              <span
+                key={`device-${device}`}
+                className='inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium'
+              >
+                📱 {device}
+                <button
+                  onClick={() => {
+                    const newDevices = filters.devices.filter((d) => d !== device)
+                    const newFilters = {
+                      ...filters,
+                      devices: newDevices.length > 0 ? newDevices : undefined,
+                    }
+                    setFilters(newFilters)
+
+                    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+                    setStoreFilters(newFilters)
+                  }}
+                  className='hover:text-purple-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+
+            {/* HTTP Method 태그 */}
+            {filters.httpMethods?.map((method) => (
+              <span
+                key={`method-${method}`}
+                className='inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium'
+              >
+                📊 {method}
+                <button
+                  onClick={() => {
+                    const newMethods = filters.httpMethods.filter((m) => m !== method)
+                    const newFilters = {
+                      ...filters,
+                      httpMethods: newMethods.length > 0 ? newMethods : undefined,
+                    }
+                    setFilters(newFilters)
+
+                    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+                    setStoreFilters(newFilters)
+                  }}
+                  className='hover:text-yellow-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+
+            {/* HTTP Host 태그 */}
+            {filters.httpHost && (
+              <span className='inline-flex items-center gap-1 px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm font-medium'>
+                🏠 Host: {filters.httpHost}
+                <button
+                  onClick={() => handleRemoveFilter('httpHost')}
+                  className='hover:text-pink-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            )}
+
+            {/* HTTP URI 태그 */}
+            {filters.httpUri && (
+              <span className='inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium'>
+                🔗 URI: {filters.httpUri}
+                <button
+                  onClick={() => handleRemoveFilter('httpUri')}
+                  className='hover:text-indigo-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            )}
+
+            {/* HTTP 응답 코드 태그 */}
+            {filters.httpResCode && (
+              <span className='inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium'>
+                🚦 Status {filters.httpResCodeOperator || '>='} {filters.httpResCode}
+                <button
+                  onClick={() => {
+                    const newFilters = { ...filters }
+                    delete newFilters.httpResCode
+                    delete newFilters.httpResCodeOperator
+                    setFilters(newFilters)
+
+                    const { setFilters: setStoreFilters } = useDashboardStore.getState()
+                    setStoreFilters(newFilters)
+                  }}
+                  className='hover:text-red-900 ml-1'
+                >
+                  ×
+                </button>
+              </span>
+            )}
+
+            {/* 모두 제거 버튼 */}
+            <button
+              onClick={handleResetFilters}
+              className='text-sm text-gray-500 hover:text-gray-700 underline font-medium'
+            >
+              모두 제거
+            </button>
+          </div>
+        )}
       </div>
 
       {/* DndContext로 감싸기 */}
@@ -104,6 +388,7 @@ const DashboardPage = () => {
         </SortableContext>
       </DndContext>
 
+      {/* 위젯 라이브러리 다이얼로그 */}
       <WidgetLibraryDialog
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
