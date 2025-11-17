@@ -1,3 +1,40 @@
+import { PIVOT_SERIES_COLORS } from '@/constants/chartColors'
+
+function fillNullOrMissingWithZero(raw) {
+  const data = raw.slice()
+  const n = data.length
+
+  const indices = []
+  for (let i = 0; i < n; i++) {
+    const v = data[i]
+    if (typeof v === 'number' && !Number.isNaN(v)) {
+      indices.push(i)
+    }
+  }
+
+  // 유효한 값이 하나도 없는 경우: 전체 0
+  if (!indices.length) {
+    return new Array(n).fill(0)
+  }
+
+  const first = indices[0]
+  const last = indices[indices.length - 1]
+
+  // first~last 사이의 null/NaN: 0
+  for (let i = first; i <= last; i++) {
+    const v = data[i]
+    if (v === null || Number.isNaN(v)) {
+      data[i] = 0
+    }
+  }
+
+  // 양 끝단도 0 처리
+  for (let i = 0; i < first; i++) data[i] = 0
+  for (let i = last + 1; i < n; i++) data[i] = 0
+
+  return data
+}
+
 export function buildPivotEChartOption(chartType, data) {
   const xCategories = data?.xCategories || []
   const yCategories = data?.yCategories || []
@@ -12,10 +49,17 @@ export function buildPivotEChartOption(chartType, data) {
   const firstSeries = series[0]
   const matrix = firstSeries.values || [] // [yIdx][xIdx]
 
-  const getValue = (yIdx, xIdx) => {
+  // raw value 숫자 아닌 경우:  null
+  const getRawValue = (yIdx, xIdx) => {
     const row = matrix[yIdx] || []
     const v = row[xIdx]
-    return typeof v === 'number' ? v : 0
+    return typeof v === 'number' && !Number.isNaN(v) ? v : null
+  }
+
+  // 바 차트 등에 사용하는 경우: null > 0 치환
+  const getValueOrZero = (yIdx, xIdx) => {
+    const v = getRawValue(yIdx, xIdx)
+    return v === null ? 0 : v
   }
 
   const legendData = yCategories
@@ -24,7 +68,7 @@ export function buildPivotEChartOption(chartType, data) {
     const pies = xCategories.map((xName, xIdx) => {
       const dataItems = yCategories.map((yName, yIdx) => ({
         name: yName,
-        value: getValue(yIdx, xIdx),
+        value: getValueOrZero(yIdx, xIdx),
       }))
 
       const col = xIdx % 3
@@ -46,6 +90,7 @@ export function buildPivotEChartOption(chartType, data) {
     })
 
     return {
+      color: PIVOT_SERIES_COLORS,
       tooltip: { trigger: 'item' },
       legend: {
         orient: 'vertical',
@@ -60,11 +105,31 @@ export function buildPivotEChartOption(chartType, data) {
     yCategories.map((yName, yIdx) => ({
       name: yName,
       type,
-      data: xCategories.map((_, xIdx) => getValue(yIdx, xIdx)),
+      data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
+      // 필요하면 시리즈별로 직접 색 고정
+      // itemStyle: { color: PIVOT_SERIES_COLORS[yIdx % PIVOT_SERIES_COLORS.length] },
       ...extra,
     }))
 
+  // 라인/에어리어용: 0으로 채워서 자연스럽게 내려가게
+  const makeLineLikeSeries = (extra = {}) =>
+    yCategories.map((yName, yIdx) => {
+      const raw = xCategories.map((_, xIdx) => getRawValue(yIdx, xIdx))
+      const filled = fillNullOrMissingWithZero(raw)
+
+      return {
+        name: yName,
+        type: 'line',
+        data: filled,
+        smooth: true,
+        showSymbol: true,
+        // itemStyle: { color: PIVOT_SERIES_COLORS[yIdx % PIVOT_SERIES_COLORS.length] },
+        ...extra,
+      }
+    })
+
   const baseOption = {
+    color: PIVOT_SERIES_COLORS, // 메인 차트 색 팔레트 (드릴다운과 공유)
     tooltip: {
       trigger: 'axis',
     },
@@ -83,6 +148,7 @@ export function buildPivotEChartOption(chartType, data) {
     series: [],
   }
 
+  // ─ 세로축 기반 차트 ─
   if (
     chartType === 'groupedColumn' ||
     chartType === 'stackedColumn' ||
@@ -96,6 +162,7 @@ export function buildPivotEChartOption(chartType, data) {
     }
     baseOption.yAxis = {
       type: 'value',
+      min: 0, // 항상 0에서 시작 – 붕 뜨는 느낌 방지
     }
 
     if (chartType === 'groupedColumn') {
@@ -109,13 +176,12 @@ export function buildPivotEChartOption(chartType, data) {
     }
 
     if (chartType === 'line') {
-      baseOption.series = makeSeriesLinesOrBars('line', { smooth: true })
+      baseOption.series = makeLineLikeSeries()
       return baseOption
     }
 
     if (chartType === 'area') {
-      baseOption.series = makeSeriesLinesOrBars('line', {
-        smooth: true,
+      baseOption.series = makeLineLikeSeries({
         stack: 'total',
         areaStyle: {},
         emphasis: { focus: 'series' },
@@ -124,6 +190,7 @@ export function buildPivotEChartOption(chartType, data) {
     }
   }
 
+  // ─ 가로축 기반 차트 ─
   if (chartType === 'groupedBar' || chartType === 'stackedBar' || chartType === 'dot') {
     baseOption.yAxis = {
       type: 'category',
@@ -131,6 +198,7 @@ export function buildPivotEChartOption(chartType, data) {
     }
     baseOption.xAxis = {
       type: 'value',
+      min: 0,
     }
 
     if (chartType === 'groupedBar') {
@@ -148,18 +216,20 @@ export function buildPivotEChartOption(chartType, data) {
         name: yName,
         type: 'scatter',
         symbolSize: 8,
-        data: xCategories.map((_, xIdx) => getValue(yIdx, xIdx)),
+        data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
+        // itemStyle: { color: PIVOT_SERIES_COLORS[yIdx % PIVOT_SERIES_COLORS.length] },
       }))
       return baseOption
     }
   }
 
+  // 그 외는 기본 bar 로
   baseOption.xAxis = {
     type: 'category',
     data: xCategories,
     boundaryGap: true,
   }
-  baseOption.yAxis = { type: 'value' }
+  baseOption.yAxis = { type: 'value', min: 0 }
   baseOption.series = makeSeriesLinesOrBars('bar')
   return baseOption
 }

@@ -1,6 +1,7 @@
-import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { buildPivotEChartOption } from './buildPivotEChartOption'
+import { PIVOT_SERIES_COLORS } from '@/constants/chartColors'
 import { usePivotChartQuery } from '@/hooks/queries/useCharts'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 
@@ -11,6 +12,18 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
   const { data, isLoading, isError } = usePivotChartQuery(isChartMode)
 
   const echartsRef = useRef(null)
+
+  const seriesColorMap = useMemo(() => {
+    const map = {}
+    const yCategories = data?.yCategories || []
+    const paletteLen = PIVOT_SERIES_COLORS.length || 1
+
+    yCategories.forEach((name, idx) => {
+      map[name] = PIVOT_SERIES_COLORS[idx % paletteLen]
+    })
+
+    return map
+  }, [data])
 
   useImperativeHandle(ref, () => ({
     downloadImage: () => {
@@ -72,9 +85,10 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
         rowKeys,
         rawEvent: params,
         chartData: data,
+        seriesColorMap,
       })
     },
-    [data, onChartClick, chartType],
+    [data, onChartClick, chartType, seriesColorMap],
   )
 
   if (!isChartMode) {

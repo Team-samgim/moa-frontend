@@ -1,15 +1,55 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
+import {
+  DRILLDOWN_BAND_COLOR,
+  DRILLDOWN_MEDIAN_COLOR,
+  PIVOT_SERIES_COLORS,
+} from '@/constants/chartColors'
 import { useDrilldownTimeSeries } from '@/hooks/queries/useCharts'
 
-const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
+const colorForSeriesName = (name, colorMap) => {
+  if (!name || !colorMap) return undefined
+  return colorMap[name]
+}
+
+const normalizePointsWithZeroEdges = (points, globalMinTime, globalMaxTime) => {
+  if (!Array.isArray(points) || points.length === 0) return []
+
+  const sorted = [...points].sort((a, b) => a.ts - b.ts)
+  const result = []
+
+  const first = sorted[0]
+  const last = sorted[sorted.length - 1]
+
+  // 전체 구간의 시작 지점에서 0
+  if (globalMinTime !== null && first.ts > globalMinTime) {
+    result.push([globalMinTime, 0])
+  }
+
+  // 실제 값들(값이 없거나 NaN이면 0으로)
+  sorted.forEach((p) => {
+    const v = typeof p.value === 'number' && !Number.isNaN(p.value) ? p.value : 0
+    result.push([p.ts, v])
+  })
+
+  // 전체 구간의 끝 지점에서 0
+  if (globalMaxTime !== null && last.ts < globalMaxTime) {
+    result.push([globalMaxTime, 0])
+  }
+
+  return result
+}
+
+const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => {
   if (!data || !data.series || !data.series.length) {
     return {
       title: { text: '드릴다운 데이터가 없습니다', left: 'center', top: 'middle' },
     }
   }
 
-  const { series, globalMedian, globalMinTime, globalMaxTime, seriesMedianMap } = data
+  // TODO: 시리즈 중간 값 유무
+  // const { series, globalMedian, globalMinTime, globalMaxTime, seriesMedianMap } = data
+  const { series, globalMedian, globalMinTime, globalMaxTime } = data
 
   const median = typeof globalMedian === 'number' ? globalMedian : null
   const upper =
@@ -21,14 +61,22 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
       ? median * (1 - (typeof minusPercent === 'number' ? minusPercent : 0) / 100)
       : null
 
-  const lineSeries = series.map((s) => ({
-    name: s.rowKey,
-    type: 'line',
-    showSymbol: false,
-    smooth: true,
-    data: (s.points || []).map((p) => [p.ts, p.value]),
-  }))
+  // --- 시리즈 생성: 색 + 앞/뒤 0 처리 ---
+  const lineSeries = series.map((s) => {
+    const color = colorForSeriesName(s.rowKey, colorMap)
 
+    return {
+      name: s.rowKey,
+      type: 'line',
+      showSymbol: true,
+      smooth: true,
+      data: normalizePointsWithZeroEdges(s.points || [], globalMinTime, globalMaxTime),
+      itemStyle: color ? { color } : undefined,
+      lineStyle: color ? { color } : undefined,
+    }
+  })
+
+  // --- 글로벌 median 라인 + 영역 (첫 시리즈에만 markLine/markArea 부착) ---
   if (
     lineSeries.length > 0 &&
     median !== null &&
@@ -41,17 +89,23 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
       ...lineSeries[0],
       markLine: {
         symbol: 'none',
+        silent: true, // 마우스 이벤트/호버 반응 막기
+        emphasis: {
+          disabled: true, // 강조 상태 비활성화
+        },
         label: {
-          formatter: () => `Median: ${median.toFixed(2)}`,
+          formatter: () => `중간값: ${median.toFixed(2)}`,
         },
         lineStyle: {
           type: 'dashed',
+          color: DRILLDOWN_MEDIAN_COLOR || '#111827',
         },
         data: [{ yAxis: median }],
       },
       markArea: {
         itemStyle: {
-          opacity: 0.08,
+          color: DRILLDOWN_BAND_COLOR || 'rgba(37, 99, 235, 0.15)',
+          opacity: 0.12,
         },
         data: [
           [
@@ -70,40 +124,72 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
   }
 
   return {
+    color: PIVOT_SERIES_COLORS, // 팔레트 자체도 공유
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
+      padding: [8, 10],
+      borderRadius: 6,
+      textStyle: {
+        fontSize: 14,
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        lineHeight: 16,
+      },
       formatter: (params) => {
         if (!params || !params.length) return ''
         const ts = params[0].value[0]
         const date = new Date(ts)
-        const lines = []
 
-        lines.push(
-          date.toLocaleString('ko-KR', {
-            timeZone: 'Asia/Seoul',
-          }),
-        )
+        const timeStr = date.toLocaleString('ko-KR', {
+          timeZone: 'Asia/Seoul',
+        })
 
-        if (median !== null) {
-          lines.push(`글로벌 중간값: ${median.toFixed(2)}`)
-        }
+        const bodyLines = []
 
         params.forEach((p) => {
           const value = p.value[1]
-          const seriesMedian =
-            seriesMedianMap && typeof seriesMedianMap[p.seriesName] === 'number'
-              ? seriesMedianMap[p.seriesName]
-              : null
+          const line = `${p.marker} ${p.seriesName}: ${value.toFixed(2)}`
 
-          let line = `${p.marker} ${p.seriesName}: ${value.toFixed(2)}`
-          if (seriesMedian !== null) {
-            line += ` (median: ${seriesMedian.toFixed(2)})`
-          }
-          lines.push(line)
+          // TODO: 시리즈 별 중간값 넣을지 말지
+          // const seriesMedian =
+          //   seriesMedianMap && typeof seriesMedianMap[p.seriesName] === 'number'
+          //     ? seriesMedianMap[p.seriesName]
+          //     : null
+          // if (seriesMedian !== null) {
+          //   line += ` (중간값: ${seriesMedian.toFixed(2)})`
+          // }
+          bodyLines.push(line)
         })
 
-        return lines.join('<br/>')
+        let globalHtml = ''
+        if (median !== null) {
+          globalHtml = `
+            <div
+              style="
+                margin-top:12px;
+                padding-top:7px;
+                border-top:1px solid rgba(156,163,175,0.5);
+              "
+            >
+              글로벌 중간값: ${median.toFixed(2)}
+            </div>
+          `
+        }
+
+        const headerHtml = `
+          <div style="margin-bottom:7px; font-weight:600;">
+            ${timeStr}
+          </div>
+        `
+
+        const bodyHtml = `
+          <div style="display:flex; flex-direction:column; row-gap:3.5px;">
+            ${bodyLines.map((line) => `<div>${line}</div>`).join('')}
+          </div>
+        `
+
+        return headerHtml + bodyHtml + globalHtml
       },
     },
     legend: {
@@ -111,7 +197,7 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
     },
     grid: {
       left: 40,
-      right: 20,
+      right: 100,
       top: 40,
       bottom: 40,
       containLabel: true,
@@ -122,12 +208,13 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent) => {
     },
     yAxis: {
       type: 'value',
+      min: 0, // 항상 0에서 시작해서 "떠 있는 느낌" 없애기
     },
     series: lineSeries,
   }
 }
 
-const DrilldownTimeSeriesPanel = ({ selectedColKey, rowKeys, onClose }) => {
+const DrilldownTimeSeriesPanel = ({ selectedColKey, rowKeys, colorMap, onClose }) => {
   const [plusPercent, setPlusPercent] = useState(50) // + 범위 (%)
   const [minusPercent, setMinusPercent] = useState(50) // - 범위 (%)
 
@@ -140,8 +227,8 @@ const DrilldownTimeSeriesPanel = ({ selectedColKey, rowKeys, onClose }) => {
   }, [selectedColKey, rowKeys, mutate])
 
   const option = useMemo(
-    () => buildDrilldownLineOption(data, plusPercent, minusPercent),
-    [data, plusPercent, minusPercent],
+    () => buildDrilldownLineOption(data, plusPercent, minusPercent, colorMap),
+    [data, plusPercent, minusPercent, colorMap],
   )
 
   const handleClose = () => {
@@ -150,7 +237,7 @@ const DrilldownTimeSeriesPanel = ({ selectedColKey, rowKeys, onClose }) => {
   }
 
   return (
-    <div className='mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700'>
+    <div className='mt-4 rounded-lg border border-gray-200 p-3 text-xs text-gray-700'>
       <div className='mb-2 flex items-center justify-between'>
         <div className='flex flex-col gap-1'>
           <div className='text-sm font-semibold text-gray-800'>

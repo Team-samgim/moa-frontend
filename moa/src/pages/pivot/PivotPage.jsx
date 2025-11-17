@@ -70,6 +70,7 @@ const PivotPage = () => {
     open: false,
     selectedColKey: null,
     rowKeys: [],
+    colorMap: null,
   })
 
   // 차트 관련 훅
@@ -86,29 +87,36 @@ const PivotPage = () => {
 
   const { runQueryNow, pivotResult, isPivotLoading } = usePivotRunner()
 
-  const handleChartClickForDrilldown = useCallback(({ selectedColKey, rowKeys }) => {
-    setDrilldownState((prev) => {
-      // 같은 colKey를 다시 클릭하면 토글 off
-      if (prev.open && prev.selectedColKey === selectedColKey) {
-        return {
-          open: false,
-          selectedColKey: null,
-          rowKeys: [],
+  const handleChartClickForDrilldown = useCallback(
+    ({ selectedColKey, rowKeys, seriesColorMap }) => {
+      setDrilldownState((prev) => {
+        // 같은 colKey를 다시 클릭하면 토글 off
+        if (prev.open && prev.selectedColKey === selectedColKey) {
+          return {
+            open: false,
+            selectedColKey: null,
+            rowKeys: [],
+            colorMap: null,
+          }
         }
-      }
-      return {
-        open: true,
-        selectedColKey,
-        rowKeys: rowKeys || [],
-      }
-    })
-  }, [])
+
+        return {
+          open: true,
+          selectedColKey,
+          rowKeys: rowKeys || [],
+          colorMap: seriesColorMap || null,
+        }
+      })
+    },
+    [],
+  )
 
   const handleCloseDrilldown = useCallback(() => {
     setDrilldownState({
       open: false,
       selectedColKey: null,
       rowKeys: [],
+      colorMap: null,
     })
   }, [])
 
@@ -386,6 +394,7 @@ const PivotPage = () => {
                 <DrilldownTimeSeriesPanel
                   selectedColKey={drilldownState.selectedColKey}
                   rowKeys={drilldownState.rowKeys}
+                  colorMap={drilldownState.colorMap}
                   onClose={handleCloseDrilldown}
                 />
               )}
