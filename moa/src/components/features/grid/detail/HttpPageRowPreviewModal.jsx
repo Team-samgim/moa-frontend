@@ -132,6 +132,14 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
   const d = q.data || {}
 
+  // 문자열 httpResCode → 숫자 httpStatus (정규화 실패 시 null)
+  const httpStatus =
+    d.httpStatus !== null && Number.isFinite(Number(d.httpStatus))
+      ? Number(d.httpStatus)
+      : d.httpResCode !== null && Number.isFinite(Number(d.httpResCode))
+        ? Number(d.httpResCode)
+        : null
+
   const hasEnv =
     d.env &&
     (d.env.countryReq || d.env.countryRes || d.env.domesticPrimaryReq || d.env.domesticPrimaryRes)
@@ -141,6 +149,13 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
   const tcpErrorPct = tcpErrorRaw <= 1 ? tcpErrorRaw * 100 : tcpErrorRaw
   const tcpQualityScore = Math.max(0, Math.min(100, 100 - tcpErrorPct))
   const tcpErrorDisplay = d.tcpQuality ? `${tcpErrorPct.toFixed(2)}%` : '값 없음'
+
+  // 지연 요약 (정규화에서 계산된 delaySummary 사용)
+  const delaySummary = d.delaySummary
+  const dominantRatioPct =
+    delaySummary && delaySummary.dominantRatio !== null
+      ? (delaySummary.dominantRatio * 100).toFixed(1)
+      : null
 
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
@@ -167,14 +182,14 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
               {d.httpResCode && (
                 <Badge
                   level={
-                    d.httpResCode >= 200 && d.httpResCode < 300
+                    httpStatus >= 200 && httpStatus < 300
                       ? 'ok'
-                      : d.httpResCode >= 400
+                      : httpStatus >= 400
                         ? 'crit'
                         : 'warn'
                   }
                 >
-                  HTTP {d.httpResCode}
+                  HTTP {httpStatus}
                 </Badge>
               )}
               {d.ndpiProtocolApp && <Chip color='purple'>{d.ndpiProtocolApp}</Chip>}
@@ -246,12 +261,12 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       <div className='mt-3 flex flex-wrap gap-2'>
                         {d.httpMethod && <Chip color='blue'>Method: {d.httpMethod}</Chip>}
                         {d.httpHost && <Chip color='green'>Host: {d.httpHost}</Chip>}
-                        {d.httpResCode && (
+                        {httpStatus !== null && (
                           <Chip
                             color={
-                              d.httpResCode >= 200 && d.httpResCode < 300
+                              httpStatus >= 200 && httpStatus < 300
                                 ? 'green'
-                                : d.httpResCode >= 400
+                                : httpStatus >= 400
                                   ? 'red'
                                   : 'amber'
                             }
@@ -260,14 +275,14 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                               <span
                                 className={[
                                   'inline-block w-2 h-2 rounded-full',
-                                  d.httpResCode >= 200 && d.httpResCode < 300
+                                  httpStatus >= 200 && httpStatus < 300
                                     ? 'bg-green-500'
-                                    : d.httpResCode >= 400
+                                    : httpStatus >= 400
                                       ? 'bg-red-500'
                                       : 'bg-amber-500',
                                 ].join(' ')}
                               />
-                              Status: {d.httpResCode}
+                              Status: {httpStatus}
                             </span>
                           </Chip>
                         )}
@@ -389,8 +404,51 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {/* === Tab: 시간 분석 === */}
                 {activeTab === 'timing' && d.timing && (
                   <>
+                    {/* ⏱️ 지연 요약 카드 (URI 모달 느낌) */}
+                    {delaySummary && (
+                      <div className='rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4'>
+                        <div className='flex items-center justify-between mb-2'>
+                          <div className='text-sm font-semibold text-amber-900'>⏱️ 지연 요약</div>
+                          {dominantRatioPct && (
+                            <span className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white border border-amber-200 text-amber-800'>
+                              주요 지연 구간: {delaySummary.dominantLabel} ({dominantRatioPct}%)
+                            </span>
+                          )}
+                        </div>
+                        <div className='text-xs text-amber-900'>
+                          전체 페이지 시간{' '}
+                          <span className='font-semibold'>
+                            {formatMs((delaySummary.total || 0) * 1000)}
+                          </span>
+                          중{' '}
+                          <span className='font-semibold'>
+                            {delaySummary.dominantLabel}{' '}
+                            {formatMs((delaySummary.dominantValue || 0) * 1000)}
+                          </span>
+                          {dominantRatioPct && <span> (약 {dominantRatioPct}%)</span>} 구간에서 가장
+                          오래 걸렸습니다.
+                        </div>
+                        <div className='mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-amber-900'>
+                          {delaySummary.segments?.map((seg) => (
+                            <div
+                              key={seg.key}
+                              className='flex flex-col rounded-lg bg-white/80 border border-amber-100 px-2 py-1.5'
+                            >
+                              <span className='font-semibold'>{seg.label}</span>
+                              <span className='mt-0.5'>
+                                {formatMs((seg.value || 0) * 1000)}
+                                {delaySummary.total
+                                  ? ` (${((seg.value / delaySummary.total) * 100).toFixed(1)}%)`
+                                  : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className='rounded-xl border bg-white p-4'>
-                      <EnhancedTimelineChart timing={d.timing} />
+                      <EnhancedTimelineChart timing={d.timing} delaySummary={delaySummary} />
                     </div>
 
                     {/* 주요 시간 메트릭 카드 */}
@@ -668,26 +726,32 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           <div
                             className={[
                               'inline-flex items-center justify-center w-32 h-32 rounded-full text-5xl font-bold',
-                              d.httpResCode >= 200 && d.httpResCode < 300
+                              httpStatus !== null && httpStatus >= 200 && httpStatus < 300
                                 ? 'bg-green-100 text-green-700'
-                                : d.httpResCode >= 400 && d.httpResCode < 500
+                                : httpStatus !== null && httpStatus >= 400 && httpStatus < 500
                                   ? 'bg-amber-100 text-amber-700'
-                                  : d.httpResCode >= 500
+                                  : httpStatus !== null && httpStatus >= 500
                                     ? 'bg-red-100 text-red-700'
                                     : 'bg-blue-100 text-blue-700',
                             ].join(' ')}
                           >
-                            {d.httpResCode || '?'}
+                            {httpStatus ?? d.httpResCode ?? '?'}
                           </div>
                           <div className='mt-4 text-lg font-medium text-gray-700'>
                             {d.httpResPhrase || '상태 알 수 없음'}
                           </div>
                           <div className='mt-2 text-sm text-gray-500'>
-                            {d.httpResCode >= 200 && d.httpResCode < 300 && '✓ 성공'}
-                            {d.httpResCode >= 300 && d.httpResCode < 400 && '↪ 리다이렉트'}
-                            {d.httpResCode >= 400 && d.httpResCode < 500 && '⚠ 클라이언트 에러'}
-                            {d.httpResCode >= 500 && '✗ 서버 에러'}
-                            {!d.httpResCode && '응답 코드 정보 없음'}
+                            {httpStatus !== null && httpStatus >= 200 && httpStatus < 300 && '성공'}
+                            {httpStatus !== null &&
+                              httpStatus >= 300 &&
+                              httpStatus < 400 &&
+                              '리다이렉트'}
+                            {httpStatus !== null &&
+                              httpStatus >= 400 &&
+                              httpStatus < 500 &&
+                              '클라이언트 에러'}
+                            {httpStatus !== null && httpStatus >= 500 && '서버 에러'}
+                            {httpStatus === null && !d.httpResCode && '응답 코드 정보 없음'}
                           </div>
                         </div>
                       </div>

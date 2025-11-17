@@ -22,10 +22,21 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
   const searchConfig = p.config?.search
   const pivotConfig = p.config?.pivot
 
-  const layer =
-    p.presetType === 'SEARCH'
-      ? (searchConfig?.layer ?? p.config?.layer)
-      : (pivotConfig?.layer ?? p.config?.layer)
+  const extractLayer = (obj) => {
+    if (!obj) return null
+    return (
+      obj.layer || obj.config?.layer || obj.baseSpec?.layer || obj.config?.baseSpec?.layer || null
+    )
+  }
+
+  let layer
+  if (p.presetType === 'SEARCH') {
+    layer = extractLayer(searchConfig) || extractLayer(p.config) || extractLayer(pivotConfig)
+  } else if (p.presetType === 'PIVOT') {
+    layer = extractLayer(pivotConfig) || extractLayer(p.config) || extractLayer(searchConfig)
+  } else {
+    layer = extractLayer(p.config)
+  }
 
   return (
     <>
@@ -87,13 +98,12 @@ const PresetRow = ({ p, onFav, onDelete, onApply }) => {
 
       {opened && (
         <tr className='bg-transparent'>
-          {/* 테이블 전체가 border-spacing-y-[12px]이므로 상세는 그만큼 위로 당겨 붙임 */}
           <td colSpan={5} className='pt-0'>
             <div className='bg-white -mt-[15px]'>
               {p.presetType === 'SEARCH' ? (
                 <GridPresetDetail payload={searchConfig ?? p.config} />
               ) : (
-                <PivotPresetDetail payload={pivotConfig ?? p.config} />
+                <PivotPresetDetail payload={p.config} />
               )}
             </div>
           </td>

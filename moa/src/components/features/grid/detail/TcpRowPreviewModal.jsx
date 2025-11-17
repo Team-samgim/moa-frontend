@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
+import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import useTcpMetrics from '@/hooks/detail/useTcpMetrics'
 
 // ===== 유틸리티 함수 =====
@@ -11,14 +12,14 @@ const prettyBytes = (n = 0) => {
 
 const pct = (v) => `${((v || 0) * 100).toFixed(2)}%`
 
-// 🆕 빈 값 처리
+// 빈 값 처리
 const emptyValue = (value, defaultText = '값 없음') => {
   if (value === null || value === undefined || value === '') return defaultText
   if (typeof value === 'number' && isNaN(value)) return defaultText
   return value
 }
 
-// 🆕 타임스탬프 포맷팅
+// 타임스탬프 포맷팅
 const formatTimestamp = (epoch) => {
   if (!epoch) return '값 없음'
   try {
@@ -36,7 +37,7 @@ const formatTimestamp = (epoch) => {
   }
 }
 
-// 🆕 지속 시간 포맷팅
+// 지속 시간 포맷팅
 const formatDuration = (sec) => {
   if (!sec || sec < 0) return '0초'
   if (sec < 0.001) return `${(sec * 1000000).toFixed(0)} μs`
@@ -50,8 +51,8 @@ const formatDuration = (sec) => {
   return `${hr}시간 ${m}분`
 }
 
-// ===== 컴포넌트 =====
-const Badge = ({ level, children }) => {
+// ===== 공통 UI 컴포넌트들 =====
+const Badge = ({ level = 'ok', children }) => {
   const cls =
     level === 'crit'
       ? 'bg-red-100 text-red-700 border-red-200'
@@ -65,25 +66,23 @@ const Badge = ({ level, children }) => {
   )
 }
 
-const TinyBadge = ({ level, children }) => {
-  const cls =
-    level === 'crit'
-      ? 'bg-red-100 text-red-700 border-red-200'
-      : level === 'warn'
-        ? 'bg-amber-100 text-amber-800 border-amber-200'
-        : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+const Chip = ({ children, color = 'gray' }) => {
+  const colors = {
+    gray: 'bg-[#F5F5F7] text-gray-700',
+    blue: 'bg-blue-100 text-blue-700',
+    green: 'bg-green-100 text-green-700',
+    red: 'bg-red-100 text-red-700',
+    amber: 'bg-amber-100 text-amber-700',
+    purple: 'bg-purple-100 text-purple-700',
+  }
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] border ${cls}`}>
+    <span className={`rounded-full px-3 py-1 text-xs ${colors[color] || colors.gray}`}>
       {children}
     </span>
   )
 }
 
-const Chip = ({ children }) => (
-  <span className='rounded-full bg-[#F5F5F7] px-3 py-1 text-xs'>{children}</span>
-)
-
-// 🆕 빈 값 처리가 추가된 LV 컴포넌트
 const LV = ({ label, value, showEmpty = true }) => {
   const displayValue = emptyValue(value, showEmpty ? '값 없음' : '')
   const isEmpty = displayValue === '값 없음' || displayValue === ''
@@ -98,21 +97,12 @@ const LV = ({ label, value, showEmpty = true }) => {
   )
 }
 
-const KV = ({ label, value }) => (
-  <div className='flex items-center gap-5 text-sm leading-tight'>
-    <span className='text-gray-500 whitespace-nowrap'>{label}</span>
-    <span className='font-medium'>{emptyValue(value)}</span>
-  </div>
-)
-
 const Row = ({ label, value }) => (
   <div className='flex items-center justify-between py-1'>
     <span className='text-gray-500 text-sm'>{label}</span>
     <span className='text-sm font-medium'>{emptyValue(String(value))}</span>
   </div>
 )
-
-const Dim = ({ children }) => <span className='text-gray-500'>{children}</span>
 
 const TabButton = ({ id, activeId, onClick, children }) => {
   const active = id === activeId
@@ -132,9 +122,10 @@ const TabButton = ({ id, activeId, onClick, children }) => {
   )
 }
 
+// ===== Main Modal Component =====
 const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, rowKey }) {
   const q = useTcpMetrics(rowKey)
-  const [activeTab, setActiveTab] = useState('summary') // summary | quality | session | geo | advanced
+  const [activeTab, setActiveTab] = useState('summary')
 
   // ESC 닫기
   useEffect(() => {
@@ -154,7 +145,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
     }
   }, [open])
 
-  // 포커스 이동(접근성)
+  // 포커스 이동
   const closeBtnRef = useRef(null)
   useEffect(() => {
     if (open) closeBtnRef.current?.focus()
@@ -166,9 +157,8 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
     if (open) {
       const t = requestAnimationFrame(() => setMounted(true))
       return () => cancelAnimationFrame(t)
-    } else {
-      setMounted(false)
     }
+    setMounted(false)
   }, [open])
 
   // 탭 초기화
@@ -180,36 +170,59 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
 
   const d = q.data || {}
 
-  // 🆕 환경 정보 확인
+  // 환경 정보 확인
   const hasEnv =
     d.env &&
     (d.env.countryReq || d.env.countryRes || d.env.domesticPrimaryReq || d.env.domesticPrimaryRes)
 
-  // 🆕 진단 메시지 확인
+  // 진단 메시지 확인
   const diagEntries = Object.entries(d.diagnostics || {})
+
+  // 품질 이슈 확인
+  const hasQualityIssue =
+    (d.retransRateBytes || 0) > 0.05 ||
+    (d.oooRatePkts || 0) > 0.05 ||
+    (d.lossRatePkts || 0) > 0.05 ||
+    (d.ackRtoTotal || 0) > 0
+
+  // 품질 등급 계산
+  const qualityLevel =
+    (d.retransRateBytes || 0) >= 0.05 || (d.lossRatePkts || 0) >= 0.05
+      ? 'crit'
+      : (d.retransRateBytes || 0) > 0 || (d.oooRatePkts || 0) > 0
+        ? 'warn'
+        : 'ok'
 
   return (
     <div className='fixed inset-0 z-[100]' aria-hidden={!open}>
-      {/* overlay */}
       <div className='absolute inset-0 bg-black/40 backdrop-blur-[2px]' onClick={onClose} />
 
-      {/* centered dialog */}
       <div className='absolute inset-0 flex items-center justify-center p-4'>
         <div
           role='dialog'
           aria-modal='true'
           aria-labelledby='tcp-dialog-title'
           className={[
-            'w-full max-w-[960px] max-h-[90vh] overflow-hidden rounded-2xl',
-            'border bg-white shadow-2xl flex flex-col',
+            'w-full max-w-[1400px] max-h-[95vh] overflow-hidden rounded-2xl',
+            'border bg-white shadow-2xl flex flex-col min-h-0',
             'transform transition duration-200 ease-out',
             mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           ].join(' ')}
         >
-          {/* header */}
-          <div className='flex items-center justify-between border-b px-6 py-4'>
-            <div id='tcp-dialog-title' className='text-lg font-semibold'>
-              TCP 세션 상세
+          {/* Header */}
+          <div className='flex-none flex items-center justify-between border-b px-6 py-4'>
+            <div className='flex items-center gap-4'>
+              <div id='tcp-dialog-title' className='text-lg font-semibold'>
+                TCP 세션 상세 분석
+              </div>
+              {d.qualityScore && (
+                <Badge level={qualityLevel}>
+                  품질: {d.qualityScore.grade || d.qualityScore.score + '점'}
+                </Badge>
+              )}
+              {hasQualityIssue && !d.qualityScore && <Badge level='warn'>⚠️ 품질 이슈 감지</Badge>}
+              {d.app && <Chip color='purple'>{d.app}</Chip>}
+              {d.master && <Chip color='blue'>{d.master}</Chip>}
             </div>
             <button
               ref={closeBtnRef}
@@ -221,33 +234,32 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
           </div>
 
           {/* Tabs */}
-          <div className='px-6 pt-3 border-b flex gap-2 overflow-x-auto'>
+          <div className='flex-none px-6 pt-3 border-b flex gap-2 overflow-x-auto'>
             <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
               요약
             </TabButton>
             <TabButton id='quality' activeId={activeTab} onClick={setActiveTab}>
-              품질 분석
+              {hasQualityIssue ? '⚠️ ' : '📊 '}품질 분석
             </TabButton>
             <TabButton id='session' activeId={activeTab} onClick={setActiveTab}>
-              세션 정보
+              🔌 세션 정보
             </TabButton>
             {hasEnv && (
               <TabButton id='geo' activeId={activeTab} onClick={setActiveTab}>
-                위치 정보
+                🌍 위치 정보
               </TabButton>
             )}
             <TabButton id='advanced' activeId={activeTab} onClick={setActiveTab}>
-              상세 통계
+              📈 상세 통계
             </TabButton>
           </div>
 
-          {/* body */}
-          <div className='p-6 space-y-5 overflow-auto flex-1'>
-            {/* 로딩/에러/빈 */}
+          {/* Body */}
+          <div className='p-6 space-y-5 overflow-auto flex-1 min-h-0'>
             {q.isLoading && <div className='text-sm text-gray-500'>불러오는 중…</div>}
             {q.isError && (
               <div className='text-sm text-red-600'>
-                요약을 불러오지 못했습니다. {q.error?.message || ''}
+                데이터를 불러오지 못했습니다. {q.error?.message || ''}
               </div>
             )}
             {q.isSuccess && !q.data && <div className='text-sm text-gray-500'>데이터 없음</div>}
@@ -257,9 +269,9 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                 {/* === Tab: 요약 === */}
                 {activeTab === 'summary' && (
                   <>
-                    {/* 세션 헤더 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='text-sm text-gray-500 mb-1'>TCP 세션</div>
+                    {/* 세션 헤더 카드 */}
+                    <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='text-sm text-gray-600 mb-1'>TCP 세션</div>
                       <div className='text-[15px] font-semibold'>
                         {emptyValue(d.srcIp)}:{emptyValue(d.srcPort)}{' '}
                         <span className='text-gray-400'>→</span> {emptyValue(d.dstIp)}:
@@ -270,20 +282,26 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                           MAC: {emptyValue(d.srcMac)} → {emptyValue(d.dstMac)}
                         </div>
                       )}
-                      <div className='mt-2 flex flex-wrap gap-2'>
-                        {d.app && <Chip>App: {d.app}</Chip>}
-                        {d.master && <Chip>Proto: {d.master}</Chip>}
-                        {d.sni && <Chip>SNI: {d.sni}</Chip>}
+
+                      {/* 프로토콜 칩들 */}
+                      <div className='mt-3 flex flex-wrap gap-2'>
+                        {d.app && <Chip color='purple'>App: {d.app}</Chip>}
+                        {d.master && <Chip color='blue'>Proto: {d.master}</Chip>}
+                        {d.sni && <Chip color='amber'>SNI: {d.sni}</Chip>}
+                        {d.handshake && <Chip color='green'>핸드셰이크: {d.handshake}</Chip>}
+                        {d.termination && <Chip color='red'>종료: {d.termination}</Chip>}
+                        {hasQualityIssue && <Chip color='red'>⚠️ 품질 이슈</Chip>}
+                        {d.env?.sensorDeviceName && <Chip>센서: {d.env.sensorDeviceName}</Chip>}
                       </div>
                     </div>
 
-                    {/* 🆕 품질 점수 (있는 경우) */}
+                    {/* 품질 점수 (있는 경우) */}
                     {d.qualityScore && (
-                      <div className='rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50 p-4'>
+                      <div className='rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50 p-5'>
                         <div className='flex items-center justify-between'>
                           <div>
-                            <div className='text-sm text-gray-600'>연결 품질 점수</div>
-                            <div className='text-3xl font-bold text-blue-700 mt-1'>
+                            <div className='text-sm text-gray-600 mb-1'>연결 품질 점수</div>
+                            <div className='text-3xl font-bold text-blue-700'>
                               {d.qualityScore.score}/100
                             </div>
                             <div className='text-sm font-medium text-blue-600 mt-1'>
@@ -300,23 +318,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                       </div>
                     )}
 
-                    {/* 🆕 타임스탬프 정보 */}
-                    {(d.tsFirst || d.tsLast || d.durSec) && (
-                      <div className='rounded-xl border bg-white p-4'>
-                        <div className='text-sm font-semibold text-gray-800 mb-3'>⏱️ 시간 정보</div>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
-                          <LV label='세션 시작' value={formatTimestamp(d.tsFirst)} />
-                          <LV label='세션 종료' value={formatTimestamp(d.tsLast)} />
-                          <LV label='샘플링 시작' value={formatTimestamp(d.tsSampleBegin)} />
-                          <LV label='샘플링 종료' value={formatTimestamp(d.tsSampleEnd)} />
-                          {d.durSec !== null && d.durSec !== undefined && (
-                            <LV label='지속 시간' value={formatDuration(d.durSec)} />
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* KPI 카드 */}
+                    {/* 핵심 지표 */}
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
                       <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='text-xs text-gray-500'>평균 처리량</div>
@@ -332,57 +334,200 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                         <div className='text-lg font-bold text-emerald-700'>
                           {prettyBytes(d.len)}
                         </div>
-                        <div className='text-xs text-gray-500 mt-1'>
-                          Req: {prettyBytes(d.lenReq)} / Res: {prettyBytes(d.lenRes)}
-                        </div>
                       </div>
                       <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
                         <div className='text-xs text-gray-500'>총 패킷</div>
                         <div className='text-lg font-bold text-purple-700'>
                           {(d.pkts || 0).toLocaleString()}
                         </div>
-                        <div className='text-xs text-gray-500 mt-1'>
-                          Req: {(d.pktsReq || 0).toLocaleString()} / Res:{' '}
-                          {(d.pktsRes || 0).toLocaleString()}
-                        </div>
                       </div>
-                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                      <div
+                        className={`rounded-xl border bg-gradient-to-br p-4 ${
+                          hasQualityIssue
+                            ? 'from-amber-50 to-white border-amber-200'
+                            : 'from-green-50 to-white'
+                        }`}
+                      >
                         <div className='text-xs text-gray-500'>평균 패킷 크기</div>
-                        <div className='text-lg font-bold text-amber-700'>
+                        <div
+                          className={`text-lg font-bold ${hasQualityIssue ? 'text-amber-700' : 'text-green-700'}`}
+                        >
                           {d.avgPktSize ? `${d.avgPktSize.toFixed(0)} bytes` : '값 없음'}
                         </div>
                       </div>
                     </div>
 
-                    {/* 🆕 진단 메시지 */}
+                    {/* 품질 이슈 경고 */}
+                    {hasQualityIssue && (
+                      <div className='rounded-xl border-2 border-amber-300 bg-amber-50 p-4'>
+                        <div className='flex items-start gap-3'>
+                          <div className='text-2xl'>⚠️</div>
+                          <div className='flex-1'>
+                            <div className='mb-2 text-sm font-semibold text-amber-800'>
+                              TCP 품질 이슈가 감지되었습니다
+                            </div>
+                            <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3'>
+                              {(d.retransRateBytes || 0) > 0 && (
+                                <div className='bg-white/60 p-2 rounded'>
+                                  <div className='text-xs text-gray-600'>재전송율</div>
+                                  <div className='font-bold text-orange-700'>
+                                    {pct(d.retransRateBytes)}
+                                  </div>
+                                </div>
+                              )}
+                              {(d.lossRatePkts || 0) > 0 && (
+                                <div className='bg-white/60 p-2 rounded'>
+                                  <div className='text-xs text-gray-600'>패킷 손실률</div>
+                                  <div className='font-bold text-red-700'>
+                                    {pct(d.lossRatePkts)}
+                                  </div>
+                                </div>
+                              )}
+                              {(d.oooRatePkts || 0) > 0 && (
+                                <div className='bg-white/60 p-2 rounded'>
+                                  <div className='text-xs text-gray-600'>순서 오류율</div>
+                                  <div className='font-bold text-amber-700'>
+                                    {pct(d.oooRatePkts)}
+                                  </div>
+                                </div>
+                              )}
+                              {(d.ackRtoTotal || 0) > 0 && (
+                                <div className='bg-white/60 p-2 rounded'>
+                                  <div className='text-xs text-gray-600'>RTO</div>
+                                  <div className='font-bold text-red-700'>
+                                    {(d.ackRtoTotal || 0).toLocaleString()}회
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className='text-xs text-amber-700 space-y-1'>
+                              <div>
+                                💡 TCP 품질 저하는 네트워크 성능에 직접적인 영향을 미칩니다.
+                              </div>
+                              <div>
+                                • 재전송, 패킷 손실, 순서 오류는 대역폭 낭비와 지연을 유발합니다.
+                              </div>
+                              <div>• 자세한 분석은 "품질 분석" 탭에서 확인하세요.</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 진단 메시지 */}
                     {diagEntries.length > 0 && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           🔍 진단 메시지
                         </div>
                         <ul className='space-y-2'>
-                          {diagEntries.map(([k, msg]) => (
-                            <li
-                              key={k}
-                              className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm'
-                            >
-                              <span className='font-medium text-gray-600'>{k}:</span>
-                              <span className='text-gray-700'>{msg}</span>
-                            </li>
-                          ))}
+                          {diagEntries.map(([k, msg]) => {
+                            const [icon, ...rest] = String(msg).split(' ')
+                            return (
+                              <li
+                                key={k}
+                                className='flex items-start gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm'
+                              >
+                                <span className='text-xl'>{icon}</span>
+                                <span className='flex-1'>{rest.join(' ')}</span>
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     )}
 
+                    {/* 시간 정보 */}
+                    {(d.tsFirst || d.tsLast || d.durSec) && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>⏱️ 시간 정보</div>
+                        <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
+                          <LV label='세션 시작' value={formatTimestamp(d.tsFirst)} />
+                          <LV label='세션 종료' value={formatTimestamp(d.tsLast)} />
+                          {d.durSec !== null && d.durSec !== undefined && (
+                            <LV label='지속 시간' value={formatDuration(d.durSec)} />
+                          )}
+                          <LV label='샘플링 시작' value={formatTimestamp(d.tsSampleBegin)} />
+                          <LV label='샘플링 종료' value={formatTimestamp(d.tsSampleEnd)} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 트래픽 통계 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>📊 트래픽 통계</div>
+                      <div className='grid grid-cols-3 gap-4'>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-3 font-semibold'>전체</div>
+                          <div className='space-y-2 text-sm'>
+                            <div className='bg-gray-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>패킷</span>
+                                <span className='font-medium'>
+                                  {(d.pkts || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className='bg-gray-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>바이트</span>
+                                <span className='font-medium'>{prettyBytes(d.len)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className='text-xs text-gray-500 mb-3 font-semibold'>요청</div>
+                          <div className='space-y-2 text-sm'>
+                            <div className='bg-blue-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>패킷</span>
+                                <span className='font-medium'>
+                                  {(d.pktsReq || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className='bg-blue-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>바이트</span>
+                                <span className='font-medium'>{prettyBytes(d.lenReq)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className='text-xs text-gray-500 mb-3 font-semibold'>응답</div>
+                          <div className='space-y-2 text-sm'>
+                            <div className='bg-green-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>패킷</span>
+                                <span className='font-medium'>
+                                  {(d.pktsRes || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className='bg-green-50 p-2 rounded'>
+                              <div className='flex justify-between'>
+                                <span className='text-gray-500'>바이트</span>
+                                <span className='font-medium'>{prettyBytes(d.lenRes)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 연결 상태 */}
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-2 text-sm font-semibold text-gray-800'>연결 상태</div>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>🔌 연결 상태</div>
                       <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
-                        <KV label='핸드셰이크' value={d.handshake} />
-                        <KV label='종료' value={d.termination} />
-                        <KV label='ACK-only' value={d.ackOnly ? '예' : '아니오'} />
+                        <LV label='핸드셰이크' value={d.handshake} />
+                        <LV label='종료' value={d.termination} />
+                        <LV label='ACK-only' value={d.ackOnly ? '예' : '아니오'} />
                         {d.reqResRatio !== null && d.reqResRatio !== undefined && (
-                          <KV label='Req/Res 비율' value={d.reqResRatio.toFixed(2)} />
+                          <LV label='Req/Res 비율' value={d.reqResRatio.toFixed(2)} />
                         )}
                       </div>
                     </div>
@@ -393,55 +538,109 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                 {activeTab === 'quality' && (
                   <>
                     {/* 핵심 품질 지표 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                    <div className='rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5'>
+                      <div className='mb-4 text-base font-bold text-blue-800'>
                         📊 핵심 품질 지표
                       </div>
                       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                        <div className='space-y-2'>
-                          <LV label='재전송율' value={pct(d.retransRateBytes)} />
-                          <Badge level={d.badges?.retrans}>{pct(d.retransRateBytes)}</Badge>
+                        <div className='bg-white rounded-lg p-4 border'>
+                          <div className='text-xs text-gray-500 mb-2'>재전송율</div>
+                          <div className='text-2xl font-bold text-orange-700 mb-2'>
+                            {pct(d.retransRateBytes)}
+                          </div>
+                          <Badge level={d.badges?.retrans || 'ok'}>
+                            {d.badges?.retrans === 'crit'
+                              ? '위험'
+                              : d.badges?.retrans === 'warn'
+                                ? '경고'
+                                : '정상'}
+                          </Badge>
                         </div>
-                        <div className='space-y-2'>
-                          <LV label='순서 오류율' value={pct(d.oooRatePkts)} />
-                          <Badge level={d.badges?.ooo}>{pct(d.oooRatePkts)}</Badge>
+                        <div className='bg-white rounded-lg p-4 border'>
+                          <div className='text-xs text-gray-500 mb-2'>순서 오류율</div>
+                          <div className='text-2xl font-bold text-amber-700 mb-2'>
+                            {pct(d.oooRatePkts)}
+                          </div>
+                          <Badge level={d.badges?.ooo || 'ok'}>
+                            {d.badges?.ooo === 'crit'
+                              ? '위험'
+                              : d.badges?.ooo === 'warn'
+                                ? '경고'
+                                : '정상'}
+                          </Badge>
                         </div>
-                        <div className='space-y-2'>
-                          <LV label='패킷 손실률' value={pct(d.lossRatePkts)} />
-                          <Badge level={d.badges?.loss}>{pct(d.lossRatePkts)}</Badge>
+                        <div className='bg-white rounded-lg p-4 border'>
+                          <div className='text-xs text-gray-500 mb-2'>패킷 손실률</div>
+                          <div className='text-2xl font-bold text-red-700 mb-2'>
+                            {pct(d.lossRatePkts)}
+                          </div>
+                          <Badge level={d.badges?.loss || 'ok'}>
+                            {d.badges?.loss === 'crit'
+                              ? '위험'
+                              : d.badges?.loss === 'warn'
+                                ? '경고'
+                                : '정상'}
+                          </Badge>
                         </div>
-                        <div className='space-y-2'>
-                          <LV label='체크섬 에러율' value={pct(d.csumRatePkts)} />
-                          <Badge level={d.badges?.csum}>{pct(d.csumRatePkts)}</Badge>
+                        <div className='bg-white rounded-lg p-4 border'>
+                          <div className='text-xs text-gray-500 mb-2'>체크섬 에러율</div>
+                          <div className='text-2xl font-bold text-purple-700 mb-2'>
+                            {pct(d.csumRatePkts)}
+                          </div>
+                          <Badge level={d.badges?.csum || 'ok'}>
+                            {d.badges?.csum === 'crit'
+                              ? '위험'
+                              : d.badges?.csum === 'warn'
+                                ? '경고'
+                                : '정상'}
+                          </Badge>
                         </div>
                       </div>
                     </div>
 
-                    {/* 🆕 RTT/RTO (가장 중요!) */}
+                    {/* RTT/RTO */}
                     {(d.ackRttCntReq || d.ackRttCntRes || d.ackRtoCntReq || d.ackRtoCntRes) && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           ⚡ RTT / RTO (응답 시간 / 타임아웃)
                         </div>
-                        <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                          <LV label='RTT 요청' value={(d.ackRttCntReq || 0).toLocaleString()} />
-                          <LV label='RTT 응답' value={(d.ackRttCntRes || 0).toLocaleString()} />
-                          <LV label='RTO 요청' value={(d.ackRtoCntReq || 0).toLocaleString()} />
-                          <LV label='RTO 응답' value={(d.ackRtoCntRes || 0).toLocaleString()} />
-                          <LV label='총 RTO' value={(d.ackRtoTotal || 0).toLocaleString()} />
-                          {d.rtoRate !== null && d.rtoRate !== undefined && (
-                            <LV label='RTO 비율' value={`${d.rtoRate.toFixed(2)}%`} />
-                          )}
+                        <div className='grid grid-cols-2 gap-3 mb-4'>
+                          <div className='bg-blue-50 p-3 rounded-lg'>
+                            <div className='text-xs text-gray-600 mb-1'>RTT (Round Trip Time)</div>
+                            <div className='text-xl font-bold text-blue-700'>
+                              {(d.ackRttCntReq || 0) + (d.ackRttCntRes || 0)}회
+                            </div>
+                            <div className='text-xs text-gray-500 mt-1'>
+                              요청: {d.ackRttCntReq || 0} / 응답: {d.ackRttCntRes || 0}
+                            </div>
+                          </div>
+                          <div
+                            className={`p-3 rounded-lg ${
+                              (d.ackRtoTotal || 0) > 0 ? 'bg-red-50' : 'bg-green-50'
+                            }`}
+                          >
+                            <div className='text-xs text-gray-600 mb-1'>
+                              RTO (Retransmission Timeout)
+                            </div>
+                            <div
+                              className={`text-xl font-bold ${
+                                (d.ackRtoTotal || 0) > 0 ? 'text-red-700' : 'text-green-700'
+                              }`}
+                            >
+                              {d.ackRtoTotal || 0}회
+                            </div>
+                            <div className='text-xs text-gray-500 mt-1'>
+                              요청: {d.ackRtoCntReq || 0} / 응답: {d.ackRtoCntRes || 0}
+                            </div>
+                          </div>
                         </div>
                         {d.badges?.rto && (
-                          <div className='mt-3'>
-                            <Badge level={d.badges.rto}>RTO 상태: {d.badges.rto}</Badge>
-                          </div>
+                          <Badge level={d.badges.rto}>RTO 상태: {d.badges.rto}</Badge>
                         )}
                       </div>
                     )}
 
-                    {/* 🆕 PDU (페이로드 vs 오버헤드) */}
+                    {/* PDU 분석 */}
                     {(d.lenPdu || d.overhead) && (
                       <div className='rounded-xl border bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
@@ -467,7 +666,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     {/* 재전송 상세 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>🔄 재전송 상세</div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
                         <LV label='재전송 횟수' value={(d.retransCnt || 0).toLocaleString()} />
                         <LV label='재전송 요청' value={(d.retransCntReq || 0).toLocaleString()} />
                         <LV label='재전송 응답' value={(d.retransCntRes || 0).toLocaleString()} />
@@ -480,7 +679,7 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                     {/* 윈도우 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>🪟 윈도우 상태</div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
+                      <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
                         <LV label='Zero Window' value={(d.zeroWinCnt || 0).toLocaleString()} />
                         <LV label='Zero Win 요청' value={(d.zeroWinCntReq || 0).toLocaleString()} />
                         <LV label='Zero Win 응답' value={(d.zeroWinCntRes || 0).toLocaleString()} />
@@ -527,35 +726,59 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                         />
                         <LV label='세션 타임아웃' value={d.sessionTimeout} />
                       </div>
+                      {d.expiredByTimeout === 1 && (
+                        <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800'>
+                          <div className='flex items-center gap-2'>
+                            <span className='text-xl'>⚠️</span>
+                            <span className='font-medium'>세션이 타임아웃으로 종료되었습니다</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* TCP 플래그 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>🚩 TCP 플래그</div>
-                      <div className='grid grid-cols-2 md:grid-cols-5 gap-3 text-sm'>
-                        {Object.entries(d.flags || {}).map(([k, v]) => (
-                          <Row key={k} label={k} value={v} />
-                        ))}
+                    {d.flags && Object.keys(d.flags).length > 0 && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          🚩 TCP 플래그
+                        </div>
+                        <div className='grid grid-cols-2 md:grid-cols-5 gap-3 text-sm'>
+                          {Object.entries(d.flags).map(([k, v]) => (
+                            <Row key={k} label={k} value={v} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 타임스탬프 상세 */}
                     <div className='rounded-xl border bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         ⏰ 타임스탬프 상세
                       </div>
-                      <div className='space-y-2 text-sm'>
-                        <LV label='세션 시작' value={formatTimestamp(d.tsFirst)} />
-                        <LV label='세션 종료' value={formatTimestamp(d.tsLast)} />
-                        <LV label='만료 시각' value={formatTimestamp(d.tsExpired)} />
-                        <LV label='샘플링 시작' value={formatTimestamp(d.tsSampleBegin)} />
-                        <LV label='샘플링 종료' value={formatTimestamp(d.tsSampleEnd)} />
-                        {d.durSec !== null && d.durSec !== undefined && (
-                          <LV
-                            label='지속 시간'
-                            value={`${formatDuration(d.durSec)} (${d.durSec.toFixed(3)}초)`}
-                          />
-                        )}
+                      <div className='grid md:grid-cols-2 gap-4 text-sm'>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-3 font-semibold'>세션 정보</div>
+                          <div className='space-y-2'>
+                            <LV label='시작' value={formatTimestamp(d.tsFirst)} />
+                            <LV label='종료' value={formatTimestamp(d.tsLast)} />
+                            <LV label='만료 시각' value={formatTimestamp(d.tsExpired)} />
+                            {d.durSec !== null && d.durSec !== undefined && (
+                              <LV
+                                label='지속 시간'
+                                value={`${formatDuration(d.durSec)} (${d.durSec.toFixed(3)}초)`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className='text-xs text-gray-500 mb-3 font-semibold'>
+                            샘플링 정보
+                          </div>
+                          <div className='space-y-2'>
+                            <LV label='시작' value={formatTimestamp(d.tsSampleBegin)} />
+                            <LV label='종료' value={formatTimestamp(d.tsSampleEnd)} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </>
@@ -563,49 +786,73 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
 
                 {/* === Tab: 위치 정보 === */}
                 {activeTab === 'geo' && hasEnv && (
-                  <div className='grid md:grid-cols-2 gap-4'>
-                    {/* 출발지 */}
+                  <>
                     <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        📍 출발지 (요청)
-                      </div>
-                      <div className='space-y-2 text-sm'>
-                        <LV label='국가' value={d.env?.countryReq} />
-                        <LV label='대륙' value={d.env?.continentReq} />
-                        <LV label='시/도' value={d.env?.domesticPrimaryReq} />
-                        <LV label='시/군/구' value={d.env?.domesticSub1Req} />
-                        <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
-                      </div>
+                      <EnhancedGeoMap
+                        countryReq={d.env?.countryReq}
+                        countryRes={d.env?.countryRes}
+                        srcIp={d.srcIp}
+                        dstIp={d.dstIp}
+                        env={d.env}
+                      />
                     </div>
 
-                    {/* 목적지 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        📍 목적지 (응답)
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          📍 출발지 (요청)
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV label='IP 주소' value={d.srcIp} />
+                          <LV label='포트' value={d.srcPort} />
+                          <LV label='MAC 주소' value={d.srcMac} />
+                          <div className='pt-2 border-t'>
+                            <LV label='국가' value={d.env?.countryReq} />
+                            <LV label='대륙' value={d.env?.continentReq} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryReq} />
+                            <LV label='시/군/구' value={d.env?.domesticSub1Req} />
+                            <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
+                          </div>
+                        </div>
                       </div>
-                      <div className='space-y-2 text-sm'>
-                        <LV label='국가' value={d.env?.countryRes} />
-                        <LV label='대륙' value={d.env?.continentRes} />
-                        <LV label='시/도' value={d.env?.domesticPrimaryRes} />
-                        <LV label='시/군/구' value={d.env?.domesticSub1Res} />
-                        <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
+
+                      <div className='rounded-xl border bg-gradient-to-br from-red-50 to-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          📍 목적지 (응답)
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV label='IP 주소' value={d.dstIp} />
+                          <LV label='포트' value={d.dstPort} />
+                          <LV label='MAC 주소' value={d.dstMac} />
+                          <div className='pt-2 border-t'>
+                            <LV label='국가' value={d.env?.countryRes} />
+                            <LV label='대륙' value={d.env?.continentRes} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryRes} />
+                            <LV label='시/군/구' value={d.env?.domesticSub1Res} />
+                            <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* === Tab: 상세 통계 === */}
                 {activeTab === 'advanced' && (
                   <>
                     {/* 품질 카운트 */}
-                    <div className='rounded-xl border bg-white p-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>📈 품질 카운트</div>
-                      <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
-                        {Object.entries(d.quality || {}).map(([k, v]) => (
-                          <Row key={k} label={k} value={v} />
-                        ))}
+                    {d.quality && Object.keys(d.quality).length > 0 && (
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
+                          📈 품질 카운트
+                        </div>
+                        <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
+                          {Object.entries(d.quality).map(([k, v]) => (
+                            <Row key={k} label={k} value={v} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 중복 ACK */}
                     <div className='rounded-xl border bg-white p-4'>
@@ -669,8 +916,11 @@ const TcpRowPreviewModal = memo(function TcpRowPreviewModal({ open, onClose, row
                 )}
 
                 {/* Footer */}
-                <div className='text-xs text-gray-400 pt-4 border-t'>
+                <div className='text-xs text-gray-400 pt-4 border-t flex justify-between items-center'>
                   <span className='font-mono'>rowKey: {emptyValue(d.rowKey)}</span>
+                  {hasQualityIssue && (
+                    <span className='text-amber-500 font-medium'>⚠️ TCP 품질 이슈 감지</span>
+                  )}
                 </div>
               </>
             )}

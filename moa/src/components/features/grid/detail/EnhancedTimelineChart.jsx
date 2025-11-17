@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import useEcharts from '@/hooks/detail/useEcharts'
 import { formatMs } from '@/utils/httpPageFormat'
 
-const EnhancedTimelineChart = ({ timing }) => {
+const EnhancedTimelineChart = ({ timing, delaySummary }) => {
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
   const echarts = useEcharts()
@@ -16,16 +16,10 @@ const EnhancedTimelineChart = ({ timing }) => {
     const steps = []
     const gaps = []
 
-    const lastStepEnd =
-      steps.length > 0 ? steps[steps.length - 1].start + steps[steps.length - 1].duration : 0
-
-    let totalDuration = (timing.tsPage || 0) * 1000
-    if (!totalDuration || totalDuration < lastStepEnd) {
-      totalDuration = lastStepEnd || 1
-    }
-
+    // --- 단계 구성 ---
     if (timing.tsPageTcpConnectAvg > 0) {
       steps.push({
+        key: 'tcp',
         name: 'TCP 핸드셰이크',
         start: 0,
         duration: timing.tsPageTcpConnectAvg * 1000,
@@ -44,6 +38,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const prevEnd =
         steps.length > 0 ? steps[steps.length - 1].start + steps[steps.length - 1].duration : 0
       steps.push({
+        key: 'client',
         name: '요청 생성',
         start: prevEnd,
         duration: timing.tsPageReqMakingAvg * 1000,
@@ -60,6 +55,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const prevEnd =
         steps.length > 0 ? steps[steps.length - 1].start + steps[steps.length - 1].duration : 0
       steps.push({
+        key: 'transferReq',
         name: '요청 전송',
         start: prevEnd,
         duration: timing.tsPageTransferReq * 1000,
@@ -75,6 +71,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const serverTime = timing.tsPageResInit * 1000 - prevEnd
       if (serverTime > 0) {
         steps.push({
+          key: 'server',
           name: '서버 처리 (TTFB)',
           start: prevEnd,
           duration: serverTime,
@@ -90,6 +87,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const appTime = (timing.tsPageResApp - timing.tsPageResInit) * 1000
       if (appTime > 0) {
         steps.push({
+          key: 'app',
           name: '애플리케이션 처리',
           start: prevEnd,
           duration: appTime,
@@ -104,6 +102,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const prevEnd =
         steps.length > 0 ? steps[steps.length - 1].start + steps[steps.length - 1].duration : 0
       steps.push({
+        key: 'transfer',
         name: '응답 수신',
         start: prevEnd,
         duration: timing.tsPageTransferRes * 1000,
@@ -119,6 +118,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       const finalTime = timing.tsPageRes * 1000 - prevEnd
       if (finalTime > 0) {
         steps.push({
+          key: 'final',
           name: '응답 완료',
           start: prevEnd,
           duration: finalTime,
@@ -129,6 +129,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       }
     }
 
+    // Gap 목록
     if (timing.tsPageGap > 0) gaps.push({ name: '페이지', value: timing.tsPageGap })
     if (timing.tsPageResInitGap > 0)
       gaps.push({ name: '응답초기화', value: timing.tsPageResInitGap })
@@ -151,17 +152,42 @@ const EnhancedTimelineChart = ({ timing }) => {
       return
     }
 
+    // --- totalDuration 계산 (delaySummary 우선 사용) ---
+    let totalDuration = (delaySummary?.total ?? timing.tsPage ?? 0) * 1000
+    const lastStepEnd =
+      steps.length > 0 ? steps[steps.length - 1].start + steps[steps.length - 1].duration : 0
+
+    if (!totalDuration || totalDuration < lastStepEnd) {
+      totalDuration = lastStepEnd || 1
+    }
+
     const xMax = totalDuration * 1.05
+
+    // --- 타이틀 subtext 구성 ---
+    const subtexts = []
+
+    if (delaySummary && delaySummary.dominantLabel && delaySummary.dominantValue !== null) {
+      const ratioPct =
+        delaySummary.dominantRatio !== null ? (delaySummary.dominantRatio * 100).toFixed(1) : null
+      subtexts.push(
+        `주요 지연: ${delaySummary.dominantLabel} ${formatMs(
+          (delaySummary.dominantValue || 0) * 1000,
+        )}${ratioPct ? ` (${ratioPct}%)` : ''}`,
+      )
+    }
+
+    if (gaps.length > 0) {
+      subtexts.push(
+        `⚠️ Gap: ${gaps.map((g) => `${g.name} ${formatMs((g.value || 0) * 1000)}`).join(', ')}`,
+      )
+    }
 
     const option = {
       title: {
         text: `페이지 로딩 타임라인 (총 ${formatMs(totalDuration)})`,
         left: 'center',
         textStyle: { fontSize: 14, fontWeight: 600 },
-        subtext:
-          gaps.length > 0
-            ? `⚠️ 지연: ${gaps.map((g) => `${g.name} ${formatMs(g.value * 1000)}`).join(', ')}`
-            : '',
+        subtext: subtexts.join('  |  '),
         subtextStyle: { fontSize: 10, color: '#ef4444' },
       },
       tooltip: {
@@ -215,7 +241,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       grid: {
         left: '15%',
         right: '10%',
-        top: gaps.length > 0 ? '22%' : '18%',
+        top: subtexts.length > 0 ? '22%' : '18%',
         bottom: '10%',
         containLabel: true,
       },
@@ -300,7 +326,7 @@ const EnhancedTimelineChart = ({ timing }) => {
       instance.dispose()
       chartInstance.current = null
     }
-  }, [echarts, timing])
+  }, [echarts, timing, delaySummary])
 
   useEffect(() => {
     const handleResize = () => {
