@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import ResetIcon from '@/assets/icons/reset.svg?react'
+import { LAYER_ACTIVE_STYLES } from '@/constants/colors'
 import { LAYER_OPTIONS, TIME_PRESETS } from '@/constants/pivot'
 import { isoToSeoulInputValue, seoulInputValueToDate } from '@/utils/dateFormat'
 
@@ -77,6 +78,20 @@ const PivotConfigPanel = ({
     return `${fromStr} ~ ${toStr}`
   }, [timeRange, customRange])
 
+  const getTimePresetActiveClass = () => {
+    if (isFromGrid) {
+      return 'bg-gray-200 text-gray-700 border-gray-300 font-semibold'
+    }
+
+    const layerStyle = LAYER_ACTIVE_STYLES[layer]
+
+    if (layerStyle) {
+      return `${layerStyle} font-semibold`
+    }
+
+    return 'bg-[#EAF1F9] text-gray-700 border-gray-300 font-semibold'
+  }
+
   return (
     <div className='w-full max-w-xs shrink-0 space-y-6'>
       <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
@@ -92,33 +107,50 @@ const PivotConfigPanel = ({
 
       {/* 조회 계층 */}
       <div>
+        {/* 조회 계층 */}
         <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
         <div className='flex flex-wrap justify-between w-full'>
           {LAYER_OPTIONS.map((opt) => {
             const isActive = layer === opt
             const disabled = isFromGrid && opt !== layer
 
+            const baseClass = 'rounded border px-3 py-2 text-xs transition-colors'
+            let stateClass = ''
+
+            if (isActive) {
+              if (isFromGrid) {
+                // fromGrid + active
+                stateClass =
+                  'bg-gray-200 text-gray-700 border-gray-300 cursor-default font-semibold'
+              } else {
+                // free 모드 + active → 레이어 색 + font-semibold
+                const layerStyle =
+                  LAYER_ACTIVE_STYLES[opt] ?? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
+                stateClass = `${layerStyle} font-semibold`
+              }
+            } else {
+              // inactive
+              if (disabled) {
+                stateClass =
+                  'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed font-medium'
+              } else {
+                stateClass = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 font-medium'
+              }
+            }
+
             return (
               <button
                 key={opt}
                 onClick={() => !disabled && onChangeLayer(opt)}
                 disabled={disabled}
-                className={[
-                  'rounded border px-3 py-2 text-xs font-medium',
-                  isActive
-                    ? isFromGrid
-                      ? 'bg-gray-200 text-gray-700 border-gray-300 cursor-default'
-                      : 'bg-[#EAF1F9] text-gray-700 border-gray-300'
-                    : disabled
-                      ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                ].join(' ')}
+                className={[baseClass, stateClass].join(' ')}
               >
                 {opt}
               </button>
             )
           })}
         </div>
+
         {isFromGrid && (
           <p className='mt-1 text-[10px] text-gray-400'>
             검색에서 선택한 계층으로 고정되어 있습니다.
@@ -150,16 +182,18 @@ const PivotConfigPanel = ({
           {TIME_PRESETS.map((p) => {
             const isActive = timeRange?.type === 'preset' && timeRange?.value === p.value
 
+            const baseClass = 'rounded border px-3 py-2 text-xs transition-colors'
+            const inactiveClass =
+              'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 font-medium'
+
             return (
               <button
                 key={p.value}
                 onClick={() => !isFromGrid && onSelectTimePreset(p.value)}
                 disabled={isFromGrid}
                 className={[
-                  'rounded border px-3 py-2 text-xs font-medium',
-                  isActive
-                    ? 'bg-[#EAF1F9] text-gray-700 border-gray-300'
-                    : 'bg-[#ffffff] text-gray-700 border-gray-300 hover:bg-gray-50',
+                  baseClass,
+                  isActive ? getTimePresetActiveClass() : inactiveClass,
                   isFromGrid ? 'opacity-40 cursor-not-allowed' : '',
                 ].join(' ')}
               >

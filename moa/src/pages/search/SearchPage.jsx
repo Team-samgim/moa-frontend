@@ -327,9 +327,9 @@ const SearchPage = () => {
   }, []) // 최초 1회만
 
   return (
-    <div className='p-5 flex flex-col gap-4'>
+    <div className='p-4 flex flex-col gap-4 mx-30'>
       {/* 검색 영역 */}
-      <div className='p-6 max-w-[1200px] mx-auto gap-3 flex flex-col'>
+      <div className='gap-3 flex flex-col'>
         <TimePresetBar
           value={timePreset}
           onChange={(key) => {
