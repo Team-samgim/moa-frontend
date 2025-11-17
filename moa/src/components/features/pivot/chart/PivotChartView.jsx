@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { buildPivotEChartOption } from './buildPivotEChartOption'
+import LoadingSpinner from '@/components/_common/LoadingSpinner'
 import { PIVOT_SERIES_COLORS } from '@/constants/chartColors'
 import { usePivotChartQuery } from '@/hooks/queries/useCharts'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
@@ -101,8 +102,8 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
 
   if (isLoading) {
     return (
-      <div className='flex h-64 items-center justify-center text-xs text-gray-400'>
-        차트 데이터를 불러오는 중…
+      <div className='h-[360px] w-full'>
+        <LoadingSpinner className='h-full' size={64} />
       </div>
     )
   }

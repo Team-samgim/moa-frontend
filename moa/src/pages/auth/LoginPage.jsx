@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
-import MsgRow from '@/components/common/MsgRow'
+import MsgRow from '@/components/_common/MsgRow'
 import IdField from '@/components/features/auth/IdField'
 import PasswordConfirmField from '@/components/features/auth/PasswordConfirmField'
 import PasswordField from '@/components/features/auth/PasswordField'
