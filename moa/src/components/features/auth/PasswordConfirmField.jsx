@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import EyeIcon from '@/assets/icons/eye.svg?react'
-import MsgRow from '@/components/common/MsgRow'
+import MsgRow from '@/components/_common/MsgRow'
 
 const PasswordConfirmField = ({ value, onChange, original }) => {
   const [show, setShow] = useState(false)
