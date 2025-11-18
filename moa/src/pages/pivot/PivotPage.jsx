@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 import ColumnIcon from '@/assets/icons/column.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
@@ -8,6 +9,7 @@ import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
 
 import PivotHeaderTabs from '@/components/features/pivot/PivotHeaderTabs'
+import DrilldownTimeSeriesPanel from '@/components/features/pivot/chart/DrilldownTimeSeriesPanel'
 import PivotChartConfigModal from '@/components/features/pivot/chart/PivotChartConfigModal'
 import PivotChartView from '@/components/features/pivot/chart/PivotChartView'
 import PivotHeatmapTableModal from '@/components/features/pivot/chart/PivotHeatmapTableModal'
@@ -34,6 +36,7 @@ import { usePivotStore } from '@/stores/pivotStore'
 import { applyPivotPresetConfigToStore } from '@/utils/preset/pivotPreset'
 
 const PivotPage = () => {
+  const location = useLocation()
   const {
     layer,
     timeRange,
@@ -62,8 +65,41 @@ const PivotPage = () => {
 
   const chartViewRef = useRef(null)
 
+  // ====== 마이페이지에서 넘어온 피벗 프리셋 적용 ======
+  const presetConfigFromLocation = location.state?.preset
+
+  useEffect(() => {
+    if (!presetConfigFromLocation) return
+
+    try {
+      const modeFromPreset = presetConfigFromLocation?.pivot?.mode
+
+      // config 전체를 store에 밀어넣기
+      applyPivotPresetConfigToStore(presetConfigFromLocation || {})
+
+      // fromGrid / free 모드 동기화
+      if (modeFromPreset === 'fromGrid' || modeFromPreset === 'free') {
+        setPivotMode(modeFromPreset)
+      }
+
+      // 바로 쿼리 실행
+      runQueryNow()
+    } catch (e) {
+      console.error(e)
+      window.alert('프리셋 적용 중 오류가 발생했습니다.')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetConfigFromLocation])
+
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false)
   const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)
+
+  const [drilldownState, setDrilldownState] = useState({
+    open: false,
+    selectedColKey: null,
+    rowKeys: [],
+    colorMap: null,
+  })
 
   // 차트 관련 훅
   const {
@@ -78,6 +114,39 @@ const PivotPage = () => {
   }
 
   const { runQueryNow, pivotResult, isPivotLoading } = usePivotRunner()
+
+  const handleChartClickForDrilldown = useCallback(
+    ({ selectedColKey, rowKeys, seriesColorMap }) => {
+      setDrilldownState((prev) => {
+        // 같은 colKey를 다시 클릭하면 토글 off
+        if (prev.open && prev.selectedColKey === selectedColKey) {
+          return {
+            open: false,
+            selectedColKey: null,
+            rowKeys: [],
+            colorMap: null,
+          }
+        }
+
+        return {
+          open: true,
+          selectedColKey,
+          rowKeys: rowKeys || [],
+          colorMap: seriesColorMap || null,
+        }
+      })
+    },
+    [],
+  )
+
+  const handleCloseDrilldown = useCallback(() => {
+    setDrilldownState({
+      open: false,
+      selectedColKey: null,
+      rowKeys: [],
+      colorMap: null,
+    })
+  }, [])
 
   // 시간 프리셋 / 커스텀 범위 변경 시 쿼리
   const handleSelectTimePreset = useCallback(
@@ -334,9 +403,20 @@ const PivotPage = () => {
 
           {/* 실제 결과 영역 */}
           {isChartMode ? (
-            <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
-              <PivotChartView ref={chartViewRef} />
-            </div>
+            <>
+              <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
+                <PivotChartView ref={chartViewRef} onChartClick={handleChartClickForDrilldown} />
+              </div>
+
+              {drilldownState.open && drilldownState.selectedColKey && (
+                <DrilldownTimeSeriesPanel
+                  selectedColKey={drilldownState.selectedColKey}
+                  rowKeys={drilldownState.rowKeys}
+                  colorMap={drilldownState.colorMap}
+                  onClose={handleCloseDrilldown}
+                />
+              )}
+            </>
           ) : (
             <>
               {isPivotLoading && (

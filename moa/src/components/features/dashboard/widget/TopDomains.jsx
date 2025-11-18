@@ -1,96 +1,113 @@
-import React from 'react'
+// TopDomains.jsx
+import ReactECharts from 'echarts-for-react'
 import PropTypes from 'prop-types'
-import TrendingUpIcon from '@/assets/icons/trending-up.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
-import { useTopDomains } from '@/hooks/queries/useDashboard'
-
-// 긴 도메인은 eTLD+1 수준으로 축약 (예: a.b.naver.com -> naver.com, naver.co.kr -> naver.co.kr)
-const shortDomain = (d) => {
-  if (!d) return ''
-  const parts = String(d).split('.').filter(Boolean)
-  if (parts.length >= 3) {
-    const sld = parts[parts.length - 2]
-    if (sld.length <= 3) return parts.slice(-3).join('.')
-  }
-  if (parts.length >= 2) return parts.slice(-2).join('.')
-  return d
-}
-
-const pctTo100 = (v) => {
-  const n = Number(v ?? 0)
-  const p = Number.isFinite(n) ? (n <= 1 ? n * 100 : n) : 0
-  return Math.max(0, Math.min(100, p))
-}
-
-const Row = ({ rank, domain, pct }) => {
-  const p = pctTo100(pct)
-  return (
-    <li className='flex items-center gap-2'>
-      <span className='w-5 shrink-0 text-xs text-slate-500'>{rank}</span>
-      <span className='min-w-0 flex-1 truncate font-medium text-slate-800'>
-        {shortDomain(domain)}
-      </span>
-      <div className='relative mx-2 h-2 w-40 rounded-full bg-slate-200 md:flex-1'>
-        <div
-          className='absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 to-blue-400'
-          style={{ width: `${p}%` }}
-        />
-      </div>
-      <span className='w-14 shrink-0 text-right text-[13px] font-extrabold tabular-nums text-slate-900'>
-        {Math.round(p)}%
-      </span>
-    </li>
-  )
-}
-
-const Skeleton = () => (
-  <ul className='space-y-2'>
-    {Array.from({ length: 5 }).map((_, i) => (
-      <li key={i} className='flex items-center gap-2'>
-        <span className='w-5 text-sm text-slate-300'>{i + 1}</span>
-        <div className='h-4 w-40 rounded bg-slate-200/70 animate-pulse' />
-        <div className='relative mx-2 h-2 flex-1 rounded-full bg-slate-200/70 overflow-hidden'>
-          <div className='absolute inset-y-0 left-0 w-1/2 animate-pulse bg-slate-300/70' />
-        </div>
-        <div className='h-4 w-10 rounded bg-slate-200/70 animate-pulse' />
-      </li>
-    ))}
-  </ul>
-)
+import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
 
 const TopDomains = ({ onClose }) => {
-  const { data: rows = [], isLoading, isError } = useTopDomains(10)
+  const { data, isLoading, error } = useDashboardAggregated()
+  const list = data?.topDomains ?? []
+
+  // 평균 응답시간 기준 내림차순 Top10
+  const top10 = list
+    .slice()
+    .sort((a, b) => (b.avgResponseTime ?? 0) - (a.avgResponseTime ?? 0))
+    .slice(0, 10)
+
+  let content
+
+  if (isLoading && !top10.length) {
+    content = (
+      <div className='flex h-60 items-center justify-center text-sm text-gray-400'>
+        느린 URI 정보를 불러오는 중입니다...
+      </div>
+    )
+  } else if (error) {
+    content = (
+      <div className='flex h-60 items-center justify-center text-sm text-red-500'>
+        느린 URI 정보를 불러오지 못했습니다.
+      </div>
+    )
+  } else if (!top10.length) {
+    content = (
+      <div className='flex h-60 items-center justify-center text-sm text-gray-400'>
+        표시할 URI 데이터가 없습니다.
+      </div>
+    )
+  } else {
+    const uris = top10.map((d) => d.httpUri)
+    const avgTimes = top10.map((d) => d.avgResponseTime ?? 0)
+    const counts = top10.map((d) => d.requestCount ?? 0)
+
+    const option = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          const p = params[0]
+          const idx = p.dataIndex
+          const uri = uris[idx]
+          const avg = avgTimes[idx]
+          const cnt = counts[idx]
+          return [
+            uri.length > 80 ? `<b>${uri.slice(0, 80)}...</b>` : `<b>${uri}</b>`,
+            `Avg 응답시간: ${avg.toFixed(2)} s`,
+            `요청 수: ${cnt.toLocaleString()} 건`,
+          ].join('<br/>')
+        },
+      },
+      grid: {
+        left: 120,
+        right: 16,
+        top: 16,
+        bottom: 24,
+      },
+      xAxis: {
+        type: 'value',
+        name: 'Avg 응답시간 (s)',
+        axisLabel: {
+          formatter: (v) => v.toFixed(1),
+        },
+      },
+      yAxis: {
+        type: 'category',
+        inverse: true,
+        data: uris,
+        axisLabel: {
+          fontSize: 10,
+          formatter: (value) => (value.length > 40 ? value.slice(0, 37) + '...' : value),
+        },
+      },
+      series: [
+        {
+          name: 'Avg 응답시간',
+          type: 'bar',
+          data: avgTimes,
+          barWidth: 14,
+          itemStyle: {
+            borderRadius: [0, 6, 6, 0],
+          },
+        },
+      ],
+      color: ['#3877BE'],
+    }
+
+    content = <ReactECharts option={option} style={{ height: 280 }} />
+  }
 
   return (
     <WidgetCard
-      icon={<TrendingUpIcon />}
-      title='Top 10 도메인'
-      description='트래픽 순위'
-      showSettings={true}
-      showClose={true}
-      onSettings={() => console.log('Top 10 도메인 설정')}
+      title='느린 URI Top 10'
+      description='평균 응답시간이 긴 URI 목록'
+      icon='🐢'
       onClose={onClose}
+      showSettings={false}
     >
-      <div className='py-2'>
-        {isError ? (
-          <div className='p-3 text-sm text-red-500'>데이터를 불러오지 못했어요.</div>
-        ) : isLoading ? (
-          <Skeleton />
-        ) : rows.length ? (
-          <ol className='space-y-2'>
-            {rows.map((r, i) => (
-              <Row key={r.domain} rank={i + 1} domain={r.domain} pct={r.pct} />
-            ))}
-          </ol>
-        ) : (
-          <div className='py-8 text-center text-sm text-slate-500'>표시할 데이터가 없습니다.</div>
-        )}
-      </div>
+      {content}
     </WidgetCard>
   )
 }
 
-// PropTypes 추가
 TopDomains.propTypes = {
   onClose: PropTypes.func,
 }

@@ -1,4 +1,4 @@
-import { uid, fixEpochRange, inferPresetKey } from './misc'
+import { uid, fixEpochRange, inferPresetKey } from '@/utils/misc'
 
 // 저장된 프리셋(config) → SearchPage가 기대하는 payload 형태로 변환
 export const toSearchSpecFromPreset = (cfg = {}) => {

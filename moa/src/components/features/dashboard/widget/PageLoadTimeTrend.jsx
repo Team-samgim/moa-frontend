@@ -13,7 +13,7 @@ import ReactECharts from 'echarts-for-react'
 import PropTypes from 'prop-types'
 import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
-import { useTrafficTrend } from '@/hooks/queries/useDashboard'
+import { usePageLoadTimeTrend } from '@/hooks/queries/useDashboard'
 
 echarts.use([
   LineChart,
@@ -27,8 +27,8 @@ echarts.use([
 
 // 위젯 설명 데이터
 const WIDGET_INFO = {
-  title: '실시간 트래픽 추이',
-  description: 'Mbps 기준, Request/Response 구분',
+  title: '페이지 로드 시간 트렌드',
+  description: '시간대별 페이지 로딩 성능 추이 (초 단위)',
   sections: [
     {
       icon: '📌',
@@ -36,7 +36,7 @@ const WIDGET_INFO = {
       items: [
         '시간대별 페이지 로딩 성능 추이 확인',
         '성능 저하 발생 시점 및 패턴 감지',
-        '트래픽 증가에 따른 성능 영향 분석',
+        'P95, P99 지표로 이상치 파악',
         '배포/변경 전후 성능 비교',
       ],
     },
@@ -44,7 +44,7 @@ const WIDGET_INFO = {
       icon: '💡',
       title: '활용 방법',
       items: [
-        '성능 저하 구간 발견 시 해당 시간대 트래픽/이벤트 분석',
+        '성능 저하 구간 발견 시 해당 시간대 분석',
         '피크 타임 성능 모니터링 및 용량 계획',
         'SLA 기준 미달 시간대 파악 및 개선',
         '정기 배포 후 성능 영향 검증',
@@ -53,18 +53,20 @@ const WIDGET_INFO = {
   ],
 }
 
-const TrafficTrend = ({ onClose }) => {
-  const { data, isError } = useTrafficTrend()
+const PageLoadTimeTrend = ({ onClose }) => {
+  const { data, isError } = usePageLoadTimeTrend()
   const chartRef = useRef(null)
 
   const points = data?.points ?? []
 
-  const reqData = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.req]), [points])
-  const resData = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.res]), [points])
+  // 차트 데이터 준비
+  const avgData = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.avg]), [points])
+  const p95Data = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.p95]), [points])
+  const p99Data = useMemo(() => points.map((p) => [new Date(p.t).getTime(), p.p99]), [points])
 
   const option = useMemo(() => {
     return {
-      grid: { top: 50, left: 44, right: 20, bottom: 0 },
+      grid: { top: 50, left: 60, right: 20, bottom: 0 },
       tooltip: {
         trigger: 'axis',
         formatter: (params) => {
@@ -81,19 +83,23 @@ const TrafficTrend = ({ onClose }) => {
             minute: '2-digit',
           })
 
-          let result = `<div style="font-size: 12px; font-weight: 500; margin-bottom: 4px;">${time}</div>`
+          let result = `<div style="font-size: 12px; font-weight: 500; margin-bottom: 8px;">${time}</div>`
+
+          // Min/Max 범위 표시
+          result += `
+            <div style="margin-bottom: 4px; padding: 4px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #888; font-size: 11px;">범위:</span>
+              <span style="font-weight: 500; margin-left: 4px;">${point.min?.toFixed(2)}s ~ ${point.max?.toFixed(2)}s</span>
+            </div>
+          `
 
           params.forEach((param) => {
-            const mbps = param.value[1]?.toFixed(2) || '0.00'
-            const count =
-              param.seriesName === 'Request' ? point.requestCount || 0 : point.responseCount || 0
-
+            const value = param.value[1]?.toFixed(3) || '0.000'
             result += `
               <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${param.color};"></span>
                 <span style="flex: 1;">${param.seriesName}:</span>
-                <span style="font-weight: 600;">${mbps} Mbps</span>
-                <span style="color: #666; font-size: 11px;">(${count.toLocaleString()}개)</span>
+                <span style="font-weight: 600;">${value}s</span>
               </div>
             `
           })
@@ -102,12 +108,24 @@ const TrafficTrend = ({ onClose }) => {
         },
       },
       legend: { top: 8, icon: 'roundRect' },
-      xAxis: { type: 'time', boundaryGap: false, axisLabel: { hideOverlap: true } },
-      yAxis: { type: 'value', name: 'Mbps', alignTicks: true, splitLine: { show: true } },
+      xAxis: {
+        type: 'time',
+        boundaryGap: false,
+        axisLabel: { hideOverlap: true },
+      },
+      yAxis: {
+        type: 'value',
+        name: '로드 시간 (초)',
+        alignTicks: true,
+        splitLine: { show: true },
+        axisLabel: {
+          formatter: (value) => `${value.toFixed(2)}s`,
+        },
+      },
       dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14 }],
       series: [
         {
-          name: 'Request',
+          name: '평균',
           type: 'line',
           smooth: true,
           showSymbol: true,
@@ -115,23 +133,32 @@ const TrafficTrend = ({ onClose }) => {
           sampling: 'lttb',
           lineStyle: { width: 2 },
           areaStyle: { opacity: 0.08 },
-          data: reqData,
+          data: avgData,
         },
         {
-          name: 'Response',
+          name: 'P95',
           type: 'line',
           smooth: true,
           showSymbol: true,
           symbolSize: 6,
           sampling: 'lttb',
-          lineStyle: { width: 2 },
-          areaStyle: { opacity: 0.15 },
-          data: resData,
+          lineStyle: { width: 2, type: 'dashed' },
+          data: p95Data,
+        },
+        {
+          name: 'P99',
+          type: 'line',
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
+          sampling: 'lttb',
+          lineStyle: { width: 2, type: 'dotted' },
+          data: p99Data,
         },
       ],
       animation: points.length < 2000,
     }
-  }, [reqData, resData, points])
+  }, [avgData, p95Data, p99Data, points])
 
   // 컨테이너 크기 변화 대응 + cleanup
   useEffect(() => {
@@ -150,23 +177,25 @@ const TrafficTrend = ({ onClose }) => {
     return () => {
       ro.disconnect()
     }
-  }, []) // points 의존성 제거 - 불필요한 재생성 방지
+  }, [])
 
   return (
     <WidgetCard
       icon={<ChartLineIcon />}
-      title='실시간 트래픽 추이'
-      description='Mbps 기준, Request/Response 구분'
+      title='페이지 로드 시간 트렌드'
+      description='시간대별 페이지 로딩 성능 추이'
       showInfo={true}
       showSettings={true}
       showClose={true}
       widgetInfo={WIDGET_INFO}
-      onSettings={() => console.log('트래픽 추이 설정')}
+      onSettings={() => console.log('페이지 로드 시간 설정')}
       onClose={onClose}
     >
       <div className='h-70'>
         {isError ? (
-          <div className='p-3 text-sm text-red-500'>트래픽 데이터를 불러오지 못했어요.</div>
+          <div className='p-3 text-sm text-red-500'>
+            페이지 로드 시간 데이터를 불러오지 못했어요.
+          </div>
         ) : (
           <ReactECharts
             ref={chartRef}
@@ -183,8 +212,8 @@ const TrafficTrend = ({ onClose }) => {
 }
 
 // PropTypes 추가
-TrafficTrend.propTypes = {
+PageLoadTimeTrend.propTypes = {
   onClose: PropTypes.func,
 }
 
-export default TrafficTrend
+export default PageLoadTimeTrend

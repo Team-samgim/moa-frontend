@@ -5,7 +5,11 @@ import arrowDown from '@/assets/icons/arrow-down-bold.svg'
 import arrowLeft from '@/assets/icons/arrow-left.svg'
 import trash from '@/assets/icons/trash.svg'
 import LayerCell from '@/components/features/mypage/common/LayerCell'
+import ChartConditionModal from '@/components/features/mypage/file/ChartConditionModal'
+import ChartPreview from '@/components/features/mypage/file/ChartPreview'
 import CsvPreview from '@/components/features/mypage/file/CsvPreview'
+import PivotConditionModal from '@/components/features/mypage/file/PivotConditionModal'
+import PivotCsvPreview from '@/components/features/mypage/file/PivotCsvPreview'
 import QueryModal from '@/components/features/mypage/file/QueryModal'
 import { userNavigations } from '@/constants/navigations'
 import { CLASSES, TOKENS } from '@/constants/tokens'
@@ -17,14 +21,35 @@ import { toSearchSpecFromConfig } from '@/utils/searchSpec'
 const FileRow = ({ idx, item, onDeleted }) => {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [queryOpen, setQueryOpen] = useState(false)
+  const [queryOpen, setQueryOpen] = useState(false) // GRID 검색 조건 모달
+  const [pivotOpen, setPivotOpen] = useState(false) // PIVOT 피벗 조건 모달
+  const [chartOpen, setChartOpen] = useState(false) // ✅ CHART 차트 조건 모달
+
   const downloadMut = useDownloadExport()
   const deleteMut = useDeleteExport()
 
-  const config = item.config ? normalizePresetConfig(item.config) : null
-  const isCsvType = item.type === 'GRID' || item.type === 'PIVOT'
+  const rawConfig = item.config || null
+  const config = rawConfig ? normalizePresetConfig(rawConfig) : null
+
   const isChart = item.type === 'CHART'
   const rowBg = open ? 'bg-[#EEF5FE]' : 'bg-white'
+
+  const pivotConfig =
+    rawConfig?.pivot?.config ||
+    rawConfig?.pivotConfig || // 혹시 다른 키로 들어오는 경우 대비
+    null
+
+  // 조회 계층 표시용 레이어 (GRID/PIVOT/CHART 모두 커버)
+  const displayLayer =
+    item.layer || // 백엔드에서 직접 내려주는 경우
+    config?.layer || // normalizer가 올려준 경우
+    config?.baseSpec?.layer || // normalizer 안에 baseSpec에 있는 경우
+    rawConfig?.layer ||
+    rawConfig?.baseSpec?.layer ||
+    rawConfig?.search?.config?.layer ||
+    rawConfig?.pivot?.config?.layer ||
+    null
+
   const cellBoxCls = cx(
     CLASSES.TD,
     rowBg,
@@ -35,16 +60,23 @@ const FileRow = ({ idx, item, onDeleted }) => {
   const handleApply = useCallback(
     (rawCfg) => {
       if (!rawCfg) {
-        alert('적용할 검색 조건이 없습니다.')
+        alert('적용할 검색/피벗 조건이 없습니다.')
         return
       }
+
       if (item.type === 'PIVOT') {
+        // 피벗은 그대로 피벗 페이지로
         navigate(userNavigations.PIVOT, { state: { preset: rawCfg } })
       } else {
+        // GRID/SEARCH는 search spec으로 변환
         const payload = toSearchSpecFromConfig(normalizePresetConfig(rawCfg))
         navigate(userNavigations.SEARCH, { state: { preset: { payload } } })
       }
+
+      // 어떤 모달에서 눌렀든 둘 다 닫기
       setQueryOpen(false)
+      setPivotOpen(false)
+      // CHART는 지금은 보기용만이라 chartOpen은 여기서 안 닫음
     },
     [item.type, navigate],
   )
@@ -72,7 +104,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
         </td>
 
         <td className={cellBoxCls}>
-          <LayerCell layer={item.layer} />
+          <LayerCell layer={displayLayer} />
         </td>
 
         <td className={cx(cellBoxCls, 'text-gray-600')}>{fmtDate(item.createdAt)}</td>
@@ -117,13 +149,16 @@ const FileRow = ({ idx, item, onDeleted }) => {
         <tr className='bg-transparent'>
           <td colSpan={5} className='pt-0 pb-3'>
             <div className='px-6 py-3 bg-white border border-[#D1D1D6] border-t-0 rounded-b-md rounded-t-none -mt-[15px] p-2'>
-              {isCsvType && <CsvPreview fileId={item.fileId} />}
-              {isChart && (
-                <div className='p-4 text-sm text-gray-600'>
-                  차트 이미지는 미리보기 대신 다운로드로 확인하세요.
-                </div>
+              {item.type === 'GRID' && <CsvPreview fileId={item.fileId} />}
+
+              {item.type === 'PIVOT' && (
+                <PivotCsvPreview fileId={item.fileId} pivotConfig={pivotConfig} />
               )}
-              {config && isCsvType && (
+
+              {isChart && <ChartPreview fileId={item.fileId} />}
+
+              {/* GRID: 검색 조건 보기 버튼 */}
+              {config && item.type === 'GRID' && (
                 <div className='mt-3 flex justify-end'>
                   <button
                     className='rounded-xl border px-4 py-2 text-sm'
@@ -138,13 +173,70 @@ const FileRow = ({ idx, item, onDeleted }) => {
                   </button>
                 </div>
               )}
+
+              {/* PIVOT: 피벗 조건 보기 버튼 */}
+              {config && item.type === 'PIVOT' && (
+                <div className='mt-3 flex justify-end'>
+                  <button
+                    className='rounded-xl border px-4 py-2 text-sm'
+                    style={{
+                      backgroundColor: TOKENS.BRAND,
+                      color: '#FFFFFF',
+                      borderColor: '#CCCCCC',
+                    }}
+                    onClick={() => setPivotOpen(true)}
+                  >
+                    피벗 조건 보기
+                  </button>
+                </div>
+              )}
+
+              {/* CHART: 차트 조건 보기 버튼 ✅ */}
+              {config && item.type === 'CHART' && (
+                <div className='mt-3 flex justify-end'>
+                  <button
+                    className='rounded-xl border px-4 py-2 text-sm'
+                    style={{
+                      backgroundColor: TOKENS.BRAND,
+                      color: '#FFFFFF',
+                      borderColor: '#CCCCCC',
+                    }}
+                    onClick={() => setChartOpen(true)}
+                  >
+                    차트 조건 보기
+                  </button>
+                </div>
+              )}
             </div>
-            <QueryModal
-              open={queryOpen}
-              onClose={() => setQueryOpen(false)}
-              config={item.config}
-              onApply={isCsvType ? handleApply : undefined}
-            />
+
+            {/* GRID: 검색 조건 모달 (적용하기 → 검색 페이지 이동) */}
+            {item.type === 'GRID' && (
+              <QueryModal
+                open={queryOpen}
+                onClose={() => setQueryOpen(false)}
+                config={item.config}
+                onApply={handleApply}
+              />
+            )}
+
+            {/* PIVOT: 피벗 조건 모달 (적용하기 → 피벗 페이지 이동) */}
+            {item.type === 'PIVOT' && (
+              <PivotConditionModal
+                open={pivotOpen}
+                onClose={() => setPivotOpen(false)}
+                payload={item.config}
+                onApply={handleApply}
+              />
+            )}
+
+            {/* CHART: 차트 조건 모달 (보기용) ✅ */}
+            {item.type === 'CHART' && (
+              <ChartConditionModal
+                open={chartOpen}
+                onClose={() => setChartOpen(false)}
+                config={item.config}
+              />
+            )}
           </td>
         </tr>
       )}

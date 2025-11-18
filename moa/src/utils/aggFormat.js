@@ -47,9 +47,9 @@ export const fmtAggCell5 = (columns, aggregates) => {
   ]
 
   columns.forEach((col) => {
-    const field = col.field
+    const field = col.field || col.name
     if (!field) return
-    const t = (col.filterParams?.type || 'string').toLowerCase()
+    const t = (col.filterParams?.type || col.type || 'string').toLowerCase()
     const a = aggregates?.[field] || {}
 
     if (t === 'date') {

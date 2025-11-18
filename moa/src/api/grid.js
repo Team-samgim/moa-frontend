@@ -37,14 +37,19 @@ export const fetchFilterValues = async ({
   return data
 }
 
+const toJsonBody = (v) => {
+  if (v === null) return null
+  return typeof v === 'string' ? v : JSON.stringify(v)
+}
+
 export const fetchAggregates = async ({ layer, filterModel, metrics, baseSpec }) => {
   const { data } = await axiosInstance.post('/aggregate', {
     layer,
-    filterModel: JSON.stringify(filterModel || {}),
-    baseSpecJson: baseSpec ? JSON.stringify(baseSpec) : null,
-    metrics, // { [field]: { type: 'number'|'string', ops: [...] } }
+    filterModel: toJsonBody(filterModel) ?? '{}',
+    baseSpecJson: toJsonBody(baseSpec),
+    metrics,
   })
-  return data // { aggregates: { [field]: {...} } }
+  return data
 }
 
 export const exportGrid = async (payload, signal) => {

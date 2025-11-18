@@ -3,10 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchGridBySearchSpec } from '@/api/grid'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
-import EthernetRowPreviewModal from '@/components/features/grid/EthernetRowPreviewModal'
-import HttpPageRowPreviewModal from '@/components/features/grid/HttpPageRowPreviewModal'
-import HttpUriRowPreviewModal from '@/components/features/grid/HttpUriRowPreviewModal'
-import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
+import EthernetRowPreviewModal from '@/components/features/grid/detail/EthernetRowPreviewModal'
+import HttpPageRowPreviewModal from '@/components/features/grid/detail/HttpPageRowPreviewModal'
+import HttpUriRowPreviewModal from '@/components/features/grid/detail/HttpUriRowPreviewModal'
+import TcpRowPreviewModal from '@/components/features/grid/detail/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
 import LayerBar from '@/components/features/search/LayerBar'
@@ -54,6 +54,7 @@ const SearchPage = () => {
   const [isSearching, setIsSearching] = useState(false)
   const [searchTotal, setSearchTotal] = useState(null)
   const [aggFilters, setAggFilters] = useState({})
+  const [showRawNumber, setShowRawNumber] = useState(false)
 
   const gridRef = useRef(null)
 
@@ -465,112 +466,141 @@ const SearchPage = () => {
           />
         </div>
 
-        {/* 결과 영역 */}
-        {hasSearched && (
-          <div className='w-full border border-gray-200 shadow-sm p-5 rounded-lg'>
-            {searchTotal === 0 ? (
-              <div className='text-sm text-gray-500 text-center bg-white'>
-                조건에 맞는 결과가 없습니다.
-              </div>
-            ) : (
-              <div className='rounded-2xl bg-white'>
-                <GridToolbar
-                  currentLayer={layer}
-                  onReset={() => gridRef.current?.resetFilters?.()}
-                  onPivot={handleGoPivot}
-                  gridApis={gridApis}
-                  getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
-                  getBaseSpec={() => searchPayload}
-                  getUiQuery={() => ({
-                    layer,
-                    timePreset,
-                    customTimeRange,
-                    globalNot,
-                    conditions,
-                    viewKeys,
-                  })}
-                />
-                {searchTotal !== null && (
-                  <div className='mb-2 text-sm text-gray-600'>
+        <QueryPreview
+          chips={queryChips}
+          globalNot={globalNot}
+          onToggleNot={() => setGlobalNot((v) => !v)}
+        />
+
+        <div className='flex justify-center'>
+          <button
+            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] disabled:opacity-60'
+            onClick={onClickSearch}
+            disabled={isSearching}
+          >
+            {isSearching ? '검색 중…' : '검색 하기'}
+          </button>
+        </div>
+      </div>
+
+      {/* 결과 */}
+      {hasSearched && (
+        <div className='max-w-[1200px] mx-auto w-full px-6'>
+          {searchTotal === 0 ? (
+            <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
+              조건에 맞는 결과가 없습니다.
+            </div>
+          ) : (
+            <>
+              <GridToolbar
+                currentLayer={layer}
+                onReset={() => gridRef.current?.resetFilters?.()}
+                onPivot={handleGoPivot}
+                gridApis={gridApis}
+                getActiveFilters={() => gridRef.current?.getActiveFilters?.() || {}}
+                getBaseSpec={() => searchPayload}
+                getUiQuery={() => ({
+                  layer,
+                  timePreset,
+                  customTimeRange,
+                  globalNot,
+                  conditions,
+                  viewKeys,
+                })}
+              />
+              {searchTotal !== null && (
+                <div className='mb-2 flex items-center justify-between text-sm text-gray-600'>
+                  {/* 왼쪽: 총 건수 */}
+                  <div>
                     총{' '}
                     <span className='font-semibold text-blue-600'>
                       {searchTotal.toLocaleString()}
                     </span>
                     건
                   </div>
-                )}
-                <DataGrid
-                  ref={gridRef}
-                  layer={layer}
-                  columns={gridCols}
-                  basePayload={searchPayload}
-                  height='55vh'
-                  cacheBlockSize={100}
-                  onGridApis={setGridApis}
-                  onActiveFiltersChange={setAggFilters}
-                  onRowClick={(row) => {
-                    const key =
-                      row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
-                    if (!key) return
 
-                    if (layer === 'TCP') {
-                      setTcpRowKey(key)
-                    } else if (layer === 'HTTP_PAGE') {
-                      setHttpPageRowKey(key)
-                    } else if (layer === 'ETHERNET') {
-                      setEthernetRowKey(key)
-                    } else if (layer === 'HTTP_URI') {
-                      setHttpUriRowKey(key)
-                    }
-                  }}
+                  {/* 오른쪽: 원본 데이터 체크박스 */}
+                  <label className='flex items-center gap-2 text-xs text-gray-600'>
+                    <input
+                      type='checkbox'
+                      className='h-4 w-4'
+                      checked={showRawNumber}
+                      onChange={(e) => setShowRawNumber(e.target.checked)}
+                    />
+                    <span>원본 데이터</span>
+                  </label>
+                </div>
+              )}
+              <DataGrid
+                ref={gridRef}
+                layer={layer}
+                columns={gridCols}
+                basePayload={searchPayload}
+                height='55vh'
+                cacheBlockSize={100}
+                onGridApis={setGridApis}
+                onActiveFiltersChange={setAggFilters}
+                onRowClick={(row) => {
+                  const key =
+                    row?.row_key?.value ?? row?.row_key ?? row?.rowKey?.value ?? row?.rowKey
+                  if (!key) return
+
+                  if (layer === 'TCP') {
+                    setTcpRowKey(key)
+                  } else if (layer === 'HTTP_PAGE') {
+                    setHttpPageRowKey(key)
+                  } else if (layer === 'ETHERNET') {
+                    setEthernetRowKey(key)
+                  } else if (layer === 'HTTP_URI') {
+                    setHttpUriRowKey(key)
+                  }
+                }}
+                showRawNumber={showRawNumber}
+              />
+              {aggQuery.isSuccess && (
+                <AggregatesPanel
+                  columns={gridCols.map((c) => ({
+                    field: c.name,
+                    headerName: c.labelKo || c.name,
+                  }))}
+                  aggregates={aggQuery.data?.aggregates || {}}
                 />
-                {aggQuery.isSuccess && (
-                  <AggregatesPanel
-                    columns={gridCols.map((c) => ({
-                      field: c.name,
-                      headerName: c.labelKo || c.name,
-                    }))}
-                    aggregates={aggQuery.data?.aggregates || {}}
-                  />
-                )}
-                {aggQuery.isLoading && (
-                  <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 행 상세 모달들 */}
-        {layer === 'TCP' && (
-          <TcpRowPreviewModal
-            open={!!tcpRowKey}
-            onClose={() => setTcpRowKey(null)}
-            rowKey={tcpRowKey}
-          />
-        )}
-        {layer === 'HTTP_PAGE' && (
-          <HttpPageRowPreviewModal
-            open={!!httpPageRowKey}
-            onClose={() => setHttpPageRowKey(null)}
-            rowKey={httpPageRowKey}
-          />
-        )}
-        {layer === 'ETHERNET' && (
-          <EthernetRowPreviewModal
-            open={!!ethernetRowKey}
-            onClose={() => setEthernetRowKey(null)}
-            rowKey={ethernetRowKey}
-          />
-        )}
-        {layer === 'HTTP_URI' && (
-          <HttpUriRowPreviewModal
-            open={!!httpUriRowKey}
-            onClose={() => setHttpUriRowKey(null)}
-            rowKey={httpUriRowKey}
-          />
-        )}
-      </div>
+              )}
+              {aggQuery.isLoading && (
+                <div className='text-xs text-gray-500 mt-2'>집계 계산 중…</div>
+              )}
+              {layer === 'TCP' && (
+                <TcpRowPreviewModal
+                  open={!!tcpRowKey}
+                  onClose={() => setTcpRowKey(null)}
+                  rowKey={tcpRowKey}
+                />
+              )}
+              {layer === 'HTTP_PAGE' && (
+                <HttpPageRowPreviewModal
+                  open={!!httpPageRowKey}
+                  onClose={() => setHttpPageRowKey(null)}
+                  rowKey={httpPageRowKey}
+                />
+              )}
+              {layer === 'ETHERNET' && (
+                <EthernetRowPreviewModal
+                  open={!!ethernetRowKey}
+                  onClose={() => setEthernetRowKey(null)}
+                  rowKey={ethernetRowKey}
+                />
+              )}
+              {layer === 'HTTP_URI' && (
+                <HttpUriRowPreviewModal
+                  open={!!httpUriRowKey}
+                  onClose={() => setHttpUriRowKey(null)}
+                  rowKey={httpUriRowKey}
+                />
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
