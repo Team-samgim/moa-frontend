@@ -234,6 +234,12 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
             <TabButton id='summary' activeId={activeTab} onClick={setActiveTab}>
               요약
             </TabButton>
+            <TabButton id='client' activeId={activeTab} onClick={setActiveTab}>
+              🧑‍💻 클라이언트
+            </TabButton>
+            <TabButton id='server' activeId={activeTab} onClick={setActiveTab}>
+              🖥️ 서버
+            </TabButton>
             <TabButton id='timing' activeId={activeTab} onClick={setActiveTab}>
               ⏱️ 시간 분석
             </TabButton>
@@ -418,6 +424,221 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
                       </div>
                     )}
+                  </>
+                )}
+
+                {/* === Tab: 클라이언트 관점 === */}
+                {activeTab === 'client' && (
+                  <>
+                    {/* 1) 클라이언트 요청 요약 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        🧑‍💻 클라이언트 요청 요약
+                      </div>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
+                        <LV label='클라이언트 IP' value={d.srcIp} />
+                        <LV label='클라이언트 포트' value={d.srcPort} />
+                        <LV label='브라우저' value={d.userAgentInfo?.softwareName} />
+                        <LV label='운영체제' value={d.userAgentInfo?.operatingSystemName} />
+                        <LV label='HTTP 메소드' value={d.httpMethod} />
+                        <LV label='요청 URI' value={d.httpUri} />
+                        <LV label='Referer' value={d.httpReferer} />
+                        <LV label='HTTPS 여부' value={d.isHttps ? 'HTTPS (TLS 사용)' : 'HTTP'} />
+                      </div>
+                    </div>
+
+                    {/* 2) 클라이언트 체감 성능 */}
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                        <div className='mb-2 text-sm font-semibold text-gray-800'>
+                          ⏱️ 클라이언트 체감 시간
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV
+                            label='페이지 전체 시간'
+                            value={d.timing ? formatMs((d.timing.tsPage || 0) * 1000) : '값 없음'}
+                          />
+                          <LV
+                            label='TTFB (첫 바이트 수신)'
+                            value={
+                              d.timing ? formatMs((d.timing.tsPageResInit || 0) * 1000) : '값 없음'
+                            }
+                          />
+                          <LV
+                            label='응답 전송 완료까지'
+                            value={
+                              d.timing
+                                ? formatMs((d.timing.tsPageTransferRes || 0) * 1000)
+                                : '값 없음'
+                            }
+                          />
+                          <LV
+                            label='클라이언트 요청 전송'
+                            value={
+                              d.timing
+                                ? formatMs((d.timing.tsPageTransferReq || 0) * 1000)
+                                : '값 없음'
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {/* 3) 클라이언트 요청 트래픽 */}
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-2 text-sm font-semibold text-gray-800'>
+                          📤 클라이언트 요청 트래픽
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <div className='bg-blue-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>HTTP 요청 수</span>
+                              <span className='font-medium'>
+                                {(d.traffic?.pageHttpCntReq || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className='bg-blue-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>요청 바이트</span>
+                              <span className='font-medium'>
+                                {prettyBytes(d.traffic?.pageHttpLenReq || 0)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className='bg-blue-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>요청 패킷 수</span>
+                              <span className='font-medium'>
+                                {(d.traffic?.pagePktLenReq || 0).toLocaleString?.() ||
+                                  d.traffic?.pagePktLenReq ||
+                                  '값 없음'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* === Tab: 서버 관점 === */}
+                {activeTab === 'server' && (
+                  <>
+                    {/* 1) 서버 응답 요약 */}
+                    <div className='rounded-xl border bg-white p-4'>
+                      <div className='mb-3 text-sm font-semibold text-gray-800'>
+                        🖥️ 서버 응답 요약
+                      </div>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
+                        <LV label='서버 IP' value={d.dstIp} />
+                        <LV label='서버 포트' value={d.dstPort} />
+                        <LV label='Host 헤더' value={d.httpHost} />
+                        <LV label='애플리케이션' value={d.ndpiProtocolApp} />
+                        <LV label='프로토콜 그룹' value={d.ndpiProtocolMaster} />
+                        <LV label='HTTP 상태 코드' value={httpStatus ?? d.httpResCode} />
+                        <LV label='상태 구문' value={d.httpResPhrase} />
+                        <LV label='Content-Type' value={d.httpContentType} />
+                        <LV label='Location (리다이렉트)' value={d.httpLocation} />
+                        <LV label='페이지 에러 수' value={(d.pageErrorCnt || 0).toLocaleString()} />
+                      </div>
+                    </div>
+
+                    {/* 2) 서버 처리 시간 */}
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                        <div className='mb-2 text-sm font-semibold text-gray-800'>
+                          ⏱️ 서버 처리 시간
+                        </div>
+                        <div className='space-y-2 text-sm'>
+                          <LV
+                            label='TTFB (서버 처리 + 첫 바이트)'
+                            value={
+                              d.timing ? formatMs((d.timing.tsPageResInit || 0) * 1000) : '값 없음'
+                            }
+                          />
+                          <LV
+                            label='앱 응답 시간'
+                            value={
+                              d.timing ? formatMs((d.timing.tsPageResApp || 0) * 1000) : '값 없음'
+                            }
+                          />
+                          <LV
+                            label='응답 전송 시간'
+                            value={
+                              d.timing
+                                ? formatMs((d.timing.tsPageTransferRes || 0) * 1000)
+                                : '값 없음'
+                            }
+                          />
+                          <LV
+                            label='페이지 종료 시각'
+                            value={
+                              d.timing?.tsPageEnd ? formatTimestamp(d.timing.tsPageEnd) : '값 없음'
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {/* 3) 서버 응답 트래픽 & TCP 품질 */}
+                      <div className='rounded-xl border bg-white p-4'>
+                        <div className='mb-2 text-sm font-semibold text-gray-800'>
+                          📥 서버 응답 트래픽 / TCP 품질
+                        </div>
+                        <div className='space-y-2 text-sm mb-3'>
+                          <div className='bg-green-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>HTTP 응답 바이트</span>
+                              <span className='font-medium'>
+                                {prettyBytes(d.traffic?.pageHttpLenRes || 0)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className='bg-green-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>응답 패킷 수</span>
+                              <span className='font-medium'>
+                                {(d.traffic?.pagePktLenRes || 0).toLocaleString?.() ||
+                                  d.traffic?.pagePktLenRes ||
+                                  '값 없음'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className='bg-green-50 p-2 rounded'>
+                            <div className='flex justify-between'>
+                              <span className='text-gray-500'>TCP 연결 수</span>
+                              <span className='font-medium'>
+                                {(d.pageTcpConnectCnt || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {d.tcpQuality && (
+                          <div className='mt-2 border-t pt-2 text-xs text-gray-700 space-y-1'>
+                            <div className='font-semibold text-gray-800'>TCP 품질 (서버 연결)</div>
+                            <div>
+                              품질 점수:{' '}
+                              {Number.isFinite(tcpQualityScore)
+                                ? `${tcpQualityScore.toFixed(0)}점`
+                                : '-'}
+                            </div>
+                            <div>에러율: {tcpErrorDisplay}</div>
+                            <div>
+                              에러 세션 비율:{' '}
+                              {tcpErrorSessionRatio !== null
+                                ? `${(tcpErrorSessionRatio * 100).toFixed(2)}%`
+                                : '-'}
+                            </div>
+                            <div>
+                              에러 패킷 비율:{' '}
+                              {tcpErrorCntRatio !== null
+                                ? `${(tcpErrorCntRatio * 100).toFixed(2)}%`
+                                : '-'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </>
                 )}
 
