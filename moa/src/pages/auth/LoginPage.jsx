@@ -134,7 +134,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center p-6'>
+    <div className='flex justify-center p-6 mt-30'>
       <div className='relative w-full max-w-5xl bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.08)] overflow-hidden'>
         {/* 슬라이드 영역 */}
         <div
