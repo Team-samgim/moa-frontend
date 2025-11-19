@@ -40,51 +40,92 @@ const ErrorRateTrend = ({ onClose }) => {
     const option = {
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (v) => `${v.toFixed(1)} %`,
+        axisPointer: { type: 'shadow' },
+        formatter: (params) => {
+          if (!params || !params.length) return ''
+          const label = params[0].axisValue
+          const total = params.find((p) => p.seriesName === '전체 에러율')
+          const client = params.find((p) => p.seriesName === '클라이언트 에러율')
+          const server = params.find((p) => p.seriesName === '서버 에러율')
+
+          const fmt = (v) => `${(v ?? 0).toFixed(2)} %`
+
+          let html = `<div style="margin-bottom:4px;font-weight:600;font-size:12px;">${label}</div>`
+          if (total) {
+            html += `<div style="font-size:12px;margin-top:2px;">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${total.color};margin-right:6px;"></span>
+              전체 에러율: <b>${fmt(total.data)}</b>
+            </div>`
+          }
+          if (client) {
+            html += `<div style="font-size:12px;margin-top:2px;">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${client.color};margin-right:6px;"></span>
+              클라이언트 에러율: <b>${fmt(client.data)}</b>
+            </div>`
+          }
+          if (server) {
+            html += `<div style="font-size:12px;margin-top:2px;">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${server.color};margin-right:6px;"></span>
+              서버 에러율: <b>${fmt(server.data)}</b>
+            </div>`
+          }
+          return html
+        },
       },
       legend: {
         top: 0,
         data: ['전체 에러율', '클라이언트 에러율', '서버 에러율'],
       },
       grid: {
-        left: 40,
+        left: 44,
         right: 16,
-        top: 32,
-        bottom: 24,
+        top: 40,
+        bottom: 26,
       },
       xAxis: {
         type: 'category',
         data: x,
-        boundaryGap: false,
+        boundaryGap: true,
         axisLabel: { fontSize: 10 },
       },
       yAxis: {
         type: 'value',
         name: '%',
         axisLabel: {
-          formatter: (v) => v.toFixed(0),
+          formatter: (v) => `${v.toFixed(0)}`,
         },
+        splitLine: { show: true },
       },
       series: [
         {
           name: '전체 에러율',
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
+          type: 'bar',
+          barMaxWidth: 18,
+          itemStyle: {
+            borderRadius: [4, 4, 0, 0],
+          },
           data: list.map((p) => p.errorRate ?? 0),
         },
         {
           name: '클라이언트 에러율',
           type: 'line',
           smooth: true,
+          symbol: 'circle',
           showSymbol: false,
+          symbolSize: 4,
+          yAxisIndex: 0,
+          lineStyle: { width: 1.8 },
           data: list.map((p) => p.clientErrorRate ?? 0),
         },
         {
           name: '서버 에러율',
           type: 'line',
           smooth: true,
+          symbol: 'circle',
           showSymbol: false,
+          symbolSize: 4,
+          yAxisIndex: 0,
+          lineStyle: { width: 1.8 },
           data: list.map((p) => p.serverErrorRate ?? 0),
         },
       ],

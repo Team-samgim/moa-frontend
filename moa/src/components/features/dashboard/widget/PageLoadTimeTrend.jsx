@@ -66,7 +66,7 @@ const PageLoadTimeTrend = ({ onClose }) => {
 
   const option = useMemo(() => {
     return {
-      grid: { top: 50, left: 60, right: 20, bottom: 0 },
+      grid: { top: 56, left: 60, right: 20, bottom: 30 },
       tooltip: {
         trigger: 'axis',
         formatter: (params) => {
@@ -111,48 +111,66 @@ const PageLoadTimeTrend = ({ onClose }) => {
       xAxis: {
         type: 'time',
         boundaryGap: false,
-        axisLabel: { hideOverlap: true },
+        axisLabel: {
+          hideOverlap: true,
+          formatter: (value) => {
+            const d = new Date(value)
+            return d.toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          },
+        },
       },
       yAxis: {
         type: 'value',
         name: '로드 시간 (초)',
         alignTicks: true,
+        axisLine: { show: false },
         splitLine: { show: true },
         axisLabel: {
           formatter: (value) => `${value.toFixed(2)}s`,
         },
       },
-      dataZoom: [{ type: 'inside' }, { type: 'slider', height: 14 }],
+      dataZoom: [
+        { type: 'inside' },
+        {
+          type: 'slider',
+          height: 18,
+          borderRadius: 6,
+          handleSize: 12,
+        },
+      ],
       series: [
         {
           name: '평균',
           type: 'line',
           smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
+          showSymbol: false,
+          symbolSize: 5,
           sampling: 'lttb',
-          lineStyle: { width: 2 },
-          areaStyle: { opacity: 0.08 },
+          lineStyle: { width: 2.4 },
+          areaStyle: { opacity: 0.25 },
           data: avgData,
         },
         {
           name: 'P95',
           type: 'line',
           smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
+          showSymbol: false,
+          symbolSize: 4,
           sampling: 'lttb',
-          lineStyle: { width: 2, type: 'dashed' },
+          lineStyle: { width: 1.6, type: 'dashed' },
           data: p95Data,
         },
         {
           name: 'P99',
           type: 'line',
           smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
+          showSymbol: false,
+          symbolSize: 4,
           sampling: 'lttb',
-          lineStyle: { width: 2, type: 'dotted' },
+          lineStyle: { width: 1.4, type: 'dotted' },
           data: p99Data,
         },
       ],

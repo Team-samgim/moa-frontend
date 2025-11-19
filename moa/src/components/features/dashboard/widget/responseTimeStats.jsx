@@ -4,13 +4,6 @@ import PropTypes from 'prop-types'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
 
-const formatTimeLabel = (iso) => {
-  if (!iso) return ''
-  const d = new Date(iso)
-  // HH:mm 형식
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 const AvgResponseTime = ({ onClose }) => {
   const { data, isLoading, error } = useDashboardAggregated()
   const points = data?.responseTimeStats ?? []
@@ -36,57 +29,61 @@ const AvgResponseTime = ({ onClose }) => {
       </div>
     )
   } else {
-    const x = points.map((p) => formatTimeLabel(p.timestamp))
+    // 가장 최근 "유효한" 집계 포인트(값이 있는 버킷)를 기준으로 요약 통계 시각화
+    const lastNonEmpty =
+      [...points]
+        .reverse()
+        .find(
+          (p) =>
+            p?.avgResponseTime !== null ||
+            p?.p95ResponseTime !== null ||
+            p?.p99ResponseTime !== null,
+        ) ?? null
+
+    const last = lastNonEmpty ?? points[points.length - 1] ?? {}
+
+    const categories = ['평균 응답시간', 'P95 응답시간', 'P99 응답시간']
+    const values = [last.avgResponseTime ?? 0, last.p95ResponseTime ?? 0, last.p99ResponseTime ?? 0]
 
     const option = {
       tooltip: {
         trigger: 'axis',
+        axisPointer: { type: 'shadow' },
         valueFormatter: (v) => `${v.toFixed(2)} s`,
       },
-      legend: {
-        top: 0,
-        data: ['Avg', 'P95', 'P99'],
-      },
       grid: {
-        left: 40,
-        right: 16,
-        top: 32,
+        left: 80,
+        right: 24,
+        top: 24,
         bottom: 24,
       },
       xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: x,
-        axisLabel: { fontSize: 10 },
-      },
-      yAxis: {
         type: 'value',
         name: '초 (s)',
         axisLabel: {
           formatter: (v) => v.toFixed(2),
         },
+        splitLine: { show: true },
+      },
+      yAxis: {
+        type: 'category',
+        data: categories,
+        axisTick: { show: false },
       },
       series: [
         {
-          name: 'Avg',
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
-          data: points.map((p) => p.avgResponseTime ?? 0),
-        },
-        {
-          name: 'P95',
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
-          data: points.map((p) => p.p95ResponseTime ?? 0),
-        },
-        {
-          name: 'P99',
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
-          data: points.map((p) => p.p99ResponseTime ?? 0),
+          name: '응답시간',
+          type: 'bar',
+          barWidth: 18,
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+          },
+          label: {
+            show: true,
+            position: 'right',
+            formatter: (p) => `${p.value.toFixed(2)}s`,
+          },
+          data: values,
         },
       ],
     }
@@ -97,7 +94,7 @@ const AvgResponseTime = ({ onClose }) => {
   return (
     <WidgetCard
       title='응답시간 통계'
-      description='평균·P95·P99 응답시간 추이'
+      description='선택 구간의 평균·P95·P99 응답시간 요약'
       icon='⏱️'
       onClose={onClose}
       showSettings={false}
