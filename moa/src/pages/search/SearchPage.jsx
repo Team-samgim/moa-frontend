@@ -543,27 +543,11 @@ const SearchPage = () => {
             onChangeOperator={onChangeOperator}
           />
         </div>
-
-        <QueryPreview
-          chips={queryChips}
-          globalNot={globalNot}
-          onToggleNot={() => setGlobalNot((v) => !v)}
-        />
-
-        <div className='flex justify-center'>
-          <button
-            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] disabled:opacity-60'
-            onClick={onClickSearch}
-            disabled={isSearching}
-          >
-            {isSearching ? '검색 중…' : '검색 하기'}
-          </button>
-        </div>
       </div>
 
       {/* 결과 */}
       {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full px-6'>
+        <div className='max-w-[1200px] mx-auto w-full p-6'>
           {searchTotal === 0 ? (
             <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
               조건에 맞는 결과가 없습니다.
@@ -590,11 +574,7 @@ const SearchPage = () => {
                 <div className='mb-2 flex items-center justify-between text-sm text-gray-600'>
                   {/* 왼쪽: 총 건수 */}
                   <div>
-                    총{' '}
-                    <span className='font-semibold text-blue-600'>
-                      {searchTotal.toLocaleString()}
-                    </span>
-                    건
+                    총 <span>{searchTotal.toLocaleString()}</span>건
                   </div>
 
                   {/* 오른쪽: 원본 데이터 체크박스 */}

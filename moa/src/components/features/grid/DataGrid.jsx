@@ -277,7 +277,10 @@ const DataGrid = forwardRef(function DataGrid(
   }
 
   return (
-    <div className='ag-theme-quartz w-full' style={{ height }}>
+    <div
+      className='ag-theme-quartz w-full font-sans text-[13px]'
+      style={{ height, overflow: 'visible' }}
+    >
       <AgGridReact
         ref={gridRef}
         columnDefs={columnDefs}
@@ -293,7 +296,7 @@ const DataGrid = forwardRef(function DataGrid(
         onGridReady={onGridReady}
         context={gridContextRef.current}
         onSortChanged={onSortChanged}
-        popupParent={popupParent}
+        popupParent={popupParent || undefined}
         onFilterOpened={onFilterOpened}
         onRowClicked={(e) => {
           onRowClick?.(e.data)

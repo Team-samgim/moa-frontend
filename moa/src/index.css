@@ -80,4 +80,10 @@ body {
   .animate-hero-gradient {
     animation: hero-gradient-move 40s ease-in-out infinite alternate;
   }
+  .ag-theme-quartz .ag-popup,
+  .ag-theme-quartz .ag-menu,
+  .ag-theme-quartz .ag-filter-wrapper,
+  .ag-theme-quartz .ag-filter {
+    z-index: 9999 !important;
+  }
 }
