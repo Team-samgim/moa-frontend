@@ -8,11 +8,13 @@ const SelectedConditions = ({
   onChangeOperator,
 }) => {
   return (
-    <div className='card'>
-      <div className='text-base font-medium'>선택된 필드 수: {conditions.length}</div>
+    <div className='card h-full flex flex-col'>
+      <div className='text-base font-semibold'>선택된 필드 수: {conditions.length}</div>
+
       {conditions.length === 0 && <div className='muted'>왼쪽에서 필드를 체크하세요.</div>}
 
-      <div className='vstack'>
+      {/* 여기 영역만 스크롤 */}
+      <div className='vstack mt-1 max-h-80 overflow-y-auto'>
         {conditions.map((row, idx) => {
           const opList = operatorsFor(row.fieldKey)
           return (

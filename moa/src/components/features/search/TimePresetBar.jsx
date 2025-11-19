@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ResetIcon from '@/assets/icons/reset.svg?react'
+import { LAYER_ACTIVE_STYLES } from '@/constants/colors'
 
 const PRESETS = [
   { key: '1H', label: '1시간' },
@@ -39,7 +41,6 @@ const DateTimeField = ({ label, value, onChange }) => {
 
   const openPicker = () => {
     if (!hiddenRef.current) return
-    // 일부 브라우저는 showPicker 지원
     if (hiddenRef.current.showPicker) hiddenRef.current.showPicker()
     else hiddenRef.current.click()
   }
@@ -102,6 +103,10 @@ const DateTimeField = ({ label, value, onChange }) => {
  * - onChange: (key) => void
  * - onRefresh?: () => void
  * - onApplyCustom?: ({ from: Date, to: Date }) => void
+ * - customRange?: { from?: Date, to?: Date, fromEpoch?: number, toEpoch?: number }
+ * - autoOpenOnCustom?: boolean
+ * - onClearCustom?: () => void
+ * - layerKey?: 'HTTP_PAGE' | 'HTTP_URI' | 'TCP' | 'ETHERNET'
  */
 const TimePresetBar = ({
   value,
@@ -111,10 +116,20 @@ const TimePresetBar = ({
   customRange,
   autoOpenOnCustom = false,
   onClearCustom,
+  layerKey,
 }) => {
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState(() => new Date(Date.now() - 60 * 60 * 1000)) // 기본 1시간 전
   const [to, setTo] = useState(() => new Date())
+
+  const getActiveButtonClass = () => {
+    const layerStyle =
+      (layerKey && LAYER_ACTIVE_STYLES[layerKey]) || 'bg-[#3877BE] text-white border-[#3877BE]' // fallback
+
+    return `${layerStyle} font-semibold`
+  }
+
+  const inactiveButtonClass = 'bg-white text-gray-800 border-gray-200 hover:bg-gray-100 font-medium'
 
   useEffect(() => {
     if (value !== 'CUSTOM' || !customRange) return
@@ -142,11 +157,9 @@ const TimePresetBar = ({
   }
 
   const handleCustomToggle = () => {
-    // ✅ 수정: state 업데이트를 분리
     const willOpen = !open
     setOpen(willOpen)
     if (willOpen) {
-      // ✅ setTimeout으로 다음 렌더링 사이클로 미룸
       setTimeout(() => {
         onChange?.('CUSTOM')
       }, 0)
@@ -165,42 +178,57 @@ const TimePresetBar = ({
     setTo(now)
     setFrom(new Date(now.getTime() - 60 * 60 * 1000))
     onChange?.('1H')
-    // 부모가 별도 리셋 로직을 갖고 있다면 호출
     onRefresh?.()
+    onClearCustom?.()
   }
 
+  const isCustomActive = value === 'CUSTOM'
+
   return (
-    <div className='section card'>
+    <div className='section card flex-2'>
       <div className='flex items-center justify-between'>
         {/* Left: label + pills */}
-        <div className='flex items-center gap-4'>
-          <div className='text-base font-medium'>조회 기간</div>
-          <div className='flex items-center gap-3'>
-            {PRESETS.map((p) => (
-              <button
-                key={p.key}
-                type='button'
-                onClick={() => handlePreset(p.key)}
-                className={[
-                  'px-4 py-2 rounded-lg border text-sm transition-colors',
-                  value === p.key
-                    ? 'bg-[#3877BE] text-white border-[#3877BE]'
-                    : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100',
-                ].join(' ')}
-              >
-                {p.label}
-              </button>
-            ))}
+        <div className='flex-col w-full items-center gap-4'>
+          <div className='flex justify-between mb-2'>
+            <div className='text-sm font-medium text-gray-800'>조회 기간</div>
+            <button
+              className='rounded border border-gray-300 bg-white p-1 hover:bg-gray-50 disabled:opacity-40'
+              title='시간 새로고침'
+              onClick={resetToDefault}
+            >
+              <ResetIcon className='h-3.5 w-3.5 text-gray-500' />
+            </button>
+          </div>
+
+          {/* 프리셋 + 직접 설정 버튼 줄 */}
+          <div className='flex w-full gap-2'>
+            {PRESETS.map((p) => {
+              const isActive = value === p.key
+              const baseClass =
+                'flex-1 px-4 py-2 rounded border text-xs transition-colors text-center'
+
+              return (
+                <button
+                  key={p.key}
+                  type='button'
+                  onClick={() => handlePreset(p.key)}
+                  className={[
+                    baseClass,
+                    isActive ? getActiveButtonClass() : inactiveButtonClass,
+                  ].join(' ')}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
 
             {/* Custom preset button */}
             <button
               type='button'
               onClick={handleCustomToggle}
               className={[
-                'px-4 py-2 rounded-lg border text-sm inline-flex items-center gap-1',
-                open
-                  ? 'bg-[#3877BE] text-white border-[#3877BE]'
-                  : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-gray-100',
+                'flex-4 px-4 py-2 rounded border text-xs transition-colors inline-flex items-center justify-between gap-1.5',
+                isCustomActive ? getActiveButtonClass() : inactiveButtonClass,
               ].join(' ')}
             >
               <span>직접설정</span>
@@ -217,17 +245,6 @@ const TimePresetBar = ({
             </button>
           </div>
         </div>
-
-        {/* Right: refresh */}
-        <button
-          type='button'
-          onClick={resetToDefault}
-          className='w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center'
-          title='초기화'
-        >
-          <span className='text-base opacity-70'>↻</span>
-          <span className='sr-only'>새로고침</span>
-        </button>
       </div>
 
       {/* Custom Range Panel */}

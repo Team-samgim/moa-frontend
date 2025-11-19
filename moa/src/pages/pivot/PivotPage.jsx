@@ -360,16 +360,6 @@ const PivotPage = () => {
             </div>
 
             <div className='flex items-center gap-2'>
-              {/* CSV 내보내기 */}
-              <button
-                type='button'
-                onClick={() => exportPivotCsvMutation.mutate()}
-                disabled={exportPivotCsvMutation.isPending}
-                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
-              >
-                {exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
-              </button>
-
               {/* 피벗 프리셋 저장 */}
               <button
                 type='button'
@@ -444,6 +434,25 @@ const PivotPage = () => {
               )}
             </>
           )}
+        </section>
+
+        <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
+          <div className='mb-3 flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              <span className='font-medium text-gray-800'>피벗 테이블</span>
+            </div>
+            <div className='flex items-center gap-2'>
+              {/* CSV 내보내기 */}
+              <button
+                type='button'
+                onClick={() => exportPivotCsvMutation.mutate()}
+                disabled={exportPivotCsvMutation.isPending}
+                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+              >
+                {exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
+              </button>
+            </div>
+          </div>
         </section>
       </div>
 

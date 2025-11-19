@@ -1,4 +1,5 @@
 const loggedOutNavigations = {
+  ONBOARDING: '/onboarding',
   LOGIN: '/login',
   SIGNUP: '/login?mode=signup',
   TEST: '/test',

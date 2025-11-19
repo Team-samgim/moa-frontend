@@ -76,10 +76,10 @@ const ConditionRow = ({
         <option value='OR'>OR</option>
       </select>
 
-      <div className='select w-64 bg-gray-100 truncate'>{row.fieldKey}</div>
+      <div className='select w-55 bg-gray-100 truncate'>{row.fieldKey}</div>
 
       <select
-        className='select w-28'
+        className='select w-23'
         value={row.operator}
         onChange={(e) => onChangeOperator(e.target.value)}
       >

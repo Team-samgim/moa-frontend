@@ -1,4 +1,15 @@
 import { useMemo, useState, useEffect } from 'react'
+import { LAYER_ACTIVE_STYLES } from '@/constants/colors'
+
+/** 공통: 잠금 아닌 필드 칩에 적용할 색 (레이어별) */
+const getUnlockedFieldChipClass = (layerKey) => {
+  const layerStyle =
+    (layerKey && LAYER_ACTIVE_STYLES[layerKey]) ||
+    'bg-[#EAF1F9] text-gray-700 border border-[#D1D1D6]'
+
+  // 레이어 색 + 칩용 기본 폰트
+  return `${layerStyle} font-medium`
+}
 
 /** 내부 모달 (조회 필드 전용) */
 const FieldPickerModal = ({
@@ -12,6 +23,7 @@ const FieldPickerModal = ({
   onToggleAll,
   onApply,
   onClose,
+  layerKey, // 🔹 레이어 키 추가
 }) => {
   if (!open) return null
   const shown = (() => {
@@ -45,9 +57,12 @@ const FieldPickerModal = ({
                 return (
                   <span
                     key={k}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${
-                      isLocked ? 'bg-blue-50 text-blue-700' : 'bg-gray-100'
-                    }`}
+                    className={[
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm',
+                      isLocked
+                        ? 'bg-gray-100 text-gray-500 cursor-default'
+                        : getUnlockedFieldChipClass(layerKey),
+                    ].join(' ')}
                   >
                     {k}
                     {!isLocked && (
@@ -82,28 +97,27 @@ const FieldPickerModal = ({
           <div className='max-h-[420px] overflow-auto rounded-lg border border-gray-200'>
             {shown.map((f) => {
               const isLocked = lockedKeys.has(f.key)
+              const isSelected = selectedSet.has(f.key)
+
               return (
                 <label
                   key={f.key}
-                  className={`flex items-center gap-3 px-4 py-3 border-b last:border-b-0 ${
-                    isLocked
-                      ? 'cursor-not-allowed bg-blue-50/30'
-                      : 'cursor-pointer hover:bg-gray-50'
-                  }`}
+                  className={[
+                    'flex items-center gap-3 px-4 py-3 border-b last:border-b-0',
+                    isLocked ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50',
+                  ].join(' ')}
                 >
                   <input
                     type='checkbox'
-                    checked={selectedSet.has(f.key)}
+                    checked={isSelected}
                     disabled={isLocked}
                     onChange={() => !isLocked && onToggleKey(f.key)}
                     className={isLocked ? 'cursor-not-allowed' : ''}
                   />
                   <div className='flex-1 flex items-center justify-between'>
-                    {' '}
-                    {}
                     <span className='text-sm'>{f.labelKo || f.key}</span>
-                    {isLocked && ( // 🔥 추가
-                      <span className='text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded'>
+                    {isLocked && (
+                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
                         필수
                       </span>
                     )}
@@ -117,7 +131,7 @@ const FieldPickerModal = ({
           </div>
         </div>
 
-        <div className='flex items-center justify-end gap-2 px-5 py-4 border-t'>
+        <div className='flex items-center justify-end gap-2 px-5 py-4 border-t '>
           <button
             className='px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm'
             onClick={onClose}
@@ -137,7 +151,7 @@ const FieldPickerModal = ({
 }
 
 /** 상단 '조회 필드 선택' 바 + 모달 (조건과 완전 독립) */
-const FieldPicker = ({ fields = [], selected = [], onChange }) => {
+const FieldPicker = ({ fields = [], selected = [], onChange, layerKey }) => {
   // fields: { key: string, labelKo: string, isInfo: boolean, ... }[]
   // selected: string[] | Set<string>
 
@@ -249,10 +263,19 @@ const FieldPicker = ({ fields = [], selected = [], onChange }) => {
 
   return (
     <>
-      <div className='border border-gray-200 rounded-2xl px-4 py-3 bg-white flex items-start gap-4'>
+      <div className='flex flex-col gap-2'>
         {/* 1) 라벨 영역 */}
-        <div className='shrink-0 pt-1'>
-          <span className='text-base font-medium'>조회 필드 선택</span>
+        <div className='flex justify-between'>
+          <span className='text-sm font-medium'>조회 필드 선택</span>
+          <div className='shrink-0 self-center'>
+            <button
+              type='button'
+              className='px-3.5 py-1.5 rounded border border-gray-300 hover:bg-gray-50 text-xs'
+              onClick={openPicker}
+            >
+              필드 선택
+            </button>
+          </div>
         </div>
 
         {/* 2) 칩(선택된 태그) 영역 */}
@@ -260,7 +283,7 @@ const FieldPicker = ({ fields = [], selected = [], onChange }) => {
           {chipList.length === 0 ? (
             <span className='text-sm text-gray-400'>선택된 필드가 없습니다.</span>
           ) : (
-            <div className='flex flex-wrap items-center gap-2 pr-1'>
+            <div className='flex flex-wrap items-center gap-2.5 pr-1'>
               {chipList.map((k, idx) => {
                 const isLocked = lockedKeys.has(k)
                 return (
@@ -292,11 +315,12 @@ const FieldPicker = ({ fields = [], selected = [], onChange }) => {
                       setChipSet(new Set(next))
                       onChange && onChange(next)
                     }}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${
+                    className={[
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm',
                       isLocked
-                        ? 'bg-blue-50 text-blue-700 cursor-default'
-                        : 'bg-gray-100 cursor-move'
-                    }`}
+                        ? 'bg-gray-100 text-gray-500 cursor-default'
+                        : `${getUnlockedFieldChipClass(layerKey)} cursor-move`,
+                    ].join(' ')}
                   >
                     {k}
                     {!isLocked && (
@@ -313,17 +337,6 @@ const FieldPicker = ({ fields = [], selected = [], onChange }) => {
             </div>
           )}
         </div>
-
-        {/* 3) 버튼 영역 */}
-        <div className='shrink-0 self-center'>
-          <button
-            type='button'
-            className='px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm'
-            onClick={openPicker}
-          >
-            필드 선택
-          </button>
-        </div>
       </div>
 
       <FieldPickerModal
@@ -337,6 +350,7 @@ const FieldPicker = ({ fields = [], selected = [], onChange }) => {
         onToggleAll={toggleAllInPicker}
         onApply={applyPicker}
         onClose={closePicker}
+        layerKey={layerKey} // 🔹 모달에도 전달
       />
     </>
   )
