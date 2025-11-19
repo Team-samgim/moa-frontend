@@ -26,9 +26,9 @@ const Chip = ({ children, color = 'gray' }) => {
     gray: 'bg-[#DEEBFA]',
     blue: 'bg-[#DEEBFA]',
     green: 'bg-[#E6F0C7]',
-    red: 'bg-[#FCEBEB]',
+    red: 'bg-[#F8F1D0]',
     amber: 'bg-[#E6F0C7]',
-    purple: 'bg-[#FCEBEB]',
+    purple: 'bg-[#F8F1D0]',
   }
 
   return (
@@ -69,7 +69,7 @@ const TabButton = ({ id, activeId, onClick, children }) => {
       className={[
         'px-3 py-2 text-xs md:text-sm border-b-2 -mb-px whitespace-nowrap',
         active
-          ? 'border-blue-500 text-blue-600 font-semibold'
+          ? 'font-semibold'
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
       ].join(' ')}
     >
@@ -125,6 +125,16 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
   if (!open) return null
 
   const d = q.data || {}
+
+  const timing = d.timing || {}
+
+  let prevSec = 0
+  if ((timing.tsPageTcpConnectAvg ?? 0) > 0) prevSec += timing.tsPageTcpConnectAvg
+  if ((timing.tsPageReqMakingAvg ?? 0) > 0) prevSec += timing.tsPageReqMakingAvg
+  if ((timing.tsPageTransferReq ?? 0) > 0) prevSec += timing.tsPageTransferReq
+
+  const ttfbSec = timing.tsPageResInit ?? 0
+  const pureServerMs = Math.max(0, (ttfbSec - prevSec) * 1000) // 차트의 serverTime과 동일 의미
 
   // 문자열 httpResCode → 숫자 httpStatus (정규화 실패 시 null)
   const httpStatus =
@@ -217,7 +227,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
             </div>
             <button
               ref={closeBtnRef}
-              className='rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 focus:outline-none'
               onClick={onClose}
             >
               닫기
@@ -655,10 +665,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
 
                       <div className='rounded-xl border border-gray-300 p-4'>
-                        <div className='text-xs text-gray-500'>TTFB (서버 처리)</div>
-                        <div className='text-lg font-bold'>
-                          {formatMs((d.timing?.tsPageResInit || 0) * 1000)}
-                        </div>
+                        <div className='text-xs text-gray-500'>서버 처리 (요청 이후)</div>
+                        <div className='text-lg font-bold'>{formatMs(pureServerMs)}</div>
                         {d.timing?.tsPageResInitGap > 0 && (
                           <div className='text-xs text-red-500 mt-1'>
                             갭: {formatMs(d.timing.tsPageResInitGap * 1000)}
@@ -1173,9 +1181,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           <LV label='포트' value={d.srcPort} />
                           <LV label='MAC 주소' value={d.srcMac} />
                           <div className='pt-2 border-t'>
-                            <LV label='국가' value={d.env?.countryReq} />
-                            <LV label='대륙' value={d.env?.continentReq} />
-                            <LV label='시/도' value={d.env?.domesticPrimaryReq} />
+                            <LV label='국가' value={d.env?.countryReq || 'South Korea'} />
+                            <LV label='대륙' value={d.env?.continentReq || 'Asia'} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryReq || '서울특별시'} />
                             <LV label='시/군/구' value={d.env?.domesticSub1Req} />
                             <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
                           </div>
@@ -1191,9 +1199,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           <LV label='포트' value={d.dstPort} />
                           <LV label='MAC 주소' value={d.dstMac} />
                           <div className='pt-2 border-t'>
-                            <LV label='국가' value={d.env?.countryRes} />
-                            <LV label='대륙' value={d.env?.continentRes} />
-                            <LV label='시/도' value={d.env?.domesticPrimaryRes} />
+                            <LV label='국가' value={d.env?.countryRes || 'South Korea'} />
+                            <LV label='대륙' value={d.env?.continentRes || 'Asia'} />
+                            <LV label='시/도' value={d.env?.domesticPrimaryRes || '서울특별시'} />
                             <LV label='시/군/구' value={d.env?.domesticSub1Res} />
                             <LV label='읍/면/동' value={d.env?.domesticSub2Res} />
                           </div>

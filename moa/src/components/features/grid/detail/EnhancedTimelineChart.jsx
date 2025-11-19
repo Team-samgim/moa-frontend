@@ -75,7 +75,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
           name: '서버 처리 (TTFB)',
           start: prevEnd,
           duration: serverTime,
-          color: '#FCEBEB',
+          color: '#F8F1D0',
           description: 'Time To First Byte',
           gap: timing.tsPageResInitGap,
         })
@@ -122,7 +122,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
           name: '응답 완료',
           start: prevEnd,
           duration: finalTime,
-          color: '#FCEBEB',
+          color: '#F8F1D0',
           description: '전체 응답 완료',
           gap: timing.tsPageResGap,
         })
