@@ -23,7 +23,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
         name: 'TCP 핸드셰이크',
         start: 0,
         duration: timing.tsPageTcpConnectAvg * 1000,
-        color: '#8b5cf6',
+        color: '#DEEBFA',
         description: `3-way handshake`,
         detail: {
           avg: timing.tsPageTcpConnectAvg,
@@ -42,7 +42,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
         name: '요청 생성',
         start: prevEnd,
         duration: timing.tsPageReqMakingAvg * 1000,
-        color: '#06b6d4',
+        color: '#E6F0C7',
         description: `HTTP 요청 준비`,
         detail: {
           avg: timing.tsPageReqMakingAvg,
@@ -59,7 +59,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
         name: '요청 전송',
         start: prevEnd,
         duration: timing.tsPageTransferReq * 1000,
-        color: '#10b981',
+        color: '#E6F0C7',
         description: `HTTP 요청 데이터 전송`,
         gap: timing.tsPageTransferReqGap,
       })
@@ -75,7 +75,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
           name: '서버 처리 (TTFB)',
           start: prevEnd,
           duration: serverTime,
-          color: '#f59e0b',
+          color: '#FCEBEB',
           description: 'Time To First Byte',
           gap: timing.tsPageResInitGap,
         })
@@ -91,7 +91,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
           name: '애플리케이션 처리',
           start: prevEnd,
           duration: appTime,
-          color: '#ec4899',
+          color: '#E6F0C7',
           description: '애플리케이션 레벨 응답',
           gap: timing.tsPageResAppGap,
         })
@@ -106,7 +106,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
         name: '응답 수신',
         start: prevEnd,
         duration: timing.tsPageTransferRes * 1000,
-        color: '#3b82f6',
+        color: '#DEEBFA',
         description: 'HTTP 응답 데이터 수신',
         gap: timing.tsPageTransferResGap,
       })
@@ -122,7 +122,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
           name: '응답 완료',
           start: prevEnd,
           duration: finalTime,
-          color: '#06b6d4',
+          color: '#FCEBEB',
           description: '전체 응답 완료',
           gap: timing.tsPageResGap,
         })
@@ -188,7 +188,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
         left: 'center',
         textStyle: { fontSize: 14, fontWeight: 600 },
         subtext: subtexts.join('  |  '),
-        subtextStyle: { fontSize: 10, color: '#ef4444' },
+        subtextStyle: { fontSize: 10, color: '#8d8d91ff' },
       },
       tooltip: {
         trigger: 'axis',
@@ -336,7 +336,7 @@ const EnhancedTimelineChart = ({ timing, delaySummary }) => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  return <div ref={chartRef} style={{ width: '90%', height: '300px' }} />
+  return <div ref={chartRef} style={{ width: '100%', height: '300px' }} />
 }
 
 export default EnhancedTimelineChart

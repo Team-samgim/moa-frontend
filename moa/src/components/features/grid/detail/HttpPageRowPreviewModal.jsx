@@ -5,15 +5,10 @@ import useHttpPageMetrics from '@/hooks/detail/useHttpPageMetrics'
 import { emptyValue, formatMs, formatTimestamp } from '@/utils/httpPageFormat'
 
 const Badge = ({ level, children }) => {
-  const cls =
-    level === 'crit'
-      ? 'bg-red-100 text-red-700 border-red-200'
-      : level === 'warn'
-        ? 'bg-amber-100 text-amber-800 border-amber-200'
-        : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+  const cls = level === 'crit' ? 'bg-[#FCEBEB]' : level === 'warn' ? 'bg-[#E6F0C7]' : 'bg-[#DEEBFA]'
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs border ${cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs ${cls}`}>
       {children}
     </span>
   )
@@ -28,12 +23,12 @@ const prettyBytes = (n = 0) => {
 
 const Chip = ({ children, color = 'gray' }) => {
   const colors = {
-    gray: 'bg-[#F5F5F7] text-gray-700',
-    blue: 'bg-blue-100 text-blue-700',
-    green: 'bg-green-100 text-green-700',
-    red: 'bg-red-100 text-red-700',
-    amber: 'bg-amber-100 text-amber-700',
-    purple: 'bg-purple-100 text-purple-700',
+    gray: 'bg-[#DEEBFA]',
+    blue: 'bg-[#DEEBFA]',
+    green: 'bg-[#E6F0C7]',
+    red: 'bg-[#FCEBEB]',
+    amber: 'bg-[#E6F0C7]',
+    purple: 'bg-[#FCEBEB]',
   }
 
   return (
@@ -194,7 +189,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
           aria-labelledby='http-page-dialog-title'
           className={[
             'w-full max-w-[1400px] max-h-[95vh] overflow-hidden rounded-2xl',
-            'border bg-white shadow-2xl flex flex-col min-h-0',
+            'bg-white shadow-2xl flex flex-col min-h-0',
             'transform transition duration-200 ease-out',
             mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           ].join(' ')}
@@ -272,7 +267,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {activeTab === 'summary' && (
                   <>
                     {/* 연결 정보 카드 */}
-                    <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                    <div className='rounded-xl border border-gray-300 p-4'>
                       <div className='text-sm text-gray-600 mb-1'>네트워크 연결</div>
                       <div className='text-[15px] font-semibold'>
                         {emptyValue(d.srcIp)}:{emptyValue(d.srcPort)}{' '}
@@ -298,16 +293,6 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                             }
                           >
                             <span className='inline-flex items-center gap-1.5'>
-                              <span
-                                className={[
-                                  'inline-block w-2 h-2 rounded-full',
-                                  httpStatus >= 200 && httpStatus < 300
-                                    ? 'bg-green-500'
-                                    : httpStatus >= 400
-                                      ? 'bg-red-500'
-                                      : 'bg-amber-500',
-                                ].join(' ')}
-                              />
                               Status: {httpStatus}
                             </span>
                           </Chip>
@@ -326,33 +311,31 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 핵심 지표 */}
                     <div className='grid grid-cols-2 md:grid-cols-5 gap-3 mt-4'>
-                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>페이지 로딩</div>
-                        <div className='text-lg font-bold text-blue-700'>
+                        <div className='text-lg font-bold'>
                           {formatMs((d.timing?.tsPage || 0) * 1000)}
                         </div>
                       </div>
-                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>총 데이터</div>
-                        <div className='text-lg font-bold text-emerald-700'>
+                        <div className='text-lg font-bold'>
                           {prettyBytes(d.traffic?.pageHttpLen || 0)}
                         </div>
                       </div>
-                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>URI 수</div>
-                        <div className='text-lg font-bold text-purple-700'>
-                          {(d.uriCnt || 0).toLocaleString()}
-                        </div>
+                        <div className='text-lg font-bold'>{(d.uriCnt || 0).toLocaleString()}</div>
                       </div>
-                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>세션 수</div>
-                        <div className='text-lg font-bold text-amber-700'>
+                        <div className='text-lg font-bold'>
                           {(d.pageSessionCnt || 0).toLocaleString()}
                         </div>
                       </div>
-                      <div className='rounded-xl border bg-gradient-to-br from-rose-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>TCP 품질</div>
-                        <div className='text-lg font-bold text-rose-700'>
+                        <div className='text-lg font-bold'>
                           {Number.isFinite(tcpQualityScore)
                             ? `${tcpQualityScore.toFixed(0)}%`
                             : '-'}
@@ -363,10 +346,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                     {/* HTTP 요청/응답 정보 */}
                     {(d.httpMethod || d.httpUri || d.httpContentType) && (
                       <div className='grid md:grid-cols-2 gap-4 mt-4'>
-                        <div className='rounded-xl border bg-white p-4'>
-                          <div className='mb-3 text-sm font-semibold text-gray-800'>
-                            📤 요청 정보
-                          </div>
+                        <div className='rounded-xl border border-gray-300 bg-white p-4'>
+                          <div className='mb-3 text-sm font-semibold'>📤 요청 정보</div>
                           <div className='space-y-2'>
                             <LV label='메소드' value={d.httpMethod} />
                             <LV label='URI' value={d.httpUri} />
@@ -375,10 +356,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                             <LV label='버전' value={d.httpVersion} />
                           </div>
                         </div>
-                        <div className='rounded-xl border bg-white p-4'>
-                          <div className='mb-3 text-sm font-semibold text-gray-800'>
-                            📥 응답 정보
-                          </div>
+                        <div className='rounded-xl border border-gray-300 bg-white p-4'>
+                          <div className='mb-3 text-sm font-semibold'>📥 응답 정보</div>
                           <div className='space-y-2'>
                             <LV label='응답 코드' value={d.httpResCode} />
                             <LV label='응답 구문' value={d.httpResPhrase} />
@@ -391,10 +370,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                     )}
 
                     {/* 세션 & 연결 통계 */}
-                    <div className='rounded-xl border bg-white p-4 mt-4'>
-                      <div className='mb-3 text-sm font-semibold text-gray-800'>
-                        🔌 세션 & 연결 통계
-                      </div>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4 mt-4'>
+                      <div className='mb-3 text-sm font-semibold'>🔌 세션 & 연결 통계</div>
                       <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
                         <LV label='세션 수' value={(d.pageSessionCnt || 0).toLocaleString()} />
                         <LV label='TCP 연결' value={(d.pageTcpConnectCnt || 0).toLocaleString()} />
@@ -412,8 +389,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 타임스탬프 정보: 0이어도 필드만 있으면 노출 */}
                     {hasCaptureTime && (
-                      <div className='rounded-xl border bg-gray-50 p-4'>
-                        <div className='mb-2 text-sm font-semibold text-gray-800'>⏰ 캡처 시간</div>
+                      <div className='rounded-xl border border-gray-300 p-4'>
+                        <div className='mb-2 text-sm font-semibold'>⏰ 캡처 시간</div>
                         <div className='text-sm text-gray-600'>
                           {d.tsServer}
                           {d.timing?.tsFirst && (
@@ -431,7 +408,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {activeTab === 'client' && (
                   <>
                     {/* 1) 클라이언트 요청 요약 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         🧑‍💻 클라이언트 요청 요약
                       </div>
@@ -449,7 +426,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 2) 클라이언트 체감 성능 */}
                     <div className='grid md:grid-cols-2 gap-4'>
-                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>
                           ⏱️ 클라이언트 체감 시간
                         </div>
@@ -484,31 +461,31 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
 
                       {/* 3) 클라이언트 요청 트래픽 */}
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>
                           📤 클라이언트 요청 트래픽
                         </div>
                         <div className='space-y-2 text-sm'>
-                          <div className='bg-blue-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex'>
                               <span className='text-gray-500'>HTTP 요청 수</span>
-                              <span className='font-medium'>
+                              <span className='font-medium ml-2'>
                                 {(d.traffic?.pageHttpCntReq || 0).toLocaleString()}
                               </span>
                             </div>
                           </div>
-                          <div className='bg-blue-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex '>
                               <span className='text-gray-500'>요청 바이트</span>
-                              <span className='font-medium'>
+                              <span className='font-medium ml-2'>
                                 {prettyBytes(d.traffic?.pageHttpLenReq || 0)}
                               </span>
                             </div>
                           </div>
-                          <div className='bg-blue-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex'>
                               <span className='text-gray-500'>요청 패킷 수</span>
-                              <span className='font-medium'>
+                              <span className='font-medium ml-2'>
                                 {(d.traffic?.pagePktLenReq || 0).toLocaleString?.() ||
                                   d.traffic?.pagePktLenReq ||
                                   '값 없음'}
@@ -525,7 +502,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {activeTab === 'server' && (
                   <>
                     {/* 1) 서버 응답 요약 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         🖥️ 서버 응답 요약
                       </div>
@@ -545,11 +522,11 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 2) 서버 처리 시간 */}
                     <div className='grid md:grid-cols-2 gap-4'>
-                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>
                           ⏱️ 서버 처리 시간
                         </div>
-                        <div className='space-y-2 text-sm'>
+                        <div className='space-y-5 text-sm'>
                           <LV
                             label='TTFB (서버 처리 + 첫 바이트)'
                             value={
@@ -580,33 +557,33 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
 
                       {/* 3) 서버 응답 트래픽 & TCP 품질 */}
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-2 text-sm font-semibold text-gray-800'>
                           📥 서버 응답 트래픽 / TCP 품질
                         </div>
                         <div className='space-y-2 text-sm mb-3'>
-                          <div className='bg-green-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex'>
                               <span className='text-gray-500'>HTTP 응답 바이트</span>
-                              <span className='font-medium'>
+                              <span className='ml-2 font-medium'>
                                 {prettyBytes(d.traffic?.pageHttpLenRes || 0)}
                               </span>
                             </div>
                           </div>
-                          <div className='bg-green-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex'>
                               <span className='text-gray-500'>응답 패킷 수</span>
-                              <span className='font-medium'>
+                              <span className='ml-2 font-medium'>
                                 {(d.traffic?.pagePktLenRes || 0).toLocaleString?.() ||
                                   d.traffic?.pagePktLenRes ||
                                   '값 없음'}
                               </span>
                             </div>
                           </div>
-                          <div className='bg-green-50 p-2 rounded'>
-                            <div className='flex justify-between'>
+                          <div className='p-2'>
+                            <div className='flex'>
                               <span className='text-gray-500'>TCP 연결 수</span>
-                              <span className='font-medium'>
+                              <span className='ml-2 font-medium'>
                                 {(d.pageTcpConnectCnt || 0).toLocaleString()}
                               </span>
                             </div>
@@ -614,7 +591,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
 
                         {d.tcpQuality && (
-                          <div className='mt-2 border-t pt-2 text-xs text-gray-700 space-y-1'>
+                          <div className='mt-2 pt-2 text-xs text-gray-700 space-y-1'>
                             <div className='font-semibold text-gray-800'>TCP 품질 (서버 연결)</div>
                             <div>
                               품질 점수:{' '}
@@ -645,15 +622,15 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {/* === Tab: 시간 분석 === */}
                 {activeTab === 'timing' && d.timing && (
                   <>
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <EnhancedTimelineChart timing={d.timing} delaySummary={delaySummary} />
                     </div>
 
                     {/* 주요 시간 메트릭 카드 */}
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-                      <div className='rounded-xl border bg-gradient-to-br from-purple-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>TCP 연결 평균</div>
-                        <div className='text-lg font-bold text-purple-700'>
+                        <div className='text-lg font-bold'>
                           {formatMs((d.timing?.tsPageTcpConnectAvg || 0) * 1000)}
                         </div>
                         {d.timing?.tsPageTcpConnectMin !== null &&
@@ -665,9 +642,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           )}
                       </div>
 
-                      <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>요청 전송</div>
-                        <div className='text-lg font-bold text-emerald-700'>
+                        <div className='text-lg font-bold'>
                           {formatMs((d.timing?.tsPageTransferReq || 0) * 1000)}
                         </div>
                         {d.timing?.tsPageTransferReqGap > 0 && (
@@ -677,9 +654,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         )}
                       </div>
 
-                      <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>TTFB (서버 처리)</div>
-                        <div className='text-lg font-bold text-amber-700'>
+                        <div className='text-lg font-bold'>
                           {formatMs((d.timing?.tsPageResInit || 0) * 1000)}
                         </div>
                         {d.timing?.tsPageResInitGap > 0 && (
@@ -689,9 +666,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         )}
                       </div>
 
-                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
                         <div className='text-xs text-gray-500'>응답 전송</div>
-                        <div className='text-lg font-bold text-blue-700'>
+                        <div className='text-lg font-bold'>
                           {formatMs((d.timing?.tsPageTransferRes || 0) * 1000)}
                         </div>
                         {d.timing?.tsPageTransferResGap > 0 && (
@@ -704,16 +681,16 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 지연 요약 카드 */}
                     {delaySummary && (
-                      <div className='rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4'>
+                      <div className='rounded-xl border border-gray-300 p-4 mb-4'>
                         <div className='flex items-center justify-between mb-2'>
-                          <div className='text-sm font-semibold text-amber-900'>⏱️ 지연 요약</div>
+                          <div className='text-sm font-semibold text-gray-700'>⏱️ 지연 요약</div>
                           {dominantRatioPct && (
-                            <span className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white border border-amber-200 text-amber-800'>
+                            <span className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] bg-white text-gray-700'>
                               주요 지연 구간: {delaySummary.dominantLabel} ({dominantRatioPct}%)
                             </span>
                           )}
                         </div>
-                        <div className='text-xs text-amber-900'>
+                        <div className='text-xs'>
                           전체 페이지 시간{' '}
                           <span className='font-semibold'>
                             {formatMs((delaySummary.total || 0) * 1000)}
@@ -726,11 +703,11 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           {dominantRatioPct && <span> (약 {dominantRatioPct}%)</span>} 구간에서 가장
                           오래 걸렸습니다.
                         </div>
-                        <div className='mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-amber-900'>
+                        <div className='mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-gray-700 text-[11px]'>
                           {delaySummary.segments?.map((seg) => (
                             <div
                               key={seg.key}
-                              className='flex flex-col rounded-lg bg-white/80 border border-amber-100 px-2 py-1.5'
+                              className='flex flex-col rounded-lg bg-white/80 text-gray-700 px-2 py-1.5'
                             >
                               <span className='font-semibold'>{seg.label}</span>
                               <span className='mt-0.5'>
@@ -752,8 +729,8 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       d.timing?.tsPageResGap > 0 ||
                       d.timing?.tsPageTransferReqGap > 0 ||
                       d.timing?.tsPageTransferResGap > 0) && (
-                      <div className='rounded-xl border border-red-200 bg-red-50 p-4'>
-                        <div className='mb-3 text-sm font-semibold text-red-800'>
+                      <div className='rounded-xl border border-gray-300 p-4'>
+                        <div className='mb-3 text-sm font-semibold text-gray-800'>
                           ⚠️ 지연 구간 감지
                         </div>
                         <div className='grid grid-cols-2 md:grid-cols-3 gap-3 text-sm'>
@@ -788,14 +765,14 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                             />
                           )}
                         </div>
-                        <div className='mt-3 text-xs text-red-600'>
+                        <div className='mt-3 text-xs text-gray-600'>
                           * 갭(Gap)은 예상 시간보다 추가로 소요된 지연 시간을 의미합니다.
                         </div>
                       </div>
                     )}
 
                     {/* 타임스탬프 상세 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         🕐 타임스탬프 상세
                       </div>
@@ -855,7 +832,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* TCP 연결 시간 통계: 값이 0이어도 필드만 있으면 노출 */}
                     {hasTcpConnectStats && (
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           🔌 TCP 연결 시간 통계
                         </div>
@@ -882,7 +859,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 요청 생성 시간: 값이 0이어도 필드만 있으면 노출 */}
                     {hasReqMakingStats && (
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📝 요청 생성 시간
                         </div>
@@ -901,10 +878,10 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                   </>
                 )}
 
-                {/* === Tab: 응답 코드 === */}
+                {/* === Tab: 상태/메소드 === */}
                 {activeTab === 'status' && (
                   <div className='space-y-6'>
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📊 HTTP 메소드 통계
                       </div>
@@ -922,7 +899,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                       </div>
                     </div>
                     {/* 현재 요청의 응답 코드 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-4 text-sm font-semibold text-gray-800'>
                         📊 현재 HTTP 응답 코드
                       </div>
@@ -930,14 +907,14 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         <div className='text-center'>
                           <div
                             className={[
-                              'inline-flex items-center justify-center w-32 h-32 rounded-full text-5xl font-bold',
+                              'inline-flex items-center justify-center w-32 h-32 rounded-full text-5xl',
                               httpStatus !== null && httpStatus >= 200 && httpStatus < 300
-                                ? 'bg-green-100 text-green-700'
+                                ? 'bg-[#DEEBFA]'
                                 : httpStatus !== null && httpStatus >= 400 && httpStatus < 500
-                                  ? 'bg-amber-100 text-amber-700'
+                                  ? 'bg-[#E6F0C7]'
                                   : httpStatus !== null && httpStatus >= 500
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-blue-100 text-blue-700',
+                                    ? 'bg-[#FCEBEB]'
+                                    : 'bg-[#DEEBFA]',
                             ].join(' ')}
                           >
                             {httpStatus ?? d.httpResCode ?? '?'}
@@ -964,18 +941,18 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                   </div>
                 )}
 
-                {/* === Tab: 성능 (TCP 품질 포함) === */}
+                {/* === Tab: 성능 === */}
                 {activeTab === 'performance' && (
                   <>
                     {/* 1) TCP 품질 요약 섹션 */}
                     {d.tcpQuality && (
-                      <div className='rounded-xl border bg-white p-4 mb-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4 mb-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>📈 TCP 품질</div>
                         <div className='grid md:grid-cols-3 gap-3'>
                           {/* 품질 점수 */}
-                          <div className='rounded-xl border bg-gradient-to-br from-emerald-50 to-white p-4'>
+                          <div className='rounded-xl border border-gray-300 p-4'>
                             <div className='text-xs text-gray-500'>TCP 품질 점수</div>
-                            <div className='text-2xl font-bold text-emerald-700'>
+                            <div className='text-2xl font-bold'>
                               {Number.isFinite(tcpQualityScore)
                                 ? `${tcpQualityScore.toFixed(0)}점`
                                 : '-'}
@@ -986,9 +963,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           </div>
 
                           {/* 에러 세션 비율 */}
-                          <div className='rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4'>
+                          <div className='rounded-xl border border-gray-300 p-4'>
                             <div className='text-xs text-gray-500'>에러 세션 비율</div>
-                            <div className='text-2xl font-bold text-amber-700'>
+                            <div className='text-2xl font-bold'>
                               {tcpErrorSessionRatio !== null
                                 ? `${(tcpErrorSessionRatio * 100).toFixed(2)}%`
                                 : '-'}
@@ -1000,9 +977,9 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           </div>
 
                           {/* 에러 패킷 비율 */}
-                          <div className='rounded-xl border bg-gradient-to-br from-rose-50 to-white p-4'>
+                          <div className='rounded-xl border border-gray-300 p-4'>
                             <div className='text-xs text-gray-500'>에러 패킷 비율</div>
-                            <div className='text-2xl font-bold text-rose-700'>
+                            <div className='text-2xl font-bold'>
                               {tcpErrorCntRatio !== null
                                 ? `${(tcpErrorCntRatio * 100).toFixed(2)}%`
                                 : '-'}
@@ -1018,52 +995,52 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 2) 대역폭 & 패킷 속도 */}
                     <div className='grid md:grid-cols-2 gap-4'>
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📊 대역폭 (Mbps)
                         </div>
-                        <div className='grid grid-cols-3 gap-3 mb-4'>
-                          <div className='bg-blue-50 p-3 rounded-lg'>
+                        <div className='grid grid-cols-3 gap-3 mb-2'>
+                          <div className='bg-[#DEEBFA]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>평균</div>
-                            <div className='text-lg font-bold text-blue-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.mbps || 0).toFixed(3)}
                             </div>
                           </div>
-                          <div className='bg-green-50 p-3 rounded-lg'>
+                          <div className='bg-[#E6F0C7]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>최소</div>
-                            <div className='text-lg font-bold text-green-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.mbpsMin || 0).toFixed(3)}
                             </div>
                           </div>
-                          <div className='bg-purple-50 p-3 rounded-lg'>
+                          <div className='bg-[#FCEBEB]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>최대</div>
-                            <div className='text-lg font-bold text-purple-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.mbpsMax || 0).toFixed(3)}
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className='rounded-xl border bg-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📦 패킷 속도 (PPS)
                         </div>
-                        <div className='grid grid-cols-3 gap-3 mb-4'>
-                          <div className='bg-blue-50 p-3 rounded-lg'>
+                        <div className='grid grid-cols-3 gap-3 mb-2'>
+                          <div className='bg-[#DEEBFA]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>평균</div>
-                            <div className='text-lg font-bold text-blue-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.pps || 0).toFixed(1)}
                             </div>
                           </div>
-                          <div className='bg-green-50 p-3 rounded-lg'>
+                          <div className='bg-[#E6F0C7]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>최소</div>
-                            <div className='text-lg font-bold text-green-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.ppsMin || 0).toFixed(1)}
                             </div>
                           </div>
-                          <div className='bg-purple-50 p-3 rounded-lg'>
+                          <div className='bg-[#FCEBEB]/40 border border-gray-300 p-3 rounded-lg'>
                             <div className='text-xs text-gray-500'>최대</div>
-                            <div className='text-lg font-bold text-purple-700'>
+                            <div className='text-lg font-bold'>
                               {(d.performance?.ppsMax || 0).toFixed(1)}
                             </div>
                           </div>
@@ -1072,15 +1049,15 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                     </div>
 
                     {/* 3) 트래픽 상세 통계 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <div className='mb-3 text-sm font-semibold text-gray-800'>
                         📈 트래픽 상세 통계
                       </div>
                       <div className='grid grid-cols-3 gap-4'>
-                        <div>
+                        <div className='border border-gray-300 p-2 rounded-xl'>
                           <div className='text-xs text-gray-500 mb-3 font-semibold'>전체</div>
                           <div className='space-y-2 text-sm'>
-                            <div className='bg-gray-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>HTTP</span>
                                 <span className='font-medium'>
@@ -1088,7 +1065,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-gray-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>패킷</span>
                                 <span className='font-medium'>
@@ -1096,7 +1073,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-gray-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>TCP</span>
                                 <span className='font-medium'>
@@ -1107,10 +1084,10 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           </div>
                         </div>
 
-                        <div>
+                        <div className='border border-gray-300 p-2 rounded-xl'>
                           <div className='text-xs text-gray-500 mb-3 font-semibold'>요청</div>
                           <div className='space-y-2 text-sm'>
-                            <div className='bg-blue-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>HTTP</span>
                                 <span className='font-medium'>
@@ -1118,15 +1095,15 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-blue-50 p-2 rounded'>
-                              <div className='flex justifyetween'>
+                            <div className='p-2'>
+                              <div className='flex justify-between'>
                                 <span className='text-gray-500'>패킷</span>
                                 <span className='font-medium'>
                                   {prettyBytes(d.traffic?.pagePktLenReq || 0)}
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-blue-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>TCP</span>
                                 <span className='font-medium'>
@@ -1137,10 +1114,10 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                           </div>
                         </div>
 
-                        <div>
+                        <div className='border border-gray-300 p-2 rounded-xl'>
                           <div className='text-xs text-gray-500 mb-3 font-semibold'>응답</div>
                           <div className='space-y-2 text-sm'>
-                            <div className='bg-green-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>HTTP</span>
                                 <span className='font-medium'>
@@ -1148,7 +1125,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-green-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>패킷</span>
                                 <span className='font-medium'>
@@ -1156,7 +1133,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                                 </span>
                               </div>
                             </div>
-                            <div className='bg-green-50 p-2 rounded'>
+                            <div className='p-2'>
                               <div className='flex justify-between'>
                                 <span className='text-gray-500'>TCP</span>
                                 <span className='font-medium'>
@@ -1175,7 +1152,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                 {activeTab === 'geo' && hasEnv && (
                   <div className='grid md:grid-cols-2 gap-4 items-stretch'>
                     {/* 왼쪽: 지도 */}
-                    <div className='rounded-xl border bg-white p-4'>
+                    <div className='rounded-xl border border-gray-300 bg-white p-4'>
                       <EnhancedGeoMap
                         countryReq={d.env?.countryReq}
                         countryRes={d.env?.countryRes}
@@ -1187,7 +1164,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
 
                     {/* 오른쪽: 출발지/도착지 카드 */}
                     <div className='flex flex-col gap-4'>
-                      <div className='rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-gradient-to-br from-blue-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 출발지 (요청)
                         </div>
@@ -1205,7 +1182,7 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         </div>
                       </div>
 
-                      <div className='rounded-xl border bg-gradient-to-br from-red-50 to-white p-4'>
+                      <div className='rounded-xl border border-gray-300 bg-gradient-to-br from-red-50 to-white p-4'>
                         <div className='mb-3 text-sm font-semibold text-gray-800'>
                           📍 목적지 (응답)
                         </div>

@@ -62,12 +62,14 @@ const GridToolbar = ({
   const disabled = exportMut.isPending || !ready
 
   return (
-    <div className='mb-4 flex items-center justify-between font-sans'>
-      <div className='rounded-md bg-[#3877BE] px-3 py-1.5 text-white'>{currentLayer}</div>
+    <div className='mb-4 flex items-center justify-between font-sans w-full'>
+      <div className='rounded-md text-xs bg-[#CDE2FA] px-4.5 py-2 border text-[#003674] border-[#D1D1D6] font-semibold'>
+        {currentLayer}
+      </div>
       <div className='flex items-center gap-2'>
         <button
           onClick={onReset}
-          className='rounded-md border border-[#3877BE] px-3 py-1.5 text-[#3877BE] bg-white hover:bg-blue-50 transition'
+          className='rounded-md text-xs border border-[#3877BE] px-4.5 py-2 text-[#3877BE] bg-white hover:bg-blue-50 transition'
         >
           필터 초기화
         </button>
@@ -75,7 +77,7 @@ const GridToolbar = ({
         <button
           onClick={() => exportMut.mutate()}
           disabled={disabled}
-          className='rounded-md bg-[#E6F0C7] px-3 py-1.5 text-black hover:shadow transition'
+          className='rounded-md text-xs bg-[#E6F0C7] px-4.5 py-2 hover:shadow transition'
           title={ready ? '' : '그리드가 준비되면 활성화됩니다'}
         >
           {exportMut.isPending ? '저장 중…' : 'CSV 저장'}
@@ -84,7 +86,7 @@ const GridToolbar = ({
         {onPivot && (
           <button
             onClick={onPivot}
-            className='rounded-md bg-[#F8F1D0] px-3 py-1.5 text-black hover:shadow transition'
+            className='rounded-md text-xs bg-[#F8F1D0] px-4.5 py-2 hover:shadow transition'
           >
             피벗 모드
           </button>
