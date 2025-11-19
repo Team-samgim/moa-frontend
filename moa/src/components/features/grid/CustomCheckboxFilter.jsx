@@ -101,7 +101,7 @@ const CustomCheckboxFilter = (props) => {
   }
 
   return (
-    <div className='w-[220px] bg-white text-[13px]'>
+    <div className='relative z-[10000] w-[220px] bg-white text-[13px]'>
       {!showConditionMode ? (
         <>
           {/* 체크박스 모드 */}
