@@ -366,8 +366,9 @@ const PivotPage = () => {
 
               <div className='flex items-center gap-1'>
                 {/* 차트 이미지 다운로드 */}
+                {/* className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50' */}
                 <button
-                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
                   onClick={() => exportChartImageMutation.mutate()}
                   disabled={!isChartMode || exportChartImageMutation.isPending}
                 >
@@ -454,9 +455,9 @@ const PivotPage = () => {
                 type='button'
                 onClick={() => exportPivotCsvMutation.mutate()}
                 disabled={exportPivotCsvMutation.isPending}
-                className='flex border rounded justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
               >
-                <ExcelIcon className='w-4 h-4 text-[#595959]' />
+                <ExcelIcon className='w-3.5 h-3.5 text-gray-600' />
                 <span>{exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}</span>
               </button>
             </div>
