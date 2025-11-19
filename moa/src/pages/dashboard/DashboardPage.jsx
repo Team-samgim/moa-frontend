@@ -21,14 +21,14 @@ import BrowserPerformance from '@/components/features/dashboard/widget/BrowserPe
 import DevicePerformanceDistribution from '@/components/features/dashboard/widget/DevicePerformanceDistribution'
 import ErrorPagesTop10 from '@/components/features/dashboard/widget/ErrorPagesTop10'
 import ErrorRateTrend from '@/components/features/dashboard/widget/ErrorRateTrend'
-import PageLoadTimeTrend from '@/components/features/dashboard/widget/PageLoadTimeTrend' // ⭐ 추가
-import TcpErrorGauge from '@/components/features/dashboard/widget/TcpErrorGauge'
+import PageLoadTimeTrend from '@/components/features/dashboard/widget/PageLoadTimeTrend'
+import ResponseTimeStats from '@/components/features/dashboard/widget/ResponseTimeStats'
 import TopDomains from '@/components/features/dashboard/widget/TopDomains'
-import GeoTrafficDistribution from '@/components/features/dashboard/widget/TrafficByCountry'
+import TrafficByCountry from '@/components/features/dashboard/widget/TrafficByCountry'
 import TrafficTrend from '@/components/features/dashboard/widget/TrafficTrend'
-import HttpStatusDonut from '@/components/features/dashboard/widget/httpStatusCodeDistribution'
-import AvgResponseTime from '@/components/features/dashboard/widget/responseTimeStats'
+import httpStatusCodeDistribution from '@/components/features/dashboard/widget/httpStatusCodeDistribution'
 import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
+import { useDashboardSSE } from '@/hooks/useDashboardSSE'
 import { useDashboardStore } from '@/stores/dashboardStore'
 
 // ✅ Mock 데이터 (API 없을 때 필터 표시용)
@@ -44,16 +44,15 @@ const DashboardPage = () => {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filters, setFilters] = useState({})
-  const [initialLoadDone, setInitialLoadDone] = useState(false) // ✅ 초기 로딩 완료 여부
+  const [initialLoadDone, setInitialLoadDone] = useState(false) // ⭐ 초기 로딩 완료 플래그
 
   // 기본으로 보여줄 위젯
   const [widgets, setWidgets] = useState([
     'pageLoadTimeTrend',
     'errorRateTrend',
     'httpStatus',
-    // 'tcpErrorRate',
     'trafficTrend',
-    'slowPages', // TopDomains
+    'slowPages',
     'errorPages',
     'geoHeatmap',
     'browserPerf',
@@ -64,15 +63,14 @@ const DashboardPage = () => {
   const WIDGET_RENDERERS = {
     pageLoadTimeTrend: { comp: PageLoadTimeTrend, className: 'col-span-12 md:col-span-8' },
     errorRateTrend: { comp: ErrorRateTrend, className: 'col-span-12 md:col-span-4' },
-    httpStatus: { comp: HttpStatusDonut, className: 'col-span-12 md:col-span-4' },
-    // tcpErrorRate: { comp: TcpErrorGauge, className: 'col-span-12 md:col-span-4' },
-    trafficTrend: { comp: TrafficTrend, className: 'col-span-12 md:col-span-4' },
-    slowPages: { comp: TopDomains, className: 'col-span-12 md:col-span-6' },
-    errorPages: { comp: ErrorPagesTop10, className: 'col-span-12 md:col-span-6' },
-    geoHeatmap: { comp: GeoTrafficDistribution, className: 'col-span-12 md:col-span-8' },
+    httpStatus: { comp: httpStatusCodeDistribution, className: 'col-span-12 md:col-span-4' },
+    trafficTrend: { comp: TrafficTrend, className: 'col-span-12 md:col-span-12' },
+    slowPages: { comp: TopDomains, className: 'col-span-12 md:col-span-8' },
+    errorPages: { comp: ErrorPagesTop10, className: 'col-span-12 md:col-span-8' },
+    geoHeatmap: { comp: TrafficByCountry, className: 'col-span-12 md:col-span-8' },
     browserPerf: { comp: BrowserPerformance, className: 'col-span-12 md:col-span-4' },
-    devicePerf: { comp: DevicePerformanceDistribution, className: 'col-span-4' },
-    responseTimeSummary: { comp: AvgResponseTime, className: 'col-span-12 md:col-span-6' },
+    devicePerf: { comp: DevicePerformanceDistribution, className: 'col-span-12 md:col-span-4' },
+    responseTimeSummary: { comp: ResponseTimeStats, className: 'col-span-12 md:col-span-4' },
   }
 
   // ============================================
@@ -80,12 +78,32 @@ const DashboardPage = () => {
   // ============================================
   const { data: dashboardData, isLoading } = useDashboardAggregated()
 
-  // ✅ 초기 로딩 완료 체크
+  // ⭐ 초기 로딩 완료 체크
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !initialLoadDone) {
       setInitialLoadDone(true)
     }
-  }, [isLoading])
+  }, [isLoading, initialLoadDone])
+
+  // ✅ 디버깅: 실시간 데이터 확인
+  const realtimeData = useDashboardStore((state) => state.realtimeData)
+  const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
+
+  useEffect(() => {
+    console.log('📊 [DashboardPage] 실시간 데이터 길이:', realtimeData.length)
+    console.log('🔌 [DashboardPage] SSE 연결 상태:', isConnected)
+    if (realtimeData.length > 0) {
+      console.log('📦 [DashboardPage] 첫 번째 데이터:', realtimeData[0])
+      console.log('📦 [DashboardPage] mbpsReq:', realtimeData[0].mbpsReq)
+      console.log('📦 [DashboardPage] mbpsRes:', realtimeData[0].mbpsRes)
+    }
+  }, [realtimeData, isConnected])
+
+  // ✅ SSE 연결 (페이지 로드 시 즉시 연결)
+  useDashboardSSE({
+    enabled: true,
+    moaDataUrl: 'http://localhost:9090',
+  })
 
   // ✅ availableFilters 처리 (API 실패 시 Mock 데이터 사용)
   const availableFilters = dashboardData?.availableFilters || MOCK_AVAILABLE_FILTERS
@@ -160,7 +178,7 @@ const DashboardPage = () => {
   }
 
   // ============================================
-  // ✅ 로딩 상태 표시 (초기 로딩 시에만)
+  // ✅ 로딩 상태 표시 - 초기 로딩 시에만!
   // ============================================
   if (isLoading && !initialLoadDone) {
     return (
@@ -192,7 +210,7 @@ const DashboardPage = () => {
           }}
         />
 
-        {/* ✅ 필터 컴포넌트 - availableFilters 체크 제거 (항상 Mock 사용 가능) */}
+        {/* ✅ 필터 컴포넌트 */}
         {isFilterOpen && (
           <DashboardFilters
             availableFilters={availableFilters}

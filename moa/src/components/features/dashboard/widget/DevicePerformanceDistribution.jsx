@@ -22,111 +22,133 @@ const DevicePerformanceDistribution = ({ onClose }) => {
 
   if (isLoading && !mapped.length) {
     content = (
-      <div className='flex h-40 items-center justify-center text-sm text-gray-400'>
+      <div className='flex h-52 items-center justify-center text-sm text-gray-400'>
         디바이스별 성능 데이터를 불러오는 중입니다...
       </div>
     )
   } else if (error) {
     content = (
-      <div className='flex h-40 items-center justify-center text-sm text-red-500'>
+      <div className='flex h-52 items-center justify-center text-sm text-red-500'>
         디바이스별 성능 데이터를 불러오지 못했습니다.
       </div>
     )
   } else if (!mapped.length) {
     content = (
-      <div className='flex h-40 items-center justify-center text-sm text-gray-400'>
+      <div className='flex h-52 items-center justify-center text-sm text-gray-400'>
         표시할 디바이스별 성능 데이터가 없습니다.
       </div>
     )
   } else {
-    const option = {
-      grid: {
-        top: 30,
-        left: 10,
-        right: 10,
-        bottom: 40,
-        containLabel: true,
-      },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params) => {
-          const p = params[0]
-          const d = mapped[p.dataIndex]
-          return [
-            `<b>${d.deviceType || 'Unknown'}</b>`,
-            `요청 수: ${d.requestCount.toLocaleString()}`,
-            `트래픽 비율: ${d.trafficPercentage.toFixed(1)}%`,
-            `평균 페이지 로드: ${d.avgPageLoadTime.toFixed(2)} s`,
-            `평균 응답시간: ${d.avgResponseTime.toFixed(2)} s`,
-          ].join('<br/>')
+    // 디바이스 타입별 색상
+    const deviceColors = {
+      Mobile: '#10B981', // 초록
+      Desktop: '#3B82F6', // 파랑
+      Tablet: '#F59E0B', // 주황
+      PC: '#6366F1', // 인디고
+      Smartphone: '#14B8A6', // 청록
+      Unknown: '#94A3B8', // 회색
+    }
+
+    const nodes = mapped.map((d, idx) => {
+      const color = deviceColors[d.deviceType] || deviceColors.Unknown
+      const size = Math.max(50, Math.min(140, 50 + (d.trafficPercentage / 100) * 90))
+
+      return {
+        id: `device-${idx}`,
+        name: d.deviceType,
+        value: d.trafficPercentage,
+        symbolSize: size,
+        itemStyle: {
+          color: color,
+          opacity: 0.85,
         },
-      },
-      xAxis: {
-        type: 'category',
-        data: mapped.map((d) => d.deviceType),
-        axisLine: { lineStyle: { color: '#CBD5E1' } },
-        axisLabel: {
-          fontSize: 11,
-          formatter: (v) => (v.length > 8 ? v.slice(0, 7) + '…' : v),
-        },
-      },
-      yAxis: {
-        type: 'value',
-        name: '요청 수',
-        nameTextStyle: { fontSize: 11, color: '#64748B' },
-        axisLine: { show: false },
-        splitLine: {
+        label: {
           show: true,
-          lineStyle: { color: '#E2E8F0', type: 'dashed' },
+          formatter: (param) => {
+            const name = param.data.name
+            const percentage = param.data.value.toFixed(1)
+            return `{name|${name}}\n{percent|${percentage}%}`
+          },
+          color: '#ffffff',
+          fontSize: 11,
+          fontWeight: 600,
+          rich: {
+            name: {
+              fontSize: 12,
+              fontWeight: 700,
+            },
+            percent: {
+              fontSize: 10,
+              fontWeight: 500,
+            },
+          },
         },
-        axisLabel: { fontSize: 10 },
+        tooltipData: {
+          requestCount: d.requestCount,
+          trafficPercentage: d.trafficPercentage,
+          avgPageLoadTime: d.avgPageLoadTime,
+          avgResponseTime: d.avgResponseTime,
+        },
+      }
+    })
+
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        formatter: (param) => {
+          if (!param || !param.data || !param.data.tooltipData) return ''
+          const { tooltipData } = param.data
+          const name = param.data.name || 'Unknown'
+
+          return [
+            `<div style="font-size:13px;font-weight:700;margin-bottom:6px;">${name}</div>`,
+            `<div style="font-size:12px;">트래픽 비중: <b>${tooltipData.trafficPercentage.toFixed(1)}%</b></div>`,
+            `<div style="font-size:12px;">요청 수: <b>${tooltipData.requestCount.toLocaleString()}건</b></div>`,
+            `<div style="font-size:11px;margin-top:4px;color:#666;">페이지 로드: ${tooltipData.avgPageLoadTime.toFixed(2)}s</div>`,
+            `<div style="font-size:11px;color:#666;">응답 시간: ${tooltipData.avgResponseTime.toFixed(2)}s</div>`,
+          ].join('')
+        },
       },
       series: [
         {
-          type: 'bar',
-          data: mapped.map((d) => d.requestCount),
-          barWidth: 22,
-          itemStyle: {
-            borderRadius: [6, 6, 0, 0],
-            color: '#3877BE',
+          type: 'graph',
+          layout: 'force',
+          data: nodes,
+          roam: false,
+          force: {
+            repulsion: 180,
+            gravity: 0.12,
+            edgeLength: 60,
+            layoutAnimation: true,
+          },
+          emphasis: {
+            focus: 'self',
+            scale: 1.15,
+            itemStyle: {
+              opacity: 1,
+              shadowBlur: 15,
+              shadowColor: 'rgba(0, 0, 0, 0.4)',
+            },
+            label: {
+              show: true,
+              fontSize: 13,
+            },
           },
         },
       ],
     }
 
     content = (
-      <div className='flex flex-col gap-2'>
-        {/* 상단 요약 KPI (작게) */}
-        <div className='flex items-center justify-between text-xs text-gray-600'>
-          <span>총 요청 수</span>
-          <span className='font-semibold text-gray-800'>{totalReq.toLocaleString()} 건</span>
+      <div className='flex flex-col gap-3'>
+        {/* 상단 요약 KPI */}
+        <div className='flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2'>
+          <span className='text-xs text-gray-600'>총 요청 수</span>
+          <span className='text-sm font-bold text-gray-800'>{totalReq.toLocaleString()}건</span>
         </div>
 
-        {/* 컴팩트 차트: 높이 줄임 */}
-        <div className='h-44'>
+        {/* 버블 차트 */}
+        <div className='h-64'>
           <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
-        </div>
-
-        {/* 하단 리스트: 상위 2~3개만 보여주기 */}
-        <div className='mt-1 space-y-1'>
-          {mapped.slice(0, 3).map((d) => (
-            <div
-              key={d.deviceType}
-              className='flex items-center justify-between text-[11px] text-gray-600'
-            >
-              <div className='flex items-center gap-1'>
-                <span className='inline-block h-2 w-2 rounded-full bg-[#3877BE]' />
-                <span className='font-medium'>{d.deviceType || 'Unknown'}</span>
-              </div>
-              <div className='flex items-center gap-3'>
-                <span>{d.requestCount.toLocaleString()}건</span>
-                <span className='text-gray-400'>
-                  {d.avgPageLoadTime.toFixed(2)}s / {d.avgResponseTime.toFixed(2)}s
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     )
@@ -135,7 +157,7 @@ const DevicePerformanceDistribution = ({ onClose }) => {
   return (
     <WidgetCard
       title='디바이스별 트래픽 성능'
-      description='디바이스 유형에 따른 요청 수 및 지연 시간'
+      description='디바이스 유형별 트래픽 비중 및 성능'
       icon='💻'
       onClose={onClose}
       showSettings={false}

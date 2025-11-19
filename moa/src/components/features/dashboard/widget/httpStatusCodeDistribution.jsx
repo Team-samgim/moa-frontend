@@ -8,14 +8,33 @@ const HttpStatusDonut = ({ onClose }) => {
   const { data, isLoading, error } = useDashboardAggregated()
   const list = data?.httpStatusCodeDistribution ?? []
 
-  const total = list.reduce((sum, it) => sum + (it.count ?? 0), 0)
-  const success = list.find((it) => it.statusGroup === '2xx')
+  // 상태코드 그룹을 항상 고정 순서로 정렬하고, 누락된 그룹은 0으로 채움
+  const STATUS_ORDER = ['2xx', '3xx', '4xx', '5xx']
+
+  const ordered = STATUS_ORDER.map((group) => {
+    const found = list.find((it) => it.statusGroup === group) || {}
+    return {
+      statusGroup: group,
+      count: found.count ?? 0,
+      percentage: found.percentage ?? 0,
+    }
+  })
+
+  const total = ordered.reduce((sum, it) => sum + (it.count ?? 0), 0)
+  const success = ordered[0] // 2xx
   const successRate = success ? (success.percentage ?? 0) : 0
 
-  const seriesData = list.map((it) => ({
+  const seriesData = ordered.map((it) => ({
     name: it.statusGroup,
     value: it.count ?? 0,
   }))
+
+  const colorMap = {
+    '2xx': '#22C55E', // 성공
+    '3xx': '#3B82F6', // 리다이렉트
+    '4xx': '#F97316', // 클라이언트 오류
+    '5xx': '#EF4444', // 서버 오류
+  }
 
   let content
 
@@ -42,16 +61,26 @@ const HttpStatusDonut = ({ onClose }) => {
       tooltip: {
         trigger: 'item',
         formatter: (p) => {
-          const target = list.find((it) => it.statusGroup === p.name)
+          const target = ordered.find((it) => it.statusGroup === p.name)
           const pct = target?.percentage ?? 0
-          return `${p.name}<br/>건수: ${p.value.toLocaleString()}<br/>비율: ${pct.toFixed(1)}%`
+
+          const labelMap = {
+            '2xx': '2xx (성공)',
+            '3xx': '3xx (리다이렉트)',
+            '4xx': '4xx (클라이언트 오류)',
+            '5xx': '5xx (서버 오류)',
+          }
+
+          const label = labelMap[p.name] ?? p.name
+
+          return `${label}<br/>건수: ${p.value.toLocaleString()}<br/>비율: ${pct.toFixed(1)}%`
         },
       },
       legend: {
         bottom: 0,
         orient: 'horizontal',
       },
-      color: ['#3877BE', '#4CAF50', '#FF9800', '#E53935'],
+      color: STATUS_ORDER.map((g) => colorMap[g]),
       series: [
         {
           type: 'pie',
@@ -84,7 +113,7 @@ const HttpStatusDonut = ({ onClose }) => {
           left: 'center',
           top: '58%',
           style: {
-            text: '2xx 비율',
+            text: '성공률 (2xx)',
             textAlign: 'center',
             fill: '#9CA3AF',
             fontSize: 12,
