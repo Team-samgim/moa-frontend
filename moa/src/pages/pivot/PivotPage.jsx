@@ -1,9 +1,13 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 
+import ChartIcon from '@/assets/icons/chart-img.svg?react'
 import ColumnIcon from '@/assets/icons/column.svg?react'
+import ExcelIcon from '@/assets/icons/excel.svg?react'
 import FilterIcon from '@/assets/icons/filter.svg?react'
+import HeatmapIcon from '@/assets/icons/heatmap.svg?react'
 import RowIcon from '@/assets/icons/row.svg?react'
+import ChartSettingIcon from '@/assets/icons/setting-outline.svg?react'
 import SettingIcon from '@/assets/icons/setting.svg?react'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
@@ -248,6 +252,7 @@ const PivotPage = () => {
                 handleApplyCustomRange(fromDate, toDate)
               }}
               onPresetLoad={() => setIsPresetModalOpen(true)}
+              onSavePreset={() => savePivotPresetMutation.mutate()}
             />
 
             <div className='hidden w-px bg-gray-200 lg:block' />
@@ -339,120 +344,135 @@ const PivotPage = () => {
         </section>
 
         {/* 결과 / 차트 모드 영역 */}
-        <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
-          <div className='mb-3 flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <span className='font-medium text-gray-800'>차트 모드</span>
-
-              <button
-                type='button'
-                onClick={handleToggleChart}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  isChartMode ? 'bg-[#1b254b]' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                    isChartMode ? 'translate-x-5' : 'translate-x-1'
+        {isChartMode && (
+          <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
+            <div className='mb-3 flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <button
+                  type='button'
+                  onClick={handleToggleChart}
+                  className={`relative inline-flex h-5.5 w-10.5 items-center rounded-full transition-colors ${
+                    isChartMode ? 'bg-[#3877BE]' : 'bg-gray-300'
                   }`}
-                />
-              </button>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              {/* 피벗 프리셋 저장 */}
-              <button
-                type='button'
-                onClick={() => savePivotPresetMutation.mutate()}
-                disabled={savePivotPresetMutation.isPending}
-                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-              >
-                {savePivotPresetMutation.isPending ? '프리셋 저장 중…' : '피벗 프리셋 저장'}
-              </button>
-
-              {/* 차트 이미지 다운로드 */}
-              <button
-                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
-                onClick={() => exportChartImageMutation.mutate()}
-                disabled={!isChartMode || exportChartImageMutation.isPending}
-              >
-                {exportChartImageMutation.isPending ? '내보내는 중…' : '차트 이미지 다운로드'}
-              </button>
-
-              {/* 차트 설정 */}
-              <button onClick={() => setIsConfigOpen(true)} className='text-xs text-gray-700'>
-                차트 설정 (임시)
-              </button>
-
-              {/* 전체보기 (히트맵) */}
-              <button
-                type='button'
-                onClick={() => {
-                  if (!column?.field || !rows?.length || !values?.length) {
-                    window.alert('전체보기를 사용하려면 열/행/값을 먼저 설정해주세요.')
-                    return
-                  }
-                  setIsHeatmapOpen(true)
-                }}
-                className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50'
-              >
-                전체보기 (테이블 히트맵)
-              </button>
-            </div>
-          </div>
-
-          {/* 실제 결과 영역 */}
-          {isChartMode ? (
-            <>
-              <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
-                <PivotChartView ref={chartViewRef} onChartClick={handleChartClickForDrilldown} />
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      isChartMode ? 'translate-x-5.5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className='font-medium text-gray-800'>차트 모드</span>
               </div>
 
-              {drilldownState.open && drilldownState.selectedColKey && (
-                <DrilldownTimeSeriesPanel
-                  selectedColKey={drilldownState.selectedColKey}
-                  rowKeys={drilldownState.rowKeys}
-                  colorMap={drilldownState.colorMap}
-                  onClose={handleCloseDrilldown}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {isPivotLoading && (
-                <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-                  로딩중...
-                </div>
-              )}
+              <div className='flex items-center gap-1'>
+                {/* 차트 이미지 다운로드 */}
+                <button
+                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  onClick={() => exportChartImageMutation.mutate()}
+                  disabled={!isChartMode || exportChartImageMutation.isPending}
+                >
+                  <ChartIcon className='w-4 h-4 text-[#595959]' />
+                  <span>
+                    {exportChartImageMutation.isPending ? '내보내는 중…' : '차트 이미지 저장'}
+                  </span>
+                </button>
 
-              {!isPivotLoading && pivotResult && <PivotResultTable pivotResult={pivotResult} />}
+                <div className='w-px h-4 bg-gray-400' />
 
-              {!isPivotLoading && !pivotResult && (
-                <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-                  아직 조회되지 않았습니다
-                </div>
-              )}
-            </>
-          )}
-        </section>
+                {/* 전체보기 (히트맵) */}
+                <button
+                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  type='button'
+                  onClick={() => {
+                    if (!column?.field || !rows?.length || !values?.length) {
+                      window.alert('전체보기를 사용하려면 열/행/값을 먼저 설정해주세요.')
+                      return
+                    }
+                    setIsHeatmapOpen(true)
+                  }}
+                >
+                  <HeatmapIcon className='w-4 h-4 text-[#595959]' />
+                  <span>전체보기 (테이블 히트맵)</span>
+                </button>
+
+                <div className='w-px h-4 bg-gray-400' />
+
+                {/* 차트 설정 */}
+                <button
+                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  onClick={() => setIsConfigOpen(true)}
+                >
+                  <ChartSettingIcon className='w-4 h-4 text-[#595959]' />
+                  <span>차트 설정</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 실제 결과 영역 */}
+            <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
+              <PivotChartView ref={chartViewRef} onChartClick={handleChartClickForDrilldown} />
+            </div>
+
+            {drilldownState.open && drilldownState.selectedColKey && (
+              <DrilldownTimeSeriesPanel
+                selectedColKey={drilldownState.selectedColKey}
+                rowKeys={drilldownState.rowKeys}
+                colorMap={drilldownState.colorMap}
+                onClose={handleCloseDrilldown}
+              />
+            )}
+          </section>
+        )}
 
         <section className='rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-sm'>
           <div className='mb-3 flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <span className='font-medium text-gray-800'>피벗 테이블</span>
-            </div>
+            {isChartMode ? (
+              <div className='flex items-center gap-3'>
+                <span className='font-medium text-gray-800'>피벗 테이블</span>
+              </div>
+            ) : (
+              <div className='flex items-center gap-3'>
+                <button
+                  type='button'
+                  onClick={handleToggleChart}
+                  className={`relative inline-flex h-5.5 w-10.5 items-center rounded-full transition-colors ${
+                    isChartMode ? 'bg-[#3877BE]' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      isChartMode ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className='font-medium text-gray-800'>차트 모드</span>
+              </div>
+            )}
             <div className='flex items-center gap-2'>
               {/* CSV 내보내기 */}
               <button
                 type='button'
                 onClick={() => exportPivotCsvMutation.mutate()}
                 disabled={exportPivotCsvMutation.isPending}
-                className='text-xs text-gray-700 border rounded px-3 py-1 disabled:opacity-50'
+                className='flex border rounded justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
               >
-                {exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}
+                <ExcelIcon className='w-4 h-4 text-[#595959]' />
+                <span>{exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}</span>
               </button>
             </div>
+            {isPivotLoading && (
+              <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+                로딩중...
+              </div>
+            )}
           </div>
+          {!isPivotLoading && pivotResult ? (
+            <PivotResultTable pivotResult={pivotResult} />
+          ) : (
+            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
+              아직 조회되지 않았습니다
+            </div>
+          )}
         </section>
       </div>
 
