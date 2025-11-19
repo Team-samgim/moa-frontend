@@ -8,26 +8,35 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
   const chartInstance = useRef(null)
   const echarts = useEcharts()
 
+  const PLANE_SYMBOL = 'path://M0,10 L24,0 L20,10 L24,20 L0,10 L6,10 L6,10 L6,10 Z'
+
   const { data: worldJson, isError } = useWorldMap()
 
   useEffect(() => {
     if (!echarts || !chartRef.current) return
-    if (!worldJson) return // 아직 로딩 중이면 대기
+    if (!worldJson) return
 
-    // 지도 등록 (여러 번 호출돼도 상관없긴 하지만, 필요하면 ref로 한 번만 하도록 막아도 됨)
     echarts.registerMap('world', worldJson)
 
     const instance = echarts.init(chartRef.current)
     chartInstance.current = instance
 
-    const coordsReq = COUNTRY_COORDS[countryReq] || null
-    const coordsRes = COUNTRY_COORDS[countryRes] || null
+    const defaultCoords = COUNTRY_COORDS.default || COUNTRY_COORDS['South Korea']
 
-    if (!coordsReq && !coordsRes) {
+    // ← 여기서 raw 데이터 기준으로 "정보 완전 없음" 체크
+    const hasAnyLocationInfo =
+      countryReq ||
+      countryRes ||
+      env?.domesticPrimaryReq ||
+      env?.domesticPrimaryRes ||
+      env?.continentReq ||
+      env?.continentRes
+
+    if (!hasAnyLocationInfo) {
       instance.setOption({
         title: {
           text: '위치 정보 없음',
-          subtext: 'IP 주소에서 국가 정보를 찾을 수 없습니다',
+          subtext: 'IP/Geo 정보가 존재하지 않습니다',
           left: 'center',
           top: 'middle',
           textStyle: { color: '#9ca3af', fontSize: 14 },
@@ -39,8 +48,13 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       }
     }
 
+    // 출발/도착 좌표: 없으면 한국으로 fallback
+    const coordsReq = COUNTRY_COORDS[countryReq] || defaultCoords
+    const coordsRes = COUNTRY_COORDS[countryRes] || defaultCoords
+
     let geoCenter
     let geoZoom = 1.5
+    let layoutSize = '120%' // 👈 기본값
 
     if (coordsReq && coordsRes) {
       const mid = [(coordsReq[0] + coordsRes[0]) / 2, (coordsReq[1] + coordsRes[1]) / 2]
@@ -48,16 +62,31 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       const dy = Math.abs(coordsReq[1] - coordsRes[1])
       const maxDelta = Math.max(dx, dy)
 
-      if (maxDelta < 15) geoZoom = 5
-      else if (maxDelta < 40) geoZoom = 4
-      else if (maxDelta < 80) geoZoom = 3
-      else geoZoom = 2
+      // ✨ 거리 기준 단계 확 차이 나게 설정
+      if (maxDelta < 3) {
+        // 거의 같은 나라 / 인접 도시 수준
+        geoZoom = 8
+        layoutSize = '260%'
+      } else if (maxDelta < 20) {
+        // 같은 대륙 안 / 근접 국가
+        geoZoom = 5
+        layoutSize = '200%'
+      } else if (maxDelta < 60) {
+        // 대륙 간 이동 (한국 ↔ 동유럽 등)
+        geoZoom = 3
+        layoutSize = '120%'
+      } else {
+        // 아주 멀리 (한국 ↔ 미국, 서유럽 등)
+        geoZoom = 2
+        layoutSize = '90%'
+      }
 
       geoCenter = mid
     } else if (coordsReq || coordsRes) {
       const only = coordsReq || coordsRes
       geoCenter = only
-      geoZoom = 5
+      geoZoom = 8
+      layoutSize = '260%'
     }
 
     const markers = []
@@ -82,7 +111,7 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
           formatter: `출발\n${srcIp || ''}`,
           position: 'top',
           fontSize: 10,
-          color: '#1e40af',
+          color: '#1d4ed8',
         },
         tooltip: {
           formatter: () => `
@@ -110,13 +139,13 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       markers.push({
         name: '도착지',
         value: coordsRes.concat([1]),
-        itemStyle: { color: '#ef4444' },
+        itemStyle: { color: '#f97316' },
         label: {
           show: true,
           formatter: `도착\n${dstIp || ''}`,
           position: 'top',
           fontSize: 10,
-          color: '#991b1b',
+          color: '#c2410c',
         },
         tooltip: {
           formatter: () => `
@@ -133,8 +162,8 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
 
     if (coordsReq && coordsRes) {
       lines.push({
-        fromName: countryReq,
-        toName: countryRes,
+        fromName: countryReq || '출발',
+        toName: countryRes || '도착',
         coords: [coordsReq, coordsRes],
       })
     }
@@ -150,7 +179,7 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       geo: {
         map: 'world',
         roam: true,
-        scaleLimit: { min: 1, max: 8 },
+        scaleLimit: { min: 1, max: 10 },
         itemStyle: {
           areaColor: '#f3f4f6',
           borderColor: '#d1d5db',
@@ -159,7 +188,7 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
           itemStyle: { areaColor: '#e5e7eb' },
         },
         layoutCenter: ['50%', '50%'],
-        layoutSize: '120%',
+        layoutSize,
         zoom: geoZoom,
         center: geoCenter,
       },
@@ -178,18 +207,10 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
                 coordinateSystem: 'geo',
                 data: lines,
                 lineStyle: {
-                  color: '#8b5cf6',
+                  color: '#3877BE',
                   width: 3,
                   curveness: 0.3,
                   opacity: 0.7,
-                },
-                effect: {
-                  show: true,
-                  period: 3,
-                  trailLength: 0.2,
-                  symbol: 'arrow',
-                  symbolSize: 10,
-                  color: '#8b5cf6',
                 },
               },
             ]
