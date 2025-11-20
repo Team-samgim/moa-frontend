@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import bell from '@/assets/icons/bell.svg'
 import logo from '@/assets/images/moa.webp'
+import NotificationDropdown from '@/components/features/notification/NotificationDropdown'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -21,6 +23,7 @@ const Header = () => {
 
   const [isScrolled, setIsScrolled] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   const handleProtectedNavClick = (to) => {
     if (isLogin) {
@@ -96,6 +99,31 @@ const Header = () => {
         <div className='flex items-center gap-2 lg:gap-3 flex-shrink-0'>
           {isLogin ? (
             <>
+              <div className='relative'>
+                <button
+                  type='button'
+                  aria-label='알림'
+                  className='
+                    relative flex items-center justify-center
+                    w-9 h-9 rounded-full border border-gray-200 bg-white
+                    text-gray-600
+                    hover:bg-gray-50 hover:border-[var(--color-blue,#1c4fd7)]
+                    hover:text-[var(--color-blue,#1c4fd7)]
+                    active:scale-[0.97]
+                    transition
+                  '
+                  onClick={() => setIsNotificationOpen((prev) => !prev)}
+                >
+                  <img src={bell} alt='알림' className='w-4 h-4' />
+                  {/* 나중에 안읽은 개수 뱃지 달고 싶으면 여기서 unreadCount 써도 됨 */}
+                </button>
+
+                <NotificationDropdown
+                  open={isNotificationOpen}
+                  onClose={() => setIsNotificationOpen(false)}
+                />
+              </div>
+
               <button
                 type='button'
                 className='
