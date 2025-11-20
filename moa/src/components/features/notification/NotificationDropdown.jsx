@@ -78,23 +78,19 @@ const NotificationDropdown = ({ open, onClose }) => {
       className='absolute right-0 top-11 w-[360px] max-h-[480px] bg-white border border-gray-200 shadow-xl rounded-2xl overflow-hidden z-[60]'
     >
       {/* 헤더 */}
-      <div className='px-4 py-3 border-b bg-gray-50 flex items-center justify-between'>
+      <div className='px-4 py-3 border-b border-gray-300 bg-gray-50 flex items-center justify-between'>
         <div className='text-[13px] font-semibold text-gray-800'>알림 센터</div>
         {/* 전체 읽음 처리 추가할거면 여기에 버튼 */}
       </div>
 
       {/* 리스트 영역 */}
       <div className='max-h-[400px] overflow-y-auto' onScroll={handleScroll}>
-        {isLoading && (
-          <div className='py-8 text-center text-xs text-gray-400'>알림을 불러오는 중...</div>
-        )}
+        {isLoading && <div className='py-8 text-center text-xs'>알림을 불러오는 중...</div>}
 
-        {isError && (
-          <div className='py-8 text-center text-xs text-red-500'>알림을 불러오지 못했습니다.</div>
-        )}
+        {isError && <div className='py-8 text-center text-xs'>알림을 불러오지 못했습니다.</div>}
 
         {!isLoading && !isError && notifications.length === 0 && (
-          <div className='py-10 text-center text-xs text-gray-400'>알림이 없습니다.</div>
+          <div className='py-10 text-center text-xs'>알림이 없습니다.</div>
         )}
 
         <ul className='divide-y divide-gray-100'>
