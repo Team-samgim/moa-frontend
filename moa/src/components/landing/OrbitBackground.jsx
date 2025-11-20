@@ -53,52 +53,30 @@ export const OrbitBackground = () => {
           </filter>
         </defs>
 
-        <motion.g
-          animate={{ rotate: 360, opacity: FINAL_GROUP_OPACITY }}
-          initial={{ rotate: 0, opacity: 0 }}
-          transition={{
-            rotate: {
-              duration: 60,
-              ease: 'linear',
-              repeat: Infinity,
-            },
-            opacity: {
-              duration: 2,
-              ease: 'easeOut',
-            },
-          }}
-          style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
-        >
+        <g className='orbit-spin' filter='url(#soft-orbit-stroke)'>
           {orbits.map((orbit) => (
-            <motion.g
+            <motion.ellipse
               key={orbit.id}
-              initial={{
-                rotate: orbit.targetRotate * START_SPREAD,
-              }}
-              animate={{
-                rotate: orbit.targetRotate,
-              }}
+              cx={CENTER}
+              cy={CENTER}
+              rx={RX}
+              ry={RY}
+              fill='none'
+              stroke='white'
+              strokeWidth={orbit.strokeWidth}
+              strokeOpacity={1}
+              strokeLinecap='round' // 끝부분도 부드럽게
+              initial={{ rotate: orbit.targetRotate * START_SPREAD }}
+              animate={{ rotate: orbit.targetRotate }}
               transition={{
-                duration: 0.8,
+                duration: 1.3,
                 ease: 'easeOut',
                 delay: orbit.delay,
               }}
               style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
-            >
-              <ellipse
-                cx={CENTER}
-                cy={CENTER}
-                rx={RX}
-                ry={RY}
-                fill='none'
-                stroke='white'
-                strokeWidth={orbit.strokeWidth}
-                filter='url(#soft-orbit-stroke)'
-                strokeOpacity={1}
-              />
-            </motion.g>
+            />
           ))}
-        </motion.g>
+        </g>
       </motion.svg>
     </div>
   )

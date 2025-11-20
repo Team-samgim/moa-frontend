@@ -1,12 +1,12 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import GradientBackground from '@/components/landing/GradientBackground'
 import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
-import GradientBackground from '@/components/onboarding/GradientBackground'
 import { loggedOutNavigations } from '@/constants/navigations'
 
 const Layout = () => {
   const location = useLocation()
-  const isOnboarding = location.pathname === loggedOutNavigations.ONBOARDING
+  const isOnboarding = location.pathname === loggedOutNavigations.LANDING
 
   return (
     <div className={isOnboarding ? 'relative min-h-screen overflow-hidden' : 'min-h-screen'}>

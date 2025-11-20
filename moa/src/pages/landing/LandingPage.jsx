@@ -1,7 +1,7 @@
-import OrbitBackground from '@/components/onboarding/OrbitBackground'
-import OrbitFeatures from '@/components/onboarding/OrbitFeature'
+import OrbitBackground from '@/components/landing/OrbitBackground'
+import OrbitFeatures from '@/components/landing/OrbitFeature'
 
-const OnboardingPage = () => {
+const LandingPage = () => {
   return (
     <div className='relative min-h-screen overflow-hidden'>
       <div className='absolute inset-0 flex justify-center mt-10'>
@@ -27,4 +27,4 @@ const OnboardingPage = () => {
   )
 }
 
-export default OnboardingPage
+export default LandingPage

@@ -56,15 +56,15 @@ const Header = () => {
     >
       <div
         className={`
-          flex w-full max-w-[1450px] items-center justify-between gap-4
+          flex w-full items-center justify-between gap-4
           rounded-full bg-white
-          px-6 lg:px-8 h-[68px]
+          px-6 mx-20 lg:px-8 h-[68px]
           shadow-[0_6px_8px_rgba(0,103,255,0.06),0_8px_10px_rgba(0,103,255,0.1)]
           transition-transform duration-600 ease-out
           ${isScrolled ? '-translate-y-23' : 'translate-y-0'}
         `}
       >
-        <div className='flex items-center gap-3 flex-shrink-0'>
+        <div className='flex items-center gap-3 shrink-0'>
           <Link to='/' className='flex flex-col leading-none select-none'>
             <div className='flex justify-center'>
               <img src={logo} alt='moa logo' className='h-13 object-contain' />
