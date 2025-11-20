@@ -63,8 +63,17 @@ body {
   }
 }
 
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @layer utilities {
-  .hero-gradient-bg {
+  /* .hero-gradient-bg {
     @apply absolute inset-0 -z-10 pointer-events-none;
 
     background-image:
@@ -75,9 +84,40 @@ body {
       linear-gradient(135deg, #c9e3ff, #9ec5ff);
     background-size: 160% 160%;
     background-position: 0% 0%;
-  }
+  } */
 
   .animate-hero-gradient {
     animation: hero-gradient-move 40s ease-in-out infinite alternate;
+  }
+
+  .hero-gradient-bg {
+    @apply absolute inset-0 -z-10 pointer-events-none;
+
+    background-image:
+      radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.85), transparent 60%),
+      radial-gradient(circle at 80% 18%, rgba(191, 219, 254, 0.9), transparent 60%),
+      radial-gradient(circle at 15% 85%, rgba(191, 219, 254, 0.9), transparent 60%),
+      radial-gradient(circle at 85% 82%, rgba(129, 199, 255, 0.8), transparent 60%),
+      linear-gradient(135deg, #e7f2ff, #9fc3ff);
+
+    background-size:
+      120% 120%,
+      120% 120%,
+      120% 120%,
+      120% 120%,
+      100% 100%;
+    background-position:
+      0% 0%,
+      100% 0%,
+      0% 100%,
+      100% 100%,
+      50% 50%;
+    background-repeat: no-repeat;
+  }
+
+  .orbit-spin {
+    transform-origin: 450px 450px;
+    animation: orbit-spin 60s linear infinite;
+    will-change: transform;
   }
 }
