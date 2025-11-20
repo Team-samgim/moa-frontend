@@ -79,7 +79,9 @@ const NotificationDropdown = ({ open, onClose }) => {
     >
       {/* 헤더 */}
       <div className='px-4 py-3 border-b border-gray-300 bg-gray-50 flex items-center justify-between'>
-        <div className='text-[13px] font-semibold text-gray-800'>알림 센터</div>
+        <div className='flex items-center gap-2'>
+          <div className='text-[13px] font-semibold text-gray-800'>알림 센터</div>
+        </div>
         {/* 전체 읽음 처리 추가할거면 여기에 버튼 */}
       </div>
 
@@ -134,7 +136,7 @@ const NotificationDropdown = ({ open, onClose }) => {
 
         {!isFetchingNextPage && !hasNextPage && notifications.length > 0 && (
           <div className='py-3 text-center text-[11px] text-gray-400'>
-            모든 알림을 확인했습니다.
+            모든 알림을 불러왔습니다.
           </div>
         )}
       </div>

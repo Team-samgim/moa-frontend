@@ -46,11 +46,22 @@ export function useMarkNotificationRead() {
             items: page.items.map((item) =>
               item.id === notificationId ? { ...item, isRead: true } : item,
             ),
+            // 첫 페이지의 unreadCount도 감소
+            unreadCount:
+              page === oldData.pages[0] && page.unreadCount > 0
+                ? page.unreadCount - 1
+                : page.unreadCount,
           })),
         }
       })
 
-      // 안 읽은 개수 다시 가져오기
+      // 안 읽은 개수 캐시도 즉시 업데이트
+      queryClient.setQueryData(UNREAD_COUNT_KEY, (oldCount) => {
+        const current = oldCount ?? 0
+        return current > 0 ? current - 1 : 0
+      })
+
+      // 안 읽은 개수 다시 가져오기 (서버와 동기화)
       queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
     },
   })
@@ -70,10 +81,16 @@ export function useMarkAllNotificationsRead() {
           pages: oldData.pages.map((page) => ({
             ...page,
             items: page.items.map((item) => ({ ...item, isRead: true })),
+            // 모든 페이지의 unreadCount를 0으로
+            unreadCount: 0,
           })),
         }
       })
 
+      // 안 읽은 개수를 0으로 즉시 설정
+      queryClient.setQueryData(UNREAD_COUNT_KEY, 0)
+
+      // 서버와 동기화
       queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
     },
   })
@@ -84,12 +101,16 @@ export function useMarkAllNotificationsRead() {
  * - 플랫한 notifications 배열
  * - 읽음 처리 함수(markAsRead)
  * - 무한스크롤 관련 값들 한 번에 반환
+ * - 안읽은 개수(unreadCount) 추가
  */
 export function useNotificationList(pageSize = 20) {
   const infiniteQuery = useNotificationInfinite(pageSize)
   const { mutate: mutateMarkRead } = useMarkNotificationRead()
 
   const notifications = infiniteQuery.data?.pages.flatMap((page) => page.items) ?? []
+
+  // 첫 페이지의 unreadCount를 가져옴
+  const unreadCount = infiniteQuery.data?.pages[0]?.unreadCount ?? 0
 
   const markAsRead = (id) => {
     mutateMarkRead(id)
@@ -104,6 +125,7 @@ export function useNotificationList(pageSize = 20) {
     isError: infiniteQuery.isError,
     refetch: infiniteQuery.refetch,
     markAsRead,
+    unreadCount,
   }
 }
 

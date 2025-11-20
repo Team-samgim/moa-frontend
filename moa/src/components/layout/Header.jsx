@@ -4,6 +4,7 @@ import bell from '@/assets/icons/bell.svg'
 import logo from '@/assets/images/moa.webp'
 import NotificationDropdown from '@/components/features/notification/NotificationDropdown'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
+import { useUnreadNotificationCount } from '@/hooks/notification/useNotificationList'
 import { useAuthStore } from '@/stores/authStore'
 
 const navItems = [
@@ -24,6 +25,9 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+
+  // 안읽은 알림 개수 조회
+  const { data: unreadCount = 0 } = useUnreadNotificationCount()
 
   const handleProtectedNavClick = (to) => {
     if (isLogin) {
@@ -105,7 +109,7 @@ const Header = () => {
                   aria-label='알림'
                   className='
                     relative flex items-center justify-center
-                    w-9 h-9 rounded-full border border-gray-200 bg-white
+                    w-9 h-9 rounded-full bg-white
                     text-gray-600
                     hover:bg-gray-50 hover:border-[var(--color-blue,#1c4fd7)]
                     hover:text-[var(--color-blue,#1c4fd7)]
@@ -114,8 +118,24 @@ const Header = () => {
                   '
                   onClick={() => setIsNotificationOpen((prev) => !prev)}
                 >
-                  <img src={bell} alt='알림' className='w-4 h-4' />
-                  {/* 나중에 안읽은 개수 뱃지 달고 싶으면 여기서 unreadCount 써도 됨 */}
+                  <img src={bell} alt='알림' className='w-7 h-7' />
+
+                  {/* 안읽은 알림 개수 뱃지 */}
+                  {unreadCount > 0 && (
+                    <span
+                      className='
+                        absolute -top-1 -right-1
+                        min-w-[18px] h-[18px] px-1
+                        flex items-center justify-center
+                        bg-red-500 text-white
+                        text-[10px] font-bold
+                        rounded-full
+                        border-2 border-white
+                      '
+                    >
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 <NotificationDropdown
