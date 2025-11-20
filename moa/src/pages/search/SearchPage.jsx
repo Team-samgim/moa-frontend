@@ -1,6 +1,8 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { fetchGridBySearchSpec } from '@/api/grid'
+import { saveGridPreset } from '@/api/presets'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
 import EthernetRowPreviewModal from '@/components/features/grid/detail/EthernetRowPreviewModal'
@@ -338,6 +340,78 @@ const SearchPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const presetMut = useMutation({
+    mutationFn: async () => {
+      const api = gridApis?.api
+      if (!api) throw new Error('그리드가 아직 준비되지 않았습니다.')
+
+      const columns = api
+        .getAllDisplayedColumns()
+        .map((c) => c.getColDef())
+        .map((def) => def?.field ?? def?.colId)
+        .filter((f) => !!f && f !== '__rowNo')
+
+      const uiQuery = {
+        layer,
+        timePreset,
+        customTimeRange,
+        globalNot,
+        conditions,
+        viewKeys,
+      }
+
+      const baseSpec = searchPayload ?? null
+
+      // === 시간 스냅샷 ===
+      let time = null
+      if (baseSpec?.time?.fromEpoch && baseSpec?.time?.toEpoch) {
+        time = baseSpec.time
+      } else if (customTimeRange?.from && customTimeRange?.to) {
+        time = {
+          field: 'ts_server_nsec',
+          fromEpoch: Math.floor(customTimeRange.from.getTime() / 1000),
+          toEpoch: Math.floor(customTimeRange.to.getTime() / 1000),
+        }
+      } else {
+        const now = Math.floor(Date.now() / 1000)
+        const span = presetSeconds[timePreset] ?? 3600
+        time = {
+          field: 'ts_server_nsec',
+          fromEpoch: now - span,
+          toEpoch: now,
+        }
+      }
+
+      const search = {
+        version: 1,
+        layer,
+        columns,
+        condition: conditions,
+        query: uiQuery,
+        time,
+      }
+
+      const config = { search }
+
+      const fallback = `검색 프리셋 ${new Date().toLocaleString()}`
+      const presetName = (window.prompt('프리셋 이름을 입력하세요', fallback) || fallback).trim()
+
+      return await saveGridPreset({
+        presetName,
+        presetType: 'SEARCH',
+        config,
+        favorite: false,
+      })
+    },
+    onSuccess: (data) => {
+      alert(`프리셋 저장 완료! (ID: ${data?.presetId})`)
+    },
+    onError: (e) => {
+      console.error(e)
+      alert(`프리셋 저장 실패: ${e?.response?.status ?? e?.message ?? ''}`)
+    },
+  })
+
   return (
     <div className='p-4 mx-30'>
       <div className='mx-auto space-y-6'>
@@ -365,8 +439,12 @@ const SearchPage = () => {
             <div className='flex items-center justify-between'>
               <div className='text-base font-semibold text-gray-900'>그리드 테이블 구성</div>
               <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
-                <button type='button' className='hover:underline'>
-                  프리셋 저장
+                <button
+                  type='button'
+                  className='hover:underline'
+                  onClick={() => presetMut.mutate()}
+                >
+                  {presetMut.isPending ? '저장 중…' : '프리셋 저장'}
                 </button>
                 <button type='button' className='hover:underline'>
                   프리셋 불러오기
@@ -465,27 +543,11 @@ const SearchPage = () => {
             onChangeOperator={onChangeOperator}
           />
         </div>
-
-        <QueryPreview
-          chips={queryChips}
-          globalNot={globalNot}
-          onToggleNot={() => setGlobalNot((v) => !v)}
-        />
-
-        <div className='flex justify-center'>
-          <button
-            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] disabled:opacity-60'
-            onClick={onClickSearch}
-            disabled={isSearching}
-          >
-            {isSearching ? '검색 중…' : '검색 하기'}
-          </button>
-        </div>
       </div>
 
       {/* 결과 */}
       {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full px-6'>
+        <div className='max-w-[1200px] mx-auto w-full py-6'>
           {searchTotal === 0 ? (
             <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
               조건에 맞는 결과가 없습니다.
@@ -512,11 +574,7 @@ const SearchPage = () => {
                 <div className='mb-2 flex items-center justify-between text-sm text-gray-600'>
                   {/* 왼쪽: 총 건수 */}
                   <div>
-                    총{' '}
-                    <span className='font-semibold text-blue-600'>
-                      {searchTotal.toLocaleString()}
-                    </span>
-                    건
+                    총 <span>{searchTotal.toLocaleString()}</span>건
                   </div>
 
                   {/* 오른쪽: 원본 데이터 체크박스 */}

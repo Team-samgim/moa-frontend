@@ -8,8 +8,6 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
   const chartInstance = useRef(null)
   const echarts = useEcharts()
 
-  const PLANE_SYMBOL = 'path://M0,10 L24,0 L20,10 L24,20 L0,10 L6,10 L6,10 L6,10 Z'
-
   const { data: worldJson, isError } = useWorldMap()
 
   useEffect(() => {
@@ -23,7 +21,7 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
 
     const defaultCoords = COUNTRY_COORDS.default || COUNTRY_COORDS['South Korea']
 
-    // ← 여기서 raw 데이터 기준으로 "정보 완전 없음" 체크
+    // raw 기준 위치 정보 존재 여부
     const hasAnyLocationInfo =
       countryReq ||
       countryRes ||
@@ -52,9 +50,16 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
     const coordsReq = COUNTRY_COORDS[countryReq] || defaultCoords
     const coordsRes = COUNTRY_COORDS[countryRes] || defaultCoords
 
+    // 좌표가 거의 같으면 sameLocation 으로 간주
+    const sameLocation =
+      coordsReq &&
+      coordsRes &&
+      Math.abs(coordsReq[0] - coordsRes[0]) < 0.5 &&
+      Math.abs(coordsReq[1] - coordsRes[1]) < 0.5
+
     let geoCenter
     let geoZoom = 1.5
-    let layoutSize = '120%' // 👈 기본값
+    let layoutSize = '120%'
 
     if (coordsReq && coordsRes) {
       const mid = [(coordsReq[0] + coordsRes[0]) / 2, (coordsReq[1] + coordsRes[1]) / 2]
@@ -62,23 +67,18 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       const dy = Math.abs(coordsReq[1] - coordsRes[1])
       const maxDelta = Math.max(dx, dy)
 
-      // ✨ 거리 기준 단계 확 차이 나게 설정
       if (maxDelta < 3) {
-        // 거의 같은 나라 / 인접 도시 수준
         geoZoom = 8
         layoutSize = '260%'
       } else if (maxDelta < 20) {
-        // 같은 대륙 안 / 근접 국가
         geoZoom = 5
         layoutSize = '200%'
       } else if (maxDelta < 60) {
-        // 대륙 간 이동 (한국 ↔ 동유럽 등)
         geoZoom = 3
-        layoutSize = '120%'
+        layoutSize = '130%'
       } else {
-        // 아주 멀리 (한국 ↔ 미국, 서유럽 등)
         geoZoom = 2
-        layoutSize = '90%'
+        layoutSize = '80%'
       }
 
       geoCenter = mid
@@ -90,11 +90,13 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
     }
 
     const markers = []
-    const lines = []
+    let lines = [] // 출발≠도착 선
+    let sameLocationLoop = [] // 출발=도착 루프 경로
 
+    // --- 출발 마커 ---
     if (coordsReq) {
       const location = [
-        countryReq || '알 수 없음',
+        countryReq,
         env?.domesticPrimaryReq,
         env?.domesticSub1Req,
         env?.domesticSub2Req,
@@ -105,30 +107,41 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       markers.push({
         name: '출발지',
         value: coordsReq.concat([1]),
-        itemStyle: { color: '#3b82f6' },
+        itemStyle: {
+          color: '#2563eb',
+          borderColor: '#ffffff',
+          borderWidth: 1.5,
+          shadowBlur: 8,
+          shadowColor: 'rgba(15,23,42,0.25)',
+        },
         label: {
           show: true,
           formatter: `출발\n${srcIp || ''}`,
-          position: 'top',
+          position: 'left',
+          offset: [6, -4],
           fontSize: 10,
-          color: '#1d4ed8',
+          color: '#1f2937',
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          padding: [3, 5],
+          borderRadius: 6,
         },
         tooltip: {
           formatter: () => `
             <div style="padding: 8px;">
               <strong>출발지 정보</strong><br/>
               IP: ${srcIp || '알 수 없음'}<br/>
-              위치: ${location}<br/>
-              대륙: ${env?.continentReq || '알 수 없음'}
+              위치: ${location || 'South Korea, 서울특별시'}<br/>
+              대륙: ${env?.continentReq || 'Asia'}
             </div>
           `,
         },
       })
     }
 
+    // --- 도착 마커 ---
     if (coordsRes) {
       const location = [
-        countryRes || '알 수 없음',
+        countryRes,
         env?.domesticPrimaryRes,
         env?.domesticSub1Res,
         env?.domesticSub2Res,
@@ -139,41 +152,75 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
       markers.push({
         name: '도착지',
         value: coordsRes.concat([1]),
-        itemStyle: { color: '#f97316' },
+        itemStyle: {
+          color: '#2563eb',
+          borderColor: '#ffffff',
+          borderWidth: 1.5,
+          shadowBlur: 8,
+          shadowColor: 'rgba(15,23,42,0.25)',
+        },
         label: {
           show: true,
           formatter: `도착\n${dstIp || ''}`,
-          position: 'top',
+          position: 'right',
+          offset: [6, -4],
           fontSize: 10,
-          color: '#c2410c',
+          color: '#1f2937',
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          padding: [3, 5],
+          borderRadius: 6,
         },
         tooltip: {
           formatter: () => `
             <div style="padding: 8px;">
               <strong>도착지 정보</strong><br/>
               IP: ${dstIp || '알 수 없음'}<br/>
-              위치: ${location}<br/>
-              대륙: ${env?.continentRes || '알 수 없음'}
+              위치: ${location || 'South Korea, 서울특별시'}<br/>
+              대륙: ${env?.continentRes || 'Asia'}
             </div>
           `,
         },
       })
     }
 
-    if (coordsReq && coordsRes) {
-      lines.push({
-        fromName: countryReq || '출발',
-        toName: countryRes || '도착',
-        coords: [coordsReq, coordsRes],
-      })
+    // --- 출발 ≠ 도착: 기존 라인 그대로 ---
+    if (!sameLocation && coordsReq && coordsRes) {
+      lines = [
+        {
+          fromName: countryReq || '출발',
+          toName: countryRes || '도착',
+          coords: [coordsReq, coordsRes],
+        },
+      ]
+    }
+
+    // --- 출발 = 도착: 점에서 나갔다가 다시 그 점으로 돌아오는 루프 경로 ---
+    if (sameLocation && coordsReq) {
+      const [lng, lat] = coordsReq
+      const radiusLng = 1
+      const radiusLat = 0.7
+      const segments = 64
+
+      const loopCoords = []
+      for (let i = 0; i <= segments; i++) {
+        const theta = (Math.PI * 2 * i) / segments
+        const xOffset = radiusLng * (1 - Math.cos(theta))
+        const yOffset = radiusLat * Math.sin(theta)
+        loopCoords.push([lng + xOffset, lat + yOffset])
+      }
+
+      sameLocationLoop = [{ coords: loopCoords }]
     }
 
     const option = {
       title: {
         left: 'center',
         textStyle: { fontSize: 14, fontWeight: 600 },
-        subtext: markers.length === 2 ? `${countryReq || '출발'} → ${countryRes || '도착'}` : '',
-        subtextStyle: { fontSize: 11 },
+        subtext:
+          markers.length === 2
+            ? `${countryReq || '출발'} → ${countryRes || '도착'}`
+            : countryReq || countryRes || '',
+        subtextStyle: { fontSize: 11, color: '#6b7280' },
       },
       tooltip: { trigger: 'item' },
       geo: {
@@ -181,11 +228,11 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
         roam: true,
         scaleLimit: { min: 1, max: 10 },
         itemStyle: {
-          areaColor: '#f3f4f6',
-          borderColor: '#d1d5db',
+          areaColor: '#f9fafb',
+          borderColor: '#e5e7eb',
         },
         emphasis: {
-          itemStyle: { areaColor: '#e5e7eb' },
+          itemStyle: { areaColor: '#e0f2fe' },
         },
         layoutCenter: ['50%', '50%'],
         layoutSize,
@@ -193,14 +240,39 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
         center: geoCenter,
       },
       series: [
+        // 1) 출발/도착 점
         {
           type: 'scatter',
           coordinateSystem: 'geo',
           data: markers,
-          symbolSize: 25,
-          emphasis: { symbolSize: 30 },
+          symbol: 'circle',
+          symbolSize: 10,
+          emphasis: { scale: true, scaleSize: 1.3 },
+          zlevel: 3,
         },
-        ...(lines.length > 0
+
+        // 2) 출발≠도착: 회색 점선 베이스 라인
+        ...(!sameLocation && lines.length > 0
+          ? [
+              {
+                type: 'lines',
+                coordinateSystem: 'geo',
+                data: lines,
+                lineStyle: {
+                  color: '#9ca3af',
+                  width: 1.2,
+                  type: 'dashed',
+                  opacity: 0.8,
+                  curveness: 0.3,
+                },
+                silent: true,
+                zlevel: 1,
+              },
+            ]
+          : []),
+
+        // 3) 출발≠도착: 흐릿한 파란 화살표 선
+        ...(!sameLocation && lines.length > 0
           ? [
               {
                 type: 'lines',
@@ -209,9 +281,55 @@ const EnhancedGeoMap = ({ countryReq, countryRes, srcIp, dstIp, env }) => {
                 lineStyle: {
                   color: '#3877BE',
                   width: 3,
+                  opacity: 0.1,
                   curveness: 0.3,
-                  opacity: 0.7,
                 },
+                symbol: ['none', 'arrow'],
+                symbolSize: 20,
+                symbolKeepAspect: true,
+                zlevel: 10,
+              },
+            ]
+          : []),
+
+        ...(sameLocation && sameLocationLoop.length > 0
+          ? [
+              // 1) 회색 루프
+              {
+                type: 'lines',
+                coordinateSystem: 'geo',
+                polyline: true,
+                data: sameLocationLoop,
+                lineStyle: {
+                  color: '#9ca3af',
+                  width: 1.2,
+                  type: 'dashed',
+                  opacity: 0.8,
+                },
+                silent: true,
+                zlevel: 1,
+              },
+
+              // 2) 화살표 1회 애니메이션
+              {
+                id: 'loopArrow',
+                type: 'lines',
+                coordinateSystem: 'geo',
+                polyline: true,
+                data: sameLocationLoop,
+                effect: {
+                  show: true,
+                  symbol: 'arrow',
+                  color: '#3877BE',
+                  constantSpeed: 150,
+                  loop: false,
+                  trailLength: 0,
+                  symbolSize: 10,
+                },
+                lineStyle: {
+                  width: 0,
+                },
+                zlevel: 20,
               },
             ]
           : []),
