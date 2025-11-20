@@ -88,7 +88,7 @@ const GridToolbar = ({
             onClick={onPivot}
             className='rounded-md text-xs bg-[#F8F1D0] px-4.5 py-2 hover:shadow transition'
           >
-            피벗 모드
+            피벗 모드(테스트)
           </button>
         )}
       </div>
