@@ -108,19 +108,28 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   const isColItemChecked = (label) => colSelectedItems.includes(label)
   const toggleColItem = (label) => {
     if (!label) return
+
+    // 최대 6개 제한
+    if (!isColItemChecked(label) && colSelectedItems.length >= 6) {
+      window.alert('최대 6개까지만 선택할 수 있습니다.')
+      return
+    }
+
     if (isColItemChecked(label)) {
       setColSelectedItems(colSelectedItems.filter((v) => v !== label))
     } else {
       setColSelectedItems([...colSelectedItems, label])
     }
   }
+
   const toggleColAllItems = () => {
     if (!colDistinctItems.length) return
     const allSelected = colDistinctItems.every((v) => colSelectedItems.includes(v))
     if (allSelected) {
       setColSelectedItems([])
     } else {
-      setColSelectedItems(colDistinctItems)
+      // 최대 6개까지만 선택
+      setColSelectedItems(colDistinctItems.slice(0, 6))
     }
   }
 
@@ -199,14 +208,12 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     }
   }
 
+  // 차트 타입 옵션 - line, area, dot 제거
   const chartTypeOptions = [
     { key: 'groupedColumn', label: '그룹 세로 막대' },
     { key: 'stackedColumn', label: '누적 세로 막대' },
     { key: 'groupedBar', label: '그룹 가로 막대' },
     { key: 'stackedBar', label: '누적 가로 막대' },
-    { key: 'line', label: '선 차트' },
-    { key: 'area', label: '영역 차트' },
-    { key: 'dot', label: '도트 차트' },
     { key: 'multiplePie', label: '멀티 파이 차트' },
   ]
 
@@ -288,7 +295,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
             <div className='mt-3 border-t border-gray-200 pt-3'>
               <div className='mb-2 text-sm font-semibold text-gray-900'>Column 값 선택</div>
               <p className='mb-3 text-xs text-gray-500'>
-                상위 N개만 사용할지, 개별 항목을 직접 선택할지 정할 수 있습니다. (최대 5개)
+                상위 N개만 사용할지, 개별 항목을 직접 선택할지 정할 수 있습니다. (최대 6개)
               </p>
 
               <div className='mb-3 flex gap-3 text-sm'>
@@ -324,12 +331,12 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                   <input
                     type='number'
                     min={1}
-                    max={5}
+                    max={6}
                     value={colTopN}
                     onChange={(e) => {
                       let v = parseInt(e.target.value, 10)
                       if (Number.isNaN(v) || v <= 0) v = 1
-                      if (v > 5) v = 5
+                      if (v > 6) v = 6
                       setColTopN(v)
                     }}
                     className='w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-800 outline-none focus:border-blue focus:ring-1 focus:ring-blue'
@@ -341,7 +348,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
               {colMode === 'manual' && (
                 <div className='mt-2 rounded-md border border-gray-200 bg-white'>
                   <div className='flex items-center justify-between border-b border-gray-200 px-3 py-2 text-xs text-gray-700'>
-                    <span>값 선택</span>
+                    <span>값 선택 ({colSelectedItems.length}/6)</span>
                     <button
                       type='button'
                       onClick={toggleColAllItems}
@@ -604,7 +611,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       type='radio'
                       name='pivot-metric'
                       className='sr-only'
-                      checked={!!checked} // ★ 항상 boolean
+                      checked={!!checked}
                       onChange={() => toggleMetric(v.field, v.agg, v.alias)}
                     />
                     <div

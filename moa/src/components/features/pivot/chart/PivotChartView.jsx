@@ -9,87 +9,158 @@ import { usePivotChartStore } from '@/stores/pivotChartStore'
 const PivotChartViewInner = ({ onChartClick }, ref) => {
   const chartType = usePivotChartStore((s) => s.chartType)
   const isChartMode = usePivotChartStore((s) => s.isChartMode)
+  const getLayout = usePivotChartStore((s) => s.getLayout)
 
   const { data, isLoading, isError } = usePivotChartQuery(isChartMode)
 
-  const echartsRef = useRef(null)
+  const echartsRefs = useRef([])
+  const layout = getLayout()
+
+  // 다중 차트 모드인지 확인
+  const isMultipleChartsMode = data?.charts && data.charts.length > 0
 
   const seriesColorMap = useMemo(() => {
     const map = {}
-    const yCategories = data?.yCategories || []
-    const paletteLen = PIVOT_SERIES_COLORS.length || 1
 
-    yCategories.forEach((name, idx) => {
-      map[name] = PIVOT_SERIES_COLORS[idx % paletteLen]
-    })
+    if (isMultipleChartsMode) {
+      // 다중 차트 모드: 첫 번째 차트의 yCategories를 기준으로 색상 매핑
+      const firstChart = data.charts[0]
+      const yCategories = firstChart?.yCategories || []
+      const paletteLen = PIVOT_SERIES_COLORS.length || 1
+
+      yCategories.forEach((name, idx) => {
+        map[name] = PIVOT_SERIES_COLORS[idx % paletteLen]
+      })
+    } else {
+      // 단일 차트 모드
+      const yCategories = data?.yCategories || []
+      const paletteLen = PIVOT_SERIES_COLORS.length || 1
+
+      yCategories.forEach((name, idx) => {
+        map[name] = PIVOT_SERIES_COLORS[idx % paletteLen]
+      })
+    }
 
     return map
-  }, [data])
+  }, [data, isMultipleChartsMode])
 
   useImperativeHandle(ref, () => ({
     downloadImage: () => {
-      const instance =
-        echartsRef.current &&
-        echartsRef.current.getEchartsInstance &&
-        echartsRef.current.getEchartsInstance()
+      if (isMultipleChartsMode) {
+        // 다중 차트 모드: 모든 차트를 개별 다운로드
+        echartsRefs.current.forEach((ref, idx) => {
+          if (!ref) return
+          const instance = ref.getEchartsInstance && ref.getEchartsInstance()
+          if (!instance) return
 
-      if (!instance) {
-        console.warn('ECharts 인스턴스를 찾을 수 없습니다.')
-        return
+          const dataURL = instance.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: '#ffffff',
+          })
+
+          const link = document.createElement('a')
+          link.href = dataURL
+          link.download = `pivot-chart-${idx + 1}.png`
+          link.click()
+        })
+      } else {
+        // 단일 차트 모드
+        const instance =
+          echartsRefs.current[0] &&
+          echartsRefs.current[0].getEchartsInstance &&
+          echartsRefs.current[0].getEchartsInstance()
+
+        if (!instance) {
+          console.warn('ECharts 인스턴스를 찾을 수 없습니다.')
+          return
+        }
+
+        const dataURL = instance.getDataURL({
+          type: 'png',
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+        })
+
+        const link = document.createElement('a')
+        link.href = dataURL
+        link.download = 'pivot-chart.png'
+        link.click()
       }
-
-      const dataURL = instance.getDataURL({
-        type: 'png',
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-      })
-
-      const link = document.createElement('a')
-      link.href = dataURL
-      link.download = 'pivot-chart.png'
-      link.click()
     },
 
-    // 서버 업로드용 dataURL
     getImageDataUrl: () => {
-      const instance =
-        echartsRef.current &&
-        echartsRef.current.getEchartsInstance &&
-        echartsRef.current.getEchartsInstance()
+      if (isMultipleChartsMode) {
+        // 다중 차트: 첫 번째 차트만 반환 (또는 모든 차트를 배열로 반환할 수도 있음)
+        const instance =
+          echartsRefs.current[0] &&
+          echartsRefs.current[0].getEchartsInstance &&
+          echartsRefs.current[0].getEchartsInstance()
 
-      if (!instance) {
-        console.warn('ECharts 인스턴스를 찾을 수 없습니다.')
-        return null
+        if (!instance) {
+          console.warn('ECharts 인스턴스를 찾을 수 없습니다.')
+          return null
+        }
+
+        return instance.getDataURL({
+          type: 'png',
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+        })
+      } else {
+        const instance =
+          echartsRefs.current[0] &&
+          echartsRefs.current[0].getEchartsInstance &&
+          echartsRefs.current[0].getEchartsInstance()
+
+        if (!instance) {
+          console.warn('ECharts 인스턴스를 찾을 수 없습니다.')
+          return null
+        }
+
+        return instance.getDataURL({
+          type: 'png',
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+        })
       }
-
-      return instance.getDataURL({
-        type: 'png',
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-      })
     },
   }))
 
   const handleChartClick = useCallback(
-    (params) => {
+    (params, columnKey = null) => {
       if (!data || !onChartClick) return
       if (chartType === 'multiplePie') return // 멀티 파이에서는 드릴다운 비활성화
 
-      // groupedColumn / line / area / bar > params.name === 축 카테고리 이름
-      const selectedColKey = params.name
-      const rowKeys = data.yCategories || []
+      if (isMultipleChartsMode) {
+        // 다중 차트 모드: columnKey를 selectedColKey로 사용
+        const chart = data.charts.find((c) => c.columnKey === columnKey)
+        if (!chart) return
 
-      if (!selectedColKey || !rowKeys.length) return
+        // 해당 차트의 yCategories를 rowKeys로 사용 (소문자 필드도 지원)
+        const rowKeys = chart.yCategories || chart.ycategories || []
+        if (!columnKey || !rowKeys.length) return
 
-      onChartClick({
-        selectedColKey,
-        rowKeys,
-        rawEvent: params,
-        chartData: data,
-        seriesColorMap,
-      })
+        onChartClick({
+          selectedColKey: columnKey,
+          rowKeys,
+          seriesColorMap,
+        })
+      } else {
+        // 단일 차트 모드: params.name을 selectedColKey로 사용
+        const selectedColKey = params.name
+        const rowKeys = data.yCategories || []
+
+        if (!selectedColKey || !rowKeys.length) return
+
+        onChartClick({
+          selectedColKey,
+          rowKeys,
+          seriesColorMap,
+        })
+      }
     },
-    [data, onChartClick, chartType, seriesColorMap],
+    [data, onChartClick, chartType, seriesColorMap, isMultipleChartsMode],
   )
 
   if (!isChartMode) {
@@ -116,12 +187,59 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
     )
   }
 
+  // ===== 다중 차트 모드 렌더링 =====
+  if (isMultipleChartsMode) {
+    const charts = data.charts || []
+    const chartsPerRow = layout.chartsPerRow || 2
+
+    return (
+      <div className='w-full'>
+        <div
+          className='grid gap-4'
+          style={{
+            gridTemplateColumns: `repeat(${chartsPerRow}, 1fr)`,
+          }}
+        >
+          {charts.map((chart, idx) => {
+            // 소문자 필드명 지원
+            const yCategories = chart.yCategories || chart.ycategories || []
+
+            const option = buildPivotEChartOption(chartType || 'groupedColumn', {
+              xCategories: [chart.columnKey], // X축은 단일 값
+              yCategories: yCategories,
+              series: chart.series,
+            })
+
+            return (
+              <div key={chart.columnKey} className='rounded border border-gray-200 bg-white p-3'>
+                <h3 className='mb-2 text-center text-sm font-medium text-gray-800'>
+                  {chart.columnKey}
+                </h3>
+                <div className='h-[300px]'>
+                  <ReactECharts
+                    ref={(el) => (echartsRefs.current[idx] = el)}
+                    option={option}
+                    style={{ width: '100%', height: '100%' }}
+                    onEvents={{
+                      click: (params) => handleChartClick(params, chart.columnKey),
+                    }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ===== 단일 차트 모드 렌더링 =====
   const option = buildPivotEChartOption(chartType || 'groupedColumn', data)
 
   return (
     <div className='h-[360px] w-full'>
       <ReactECharts
-        ref={echartsRef}
+        ref={(el) => (echartsRefs.current[0] = el)}
         option={option}
         style={{ width: '100%', height: '100%' }}
         onEvents={{ click: handleChartClick }}

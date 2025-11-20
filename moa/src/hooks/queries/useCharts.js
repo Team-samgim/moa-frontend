@@ -22,6 +22,7 @@ export function usePivotChartQuery(enabled = true) {
 
   const metric = usePivotChartStore((s) => s.metric)
   const chartType = usePivotChartStore((s) => s.chartType)
+  const getLayout = usePivotChartStore((s) => s.getLayout)
 
   const time = buildTimePayload(timeRange, customRange)
 
@@ -46,8 +47,10 @@ export function usePivotChartQuery(enabled = true) {
       chartType,
     ],
     enabled: canRun,
-    queryFn: async () =>
-      runPivotChart({
+    queryFn: async () => {
+      const layout = getLayout()
+
+      return runPivotChart({
         layer,
         time,
         filters,
@@ -65,7 +68,9 @@ export function usePivotChartQuery(enabled = true) {
           selectedItems: rowMode === 'manual' ? rowSelectedItems : null,
         },
         metric, // { field, agg, alias }
-      }),
+        layout: layout.chartsPerRow ? { chartsPerRow: layout.chartsPerRow } : null,
+      })
+    },
   })
 }
 
@@ -76,14 +81,6 @@ export function usePivotHeatmapTable(enabled = true) {
   const filters = usePivotStore((s) => s.filters)
 
   const time = buildTimePayload(timeRange, customRange)
-
-  // const column = usePivotStore((s) => s.column)
-  // const rows = usePivotStore((s) => s.rows)
-  // const values = usePivotStore((s) => s.values)
-
-  // const colField = column?.field || null
-  // const rowField = Array.isArray(rows) && rows.length > 0 ? rows[0].field : null
-  // const metric = Array.isArray(values) && values.length > 0 ? values[0] : null // { field, agg, alias }
 
   const colField = usePivotChartStore((s) => s.colField)
   const rowField = usePivotChartStore((s) => s.rowField)
