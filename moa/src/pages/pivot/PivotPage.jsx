@@ -405,7 +405,7 @@ const PivotPage = () => {
             </div>
 
             {/* 실제 결과 영역 */}
-            <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
+            <div className='flex min-h-[400px] items-center justify-center rounded border-gray-300 text-xs text-gray-400'>
               <PivotChartView ref={chartViewRef} onChartClick={handleChartClickForDrilldown} />
             </div>
 
