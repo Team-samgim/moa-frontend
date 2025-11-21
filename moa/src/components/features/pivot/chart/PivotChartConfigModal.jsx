@@ -221,11 +221,19 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
 
   // 차트 타입 옵션
   const chartTypeOptions = [
-    { key: 'groupedColumn', label: '그룹 세로 막대' },
-    { key: 'stackedColumn', label: '누적 세로 막대' },
-    { key: 'groupedBar', label: '그룹 가로 막대' },
-    { key: 'stackedBar', label: '누적 가로 막대' },
-    { key: 'multiplePie', label: '멀티 파이 차트' },
+    {
+      key: 'groupedColumn',
+      label: '그룹 세로 막대',
+      image: '/src/assets/images/grouped-column.webp',
+    },
+    {
+      key: 'stackedColumn',
+      label: '누적 세로 막대',
+      image: '/src/assets/images/stacked-column.webp',
+    },
+    { key: 'groupedBar', label: '그룹 가로 막대', image: '/src/assets/images/grouped-bar.webp' },
+    { key: 'stackedBar', label: '누적 가로 막대', image: '/src/assets/images/stacked-bar.webp' },
+    { key: 'multiplePie', label: '멀티 파이 차트', image: '/src/assets/images/pie.webp' },
   ]
 
   // 적용 버튼 핸들러: 실제 store에 저장
@@ -664,6 +672,17 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                   </button>
                 ))}
               </div>
+
+              {/* 선택된 차트 타입의 미리보기 이미지 */}
+              {localChartType && (
+                <div className='mt-4 rounded-lg border border-gray-200 bg-white p-4'>
+                  <img
+                    src={chartTypeOptions.find((opt) => opt.key === localChartType)?.image}
+                    alt={chartTypeOptions.find((opt) => opt.key === localChartType)?.label}
+                    className='w-full h-auto object-contain'
+                  />
+                </div>
+              )}
             </div>
           </section>
         </div>
