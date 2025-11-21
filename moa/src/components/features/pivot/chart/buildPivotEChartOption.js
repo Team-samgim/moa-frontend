@@ -24,6 +24,7 @@ export function buildPivotEChartOption(chartType, data) {
   const xCategories = data?.xCategories || data?.xcategories || []
   const yCategories = data?.yCategories || data?.ycategories || []
   const series = data?.series || []
+  const seriesColorMap = data?.seriesColorMap || {}
 
   if (!xCategories.length || !yCategories.length || !series.length) {
     return {
@@ -79,7 +80,17 @@ export function buildPivotEChartOption(chartType, data) {
 
     return {
       color: PIVOT_SERIES_COLORS,
-      tooltip: { trigger: 'item' },
+      textStyle: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      },
+      tooltip: {
+        trigger: 'item',
+        textStyle: {
+          fontFamily:
+            'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        },
+      },
       legend: {
         bottom: 10,
         left: 'center',
@@ -95,26 +106,46 @@ export function buildPivotEChartOption(chartType, data) {
         tooltip: {
           show: true,
         },
+        textStyle: {
+          fontFamily:
+            'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        },
       },
       series: pies,
     }
   }
 
   const makeSeriesLinesOrBars = (type, extra = {}) =>
-    yCategories.map((yName, yIdx) => ({
-      name: yName,
-      type,
-      data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
-      ...extra,
-    }))
+    yCategories.map((yName, yIdx) => {
+      const color = seriesColorMap[yName]
+      return {
+        name: yName,
+        type,
+        data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
+        // 막대 차트일 때 최대 너비 설정
+        ...(type === 'bar' ? { barMaxWidth: 40 } : {}),
+        // 색상 매핑이 있으면 적용
+        ...(color ? { itemStyle: { color }, lineStyle: { color } } : {}),
+        ...extra,
+      }
+    })
 
   const baseOption = {
     color: PIVOT_SERIES_COLORS,
+    // 전역 폰트 설정
+    textStyle: {
+      fontFamily:
+        'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     tooltip: {
       trigger: 'axis',
       valueFormatter: (value) => {
         // 툴팁에는 원래 값도 함께 표시
         return `${formatNumber(value)} (${value.toLocaleString()})`
+      },
+      textStyle: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       },
     },
     legend: {
@@ -133,6 +164,10 @@ export function buildPivotEChartOption(chartType, data) {
       },
       tooltip: {
         show: true, // 범례 항목에 호버 시 전체 이름 표시
+      },
+      textStyle: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       },
     },
     grid: {
@@ -154,13 +189,20 @@ export function buildPivotEChartOption(chartType, data) {
       data: xCategories,
       boundaryGap: true,
       // 단일 컬럼일 때 축 레이블 숨김
-      axisLabel: isSingleColumn ? { show: false } : undefined,
+      axisLabel: isSingleColumn
+        ? { show: false }
+        : {
+            fontFamily:
+              'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          },
     }
     baseOption.yAxis = {
       type: 'value',
       min: 0,
       axisLabel: {
         formatter: formatNumber,
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       },
     }
 
@@ -181,7 +223,12 @@ export function buildPivotEChartOption(chartType, data) {
       type: 'category',
       data: xCategories,
       // 단일 컬럼일 때 축 레이블 숨김
-      axisLabel: isSingleColumn ? { show: false } : undefined,
+      axisLabel: isSingleColumn
+        ? { show: false }
+        : {
+            fontFamily:
+              'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          },
     }
     baseOption.xAxis = {
       type: 'value',
@@ -189,6 +236,8 @@ export function buildPivotEChartOption(chartType, data) {
       axisLabel: {
         formatter: formatNumber,
         rotate: 0, // 가로로 표시
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       },
     }
 
@@ -208,13 +257,20 @@ export function buildPivotEChartOption(chartType, data) {
     type: 'category',
     data: xCategories,
     boundaryGap: true,
-    axisLabel: isSingleColumn ? { show: false } : undefined,
+    axisLabel: isSingleColumn
+      ? { show: false }
+      : {
+          fontFamily:
+            'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        },
   }
   baseOption.yAxis = {
     type: 'value',
     min: 0,
     axisLabel: {
       formatter: formatNumber,
+      fontFamily:
+        'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
   }
   baseOption.series = makeSeriesLinesOrBars('bar')

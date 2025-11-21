@@ -368,7 +368,7 @@ const PivotPage = () => {
                 {/* 차트 이미지 다운로드 */}
                 {/* className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50' */}
                 <button
-                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
                   onClick={() => exportChartImageMutation.mutate()}
                   disabled={!isChartMode || exportChartImageMutation.isPending}
                 >

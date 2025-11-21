@@ -23,12 +23,23 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
     const map = {}
 
     if (isMultipleChartsMode) {
-      // 다중 차트 모드: 첫 번째 차트의 yCategories를 기준으로 색상 매핑
-      const firstChart = data.charts[0]
-      const yCategories = firstChart?.yCategories || []
+      // 다중 차트 모드: 모든 차트의 yCategories를 등장 순서대로 수집
+      const allYCategories = []
+      const seen = new Set()
+
+      data.charts.forEach((chart) => {
+        const yCategories = chart.yCategories || chart.ycategories || []
+        yCategories.forEach((name) => {
+          if (!seen.has(name)) {
+            seen.add(name)
+            allYCategories.push(name)
+          }
+        })
+      })
+
       const paletteLen = PIVOT_SERIES_COLORS.length || 1
 
-      yCategories.forEach((name, idx) => {
+      allYCategories.forEach((name, idx) => {
         map[name] = PIVOT_SERIES_COLORS[idx % paletteLen]
       })
     } else {
@@ -208,6 +219,7 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
               xCategories: [chart.columnKey], // X축은 단일 값
               yCategories: yCategories,
               series: chart.series,
+              seriesColorMap: seriesColorMap, // 색상 매핑 전달
             })
 
             return (
@@ -234,7 +246,10 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
   }
 
   // ===== 단일 차트 모드 렌더링 =====
-  const option = buildPivotEChartOption(chartType || 'groupedColumn', data)
+  const option = buildPivotEChartOption(chartType || 'groupedColumn', {
+    ...data,
+    seriesColorMap,
+  })
 
   return (
     <div className='h-[360px] w-full'>
