@@ -1,70 +1,54 @@
-// src/components/onboarding/OrbitFeatures.jsx
+import OrbitBeam from './OrbitBeam'
+
+const RADIUS = 260
+
+const Dot = ({ angleDeg, radius = RADIUS, offsetX = 0, offsetY = 0 }) => {
+  const rad = (angleDeg * Math.PI) / 180
+  const x = radius * Math.cos(rad)
+  const y = radius * -Math.sin(rad)
+
+  return (
+    <div
+      className='absolute'
+      style={{
+        top: '50%',
+        left: '50%',
+        transform: `translate(-50%, -50%) translate(${x + offsetX}px, ${y + offsetY}px)`,
+      }}
+    >
+      {/* 여기에서만 scale/opacity 애니메이션 → 좌표 transform과 안 겹침 */}
+      <div className='relative flex items-center justify-center w-10 h-10 orbit-dot-glow'>
+        {/* 바깥쪽 부드러운 퍼짐 영역 */}
+        <div
+          className='absolute inset-0 rounded-full opacity-70
+          bg-[radial-gradient(circle,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.35)_40%,rgba(15,23,42,0)_70%)]'
+        />
+
+        {/* 중심 코어 점 + 샤프한 glow */}
+        <div className='relative w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]' />
+      </div>
+    </div>
+  )
+}
 
 const OrbitFeatures = () => {
   return (
     <>
-      {/* 위-왼쪽: 직선 + 점(오른쪽 끝, orbit 쪽) */}
-      <div className='absolute top-[14%] left-[29%] text-left text-[#0f1c3f]'>
-        <p className='text-[15px] leading-tight font-semibold max-w-[210px]'>
-          Expert subjective
-          <br />
-          history taking
-        </p>
+      {/* 왼쪽 상단: delay 0초 */}
+      <OrbitBeam angleDeg={120} offsetX={-150} variant='tl' delay={0} />
+      <Dot angleDeg={120} offsetX={-150} />
 
-        <div className='relative mt-4 w-[230px]'>
-          {/* 라인 */}
-          <div className='h-px w-full bg-[#9ec5ff] opacity-80' />
-          {/* 점: 라인 오른쪽 끝, orbit 쪽 */}
-          <div className='absolute right-0 top-1/2 -translate-y-1/2'>
-            <div className='w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_0_6px_rgba(255,255,255,0.7)]' />
-          </div>
-        </div>
-      </div>
+      {/* 오른쪽 상단: delay 2초 */}
+      <OrbitBeam angleDeg={60} offsetX={150} variant='tr' delay={2} />
+      <Dot angleDeg={60} offsetX={150} />
 
-      {/* 위-오른쪽: 꺾이는 라인 + 점(orbit 쪽) */}
-      <div className='absolute top-[24%] right-[7%] text-right text-[#0f1c3f]'>
-        {/* TODO: 미구현 */}
-      </div>
+      {/* 왼쪽 하단: delay 4초 */}
+      <OrbitBeam angleDeg={-60} offsetX={150} variant='br' delay={4} />
+      <Dot angleDeg={-60} offsetX={150} />
 
-      {/* 아래-왼쪽: 꺾이는 라인 + 점(orbit 쪽) */}
-      <div className='absolute bottom-[37%] left-[28%] text-left text-[#0f1c3f]'>
-        <p className='text-[15px] leading-tight font-semibold max-w-[220px]'>
-          Preconstructed
-          <br />
-          clinical note
-        </p>
-
-        <div className='mt-4 flex items-center'>
-          {/* 수평 라인 (텍스트 바로 아래에서 시작) */}
-          <div className='h-px w-[190px] bg-[#9ec5ff] opacity-80' />
-
-          {/* 꺾여서 올라가는 대각선 + 점 */}
-          <div className='relative h-px w-[100px] bg-[#9ec5ff] opacity-80 origin-left -rotate-[28deg]'>
-            {/* 점: 대각선 끝, orbit 쪽 */}
-            <div className='absolute right-0 top-1/2 -translate-y-1/2'>
-              <div className='w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_0_6px_rgba(255,255,255,0.7)]' />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 아래-오른쪽: 직선 + 점(orbit 쪽) */}
-      <div className='absolute bottom-[17%] right-[7%] text-right text-[#0f1c3f]'>
-        <p className='text-[15px] leading-tight font-semibold max-w-[250px] ml-auto'>
-          Ambient AI scribing to
-          <br />
-          complete documentation
-        </p>
-
-        <div className='relative mt-4 w-[230px] ml-auto'>
-          {/* 라인 (오른쪽 → 왼쪽) */}
-          <div className='ml-auto h-px w-full bg-[#9ec5ff] opacity-80' />
-          {/* 점: 왼쪽 끝, orbit 쪽 */}
-          <div className='absolute left-0 top-1/2 -translate-y-1/2'>
-            <div className='w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_0_6px_rgba(255,255,255,0.7)]' />
-          </div>
-        </div>
-      </div>
+      {/* 오른쪽 하단: delay 6초 */}
+      <OrbitBeam angleDeg={-120} offsetX={-150} variant='bl' delay={6} />
+      <Dot angleDeg={-120} offsetX={-150} />
     </>
   )
 }

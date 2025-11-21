@@ -17,12 +17,19 @@ const Layout = () => {
       )}
 
       <div className='relative z-10'>
-        <Header />
+        {!isOnboarding ? (
+          <>
+            <Header />
 
-        <main className='pt-[130px]'>
-          <Outlet />
-        </main>
-
+            <main className='pt-[130px]'>
+              <Outlet />
+            </main>
+          </>
+        ) : (
+          <main>
+            <Outlet />
+          </main>
+        )}
         <Footer />
       </div>
     </div>

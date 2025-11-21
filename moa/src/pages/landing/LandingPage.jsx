@@ -1,18 +1,26 @@
+// LandingPage.jsx
 import OrbitBackground from '@/components/landing/OrbitBackground'
 import OrbitFeatures from '@/components/landing/OrbitFeature'
 
 const LandingPage = () => {
   return (
     <div className='relative min-h-screen overflow-hidden'>
-      <div className='absolute inset-0 flex justify-center mt-10'>
-        <OrbitBackground />
+      {/* 오비트 + 점들을 같은 좌표계 안에 넣는 래퍼 */}
+      <div className='absolute inset-0 flex items-center justify-center'>
+        <div className='relative mt-10 w-full max-w-[min(90vw,90vh,900px)] aspect-square'>
+          <OrbitBackground />
+          <OrbitFeatures />
+        </div>
       </div>
-      <OrbitFeatures />
+
+      {/* 텍스트 영역 */}
       <div className='relative z-10 flex flex-col items-center justify-center px-6 text-center mt-100'>
-        <h1 className='text-4xl md:text-6xl font-bold tracking-tight text-blue-dark'>
-          lorem ipsum moa
+        <h1 className='text-4xl md:text-6xl font-bold tracking-tight text-[#2a4787]'>
+          EUM 데이터 분석 시스템
         </h1>
-        <p className='mt-4 text-base md:text-xl text-blue-dark'>lorem import second from 'first'</p>
+        <p className='mt-4 text-base md:text-xl text-blue-dark'>
+          복잡한 데이터 분석, MOA와 함께 시작하세요
+        </p>
 
         <div className='mt-8 flex flex-col items-center gap-4 md:flex-row md:gap-6'>
           <button className='rounded-full bg-linear-to-r from-[#4a74cd] to-[#2d50ae] px-8 py-3 text-sm md:text-base font-semibold text-white shadow-lg shadow-blue-400/50'>
