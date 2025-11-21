@@ -229,6 +229,7 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
                 </h3>
                 <div className='h-[300px]'>
                   <ReactECharts
+                    key={`${chart.columnKey}-${chartType}`}
                     ref={(el) => (echartsRefs.current[idx] = el)}
                     option={option}
                     style={{ width: '100%', height: '100%' }}
@@ -254,6 +255,7 @@ const PivotChartViewInner = ({ onChartClick }, ref) => {
   return (
     <div className='h-[360px] w-full'>
       <ReactECharts
+        key={chartType}
         ref={(el) => (echartsRefs.current[0] = el)}
         option={option}
         style={{ width: '100%', height: '100%' }}

@@ -115,10 +115,10 @@ export function buildPivotEChartOption(chartType, data) {
     }
   }
 
-  const makeSeriesLinesOrBars = (type, extra = {}) =>
+  const makeSeriesLinesOrBars = (type, shouldStack = false) =>
     yCategories.map((yName, yIdx) => {
       const color = seriesColorMap[yName]
-      return {
+      const seriesItem = {
         name: yName,
         type,
         data: xCategories.map((_, xIdx) => getValueOrZero(yIdx, xIdx)),
@@ -126,8 +126,11 @@ export function buildPivotEChartOption(chartType, data) {
         ...(type === 'bar' ? { barMaxWidth: 40 } : {}),
         // 색상 매핑이 있으면 적용
         ...(color ? { itemStyle: { color }, lineStyle: { color } } : {}),
-        ...extra,
       }
+      if (shouldStack) {
+        seriesItem.stack = 'total'
+      }
+      return seriesItem
     })
 
   const baseOption = {
@@ -207,12 +210,12 @@ export function buildPivotEChartOption(chartType, data) {
     }
 
     if (chartType === 'groupedColumn') {
-      baseOption.series = makeSeriesLinesOrBars('bar')
+      baseOption.series = makeSeriesLinesOrBars('bar', false) // shouldStack = false
       return baseOption
     }
 
     if (chartType === 'stackedColumn') {
-      baseOption.series = makeSeriesLinesOrBars('bar', { stack: 'total' })
+      baseOption.series = makeSeriesLinesOrBars('bar', true) // shouldStack = true
       return baseOption
     }
   }
@@ -242,12 +245,12 @@ export function buildPivotEChartOption(chartType, data) {
     }
 
     if (chartType === 'groupedBar') {
-      baseOption.series = makeSeriesLinesOrBars('bar')
+      baseOption.series = makeSeriesLinesOrBars('bar', false) // shouldStack = false
       return baseOption
     }
 
     if (chartType === 'stackedBar') {
-      baseOption.series = makeSeriesLinesOrBars('bar', { stack: 'total' })
+      baseOption.series = makeSeriesLinesOrBars('bar', true) // shouldStack = true
       return baseOption
     }
   }
@@ -273,6 +276,6 @@ export function buildPivotEChartOption(chartType, data) {
         'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
   }
-  baseOption.series = makeSeriesLinesOrBars('bar')
+  baseOption.series = makeSeriesLinesOrBars('bar', false) // shouldStack = false
   return baseOption
 }
