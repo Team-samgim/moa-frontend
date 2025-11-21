@@ -11,32 +11,39 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   const rows = usePivotStore((s) => s.rows)
   const values = usePivotStore((s) => s.values)
 
-  const colField = usePivotChartStore((s) => s.colField)
-  const colMode = usePivotChartStore((s) => s.colMode)
-  const colTopN = usePivotChartStore((s) => s.colTopN)
-  const colSelectedItems = usePivotChartStore((s) => s.colSelectedItems)
-
-  const rowField = usePivotChartStore((s) => s.rowField)
-  const rowMode = usePivotChartStore((s) => s.rowMode)
-  const rowTopN = usePivotChartStore((s) => s.rowTopN)
-  const rowSelectedItems = usePivotChartStore((s) => s.rowSelectedItems)
-
-  const metric = usePivotChartStore((s) => s.metric)
-  const chartType = usePivotChartStore((s) => s.chartType)
+  const storeColField = usePivotChartStore((s) => s.colField)
+  const storeColMode = usePivotChartStore((s) => s.colMode)
+  const storeColTopN = usePivotChartStore((s) => s.colTopN)
+  const storeColSelectedItems = usePivotChartStore((s) => s.colSelectedItems)
+  const storeRowField = usePivotChartStore((s) => s.rowField)
+  const storeRowMode = usePivotChartStore((s) => s.rowMode)
+  const storeRowTopN = usePivotChartStore((s) => s.rowTopN)
+  const storeRowSelectedItems = usePivotChartStore((s) => s.rowSelectedItems)
+  const storeMetric = usePivotChartStore((s) => s.metric)
+  const storeChartType = usePivotChartStore((s) => s.chartType)
 
   const setColField = usePivotChartStore((s) => s.setColField)
   const setColMode = usePivotChartStore((s) => s.setColMode)
   const setColTopN = usePivotChartStore((s) => s.setColTopN)
   const setColSelectedItems = usePivotChartStore((s) => s.setColSelectedItems)
-
   const setRowField = usePivotChartStore((s) => s.setRowField)
   const setRowMode = usePivotChartStore((s) => s.setRowMode)
   const setRowTopN = usePivotChartStore((s) => s.setRowTopN)
   const setRowSelectedItems = usePivotChartStore((s) => s.setRowSelectedItems)
-
   const setMetric = usePivotChartStore((s) => s.setMetric)
   const setChartType = usePivotChartStore((s) => s.setChartType)
   const setAxisAndMetric = usePivotChartStore((s) => s.setAxisAndMetric)
+
+  const [localColField, setLocalColField] = useState(storeColField)
+  const [localColMode, setLocalColMode] = useState(storeColMode)
+  const [localColTopN, setLocalColTopN] = useState(storeColTopN)
+  const [localColSelectedItems, setLocalColSelectedItems] = useState(storeColSelectedItems)
+  const [localRowField, setLocalRowField] = useState(storeRowField)
+  const [localRowMode, setLocalRowMode] = useState(storeRowMode)
+  const [localRowTopN, setLocalRowTopN] = useState(storeRowTopN)
+  const [localRowSelectedItems, setLocalRowSelectedItems] = useState(storeRowSelectedItems)
+  const [localMetric, setLocalMetric] = useState(storeMetric)
+  const [localChartType, setLocalChartType] = useState(storeChartType)
 
   const [isRowFieldOpen, setIsRowFieldOpen] = useState(false)
 
@@ -47,25 +54,27 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     }
   }, [])
 
+  // Column 필드 초기화
   useEffect(() => {
-    if (column?.field && !colField) {
-      setColField(column.field)
+    if (column?.field && !localColField) {
+      setLocalColField(column.field)
     }
-  }, [column, colField, setColField])
+  }, [column, localColField])
 
+  // Row 필드 초기화
   useEffect(() => {
-    if (!rowField && rows && rows.length > 0) {
-      setRowField(rows[0].field)
+    if (!localRowField && rows && rows.length > 0) {
+      setLocalRowField(rows[0].field)
     }
-  }, [rowField, rows, setRowField])
+  }, [localRowField, rows])
 
   const hasColumn = !!(column && column.field)
   const hasRows = Array.isArray(rows) && rows.length > 0
 
   // ===== 1. Column 축 manual 값 조회 =====
   const effectiveFiltersForCol = useMemo(
-    () => (filters ?? []).filter((f) => f.field !== colField),
-    [filters, colField],
+    () => (filters ?? []).filter((f) => f.field !== localColField),
+    [filters, localColField],
   )
 
   const {
@@ -77,11 +86,11 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     refetch: refetchColDistinct,
   } = useInfiniteDistinctValues({
     layer,
-    field: colField,
+    field: localColField,
     time,
     filters: effectiveFiltersForCol,
     order: 'asc',
-    enabled: colMode === 'manual' && !!colField,
+    enabled: localColMode === 'manual' && !!localColField,
     limit: 50,
   })
 
@@ -91,10 +100,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   )
 
   useEffect(() => {
-    if (colMode === 'manual' && colField) {
+    if (localColMode === 'manual' && localColField) {
       refetchColDistinct()
     }
-  }, [colField, colMode, refetchColDistinct])
+  }, [localColField, localColMode, refetchColDistinct])
 
   const handleScrollColDistinct = (e) => {
     const el = e.currentTarget
@@ -105,29 +114,37 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     }
   }
 
-  const isColItemChecked = (label) => colSelectedItems.includes(label)
+  const isColItemChecked = (label) => localColSelectedItems.includes(label)
+
   const toggleColItem = (label) => {
     if (!label) return
+    // 최대 6개 제한
+    if (!isColItemChecked(label) && localColSelectedItems.length >= 6) {
+      window.alert('최대 6개까지만 선택할 수 있습니다.')
+      return
+    }
     if (isColItemChecked(label)) {
-      setColSelectedItems(colSelectedItems.filter((v) => v !== label))
+      setLocalColSelectedItems(localColSelectedItems.filter((v) => v !== label))
     } else {
-      setColSelectedItems([...colSelectedItems, label])
+      setLocalColSelectedItems([...localColSelectedItems, label])
     }
   }
+
   const toggleColAllItems = () => {
     if (!colDistinctItems.length) return
-    const allSelected = colDistinctItems.every((v) => colSelectedItems.includes(v))
+    const allSelected = colDistinctItems.every((v) => localColSelectedItems.includes(v))
     if (allSelected) {
-      setColSelectedItems([])
+      setLocalColSelectedItems([])
     } else {
-      setColSelectedItems(colDistinctItems)
+      // 최대 6개까지만 선택
+      setLocalColSelectedItems(colDistinctItems.slice(0, 6))
     }
   }
 
   // ===== 2. Row 축 manual 값 조회 =====
   const effectiveFiltersForRow = useMemo(
-    () => (filters ?? []).filter((f) => f.field !== rowField),
-    [filters, rowField],
+    () => (filters ?? []).filter((f) => f.field !== localRowField),
+    [filters, localRowField],
   )
 
   const {
@@ -139,11 +156,11 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     refetch: refetchRowDistinct,
   } = useInfiniteDistinctValues({
     layer,
-    field: rowField,
+    field: localRowField,
     time,
     filters: effectiveFiltersForRow,
     order: 'asc',
-    enabled: rowMode === 'manual' && !!rowField,
+    enabled: localRowMode === 'manual' && !!localRowField,
     limit: 50,
   })
 
@@ -153,10 +170,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   )
 
   useEffect(() => {
-    if (rowMode === 'manual' && rowField) {
+    if (localRowMode === 'manual' && localRowField) {
       refetchRowDistinct()
     }
-  }, [rowField, rowMode, refetchRowDistinct])
+  }, [localRowField, localRowMode, refetchRowDistinct])
 
   const handleScrollRowDistinct = (e) => {
     const el = e.currentTarget
@@ -167,76 +184,97 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     }
   }
 
-  const isRowItemChecked = (label) => rowSelectedItems.includes(label)
+  const isRowItemChecked = (label) => localRowSelectedItems.includes(label)
+
   const toggleRowItem = (label) => {
     if (!label) return
     if (isRowItemChecked(label)) {
-      setRowSelectedItems(rowSelectedItems.filter((v) => v !== label))
+      setLocalRowSelectedItems(localRowSelectedItems.filter((v) => v !== label))
     } else {
-      setRowSelectedItems([...rowSelectedItems, label])
+      setLocalRowSelectedItems([...localRowSelectedItems, label])
     }
   }
+
   const toggleRowAllItems = () => {
     if (!rowDistinctItems.length) return
-    const allSelected = rowDistinctItems.every((v) => rowSelectedItems.includes(v))
+    const allSelected = rowDistinctItems.every((v) => localRowSelectedItems.includes(v))
     if (allSelected) {
-      setRowSelectedItems([])
+      setLocalRowSelectedItems([])
     } else {
-      setRowSelectedItems(rowDistinctItems)
+      setLocalRowSelectedItems(rowDistinctItems)
     }
   }
 
   // ===== 3. Value 지표 후보 (단일 선택) =====
   const valueOptions = values || []
 
-  const isMetricChecked = (field, agg) => !!metric && metric.field === field && metric.agg === agg
+  const isMetricChecked = (field, agg) =>
+    !!localMetric && localMetric.field === field && localMetric.agg === agg
 
   const toggleMetric = (field, agg, alias) => {
-    if (metric && metric.field === field && metric.agg === agg) {
-      setMetric(null)
+    if (localMetric && localMetric.field === field && localMetric.agg === agg) {
+      setLocalMetric(null)
     } else {
-      setMetric({ field, agg, alias })
+      setLocalMetric({ field, agg, alias })
     }
   }
 
+  // 차트 타입 옵션
   const chartTypeOptions = [
-    { key: 'groupedColumn', label: '그룹 세로 막대' },
-    { key: 'stackedColumn', label: '누적 세로 막대' },
-    { key: 'groupedBar', label: '그룹 가로 막대' },
-    { key: 'stackedBar', label: '누적 가로 막대' },
-    { key: 'line', label: '선 차트' },
-    { key: 'area', label: '영역 차트' },
-    { key: 'dot', label: '도트 차트' },
-    { key: 'multiplePie', label: '멀티 파이 차트' },
+    {
+      key: 'groupedColumn',
+      label: '그룹 세로 막대',
+      image: '/src/assets/images/grouped-column.webp',
+    },
+    {
+      key: 'stackedColumn',
+      label: '누적 세로 막대',
+      image: '/src/assets/images/stacked-column.webp',
+    },
+    { key: 'groupedBar', label: '그룹 가로 막대', image: '/src/assets/images/grouped-bar.webp' },
+    { key: 'stackedBar', label: '누적 가로 막대', image: '/src/assets/images/stacked-bar.webp' },
+    { key: 'multiplePie', label: '멀티 파이 차트', image: '/src/assets/images/pie.webp' },
   ]
 
+  // 적용 버튼 핸들러: 실제 store에 저장
   const handleApply = () => {
-    if (!colField) {
+    if (!localColField) {
       window.alert('Column 축 필드를 선택할 수 없습니다. 피벗 열을 먼저 설정해주세요.')
       return
     }
-    if (!rowField) {
+    if (!localRowField) {
       window.alert('Row 축으로 사용할 행 필드를 선택해주세요.')
       return
     }
-    if (!metric) {
+    if (!localMetric) {
       window.alert('Value 지표를 1개 선택해주세요.')
       return
     }
-
-    if (colMode === 'manual' && colSelectedItems.length === 0) {
+    if (localColMode === 'manual' && localColSelectedItems.length === 0) {
       window.alert('Column 직접 선택 모드에서는 최소 1개의 항목을 선택해야 합니다.')
       return
     }
-    if (rowMode === 'manual' && rowSelectedItems.length === 0) {
+    if (localRowMode === 'manual' && localRowSelectedItems.length === 0) {
       window.alert('Row 직접 선택 모드에서는 최소 1개의 항목을 선택해야 합니다.')
       return
     }
 
+    // 로컬 설정 store에 반영
+    setColField(localColField)
+    setColMode(localColMode)
+    setColTopN(localColTopN)
+    setColSelectedItems(localColSelectedItems)
+    setRowField(localRowField)
+    setRowMode(localRowMode)
+    setRowTopN(localRowTopN)
+    setRowSelectedItems(localRowSelectedItems)
+    setMetric(localMetric)
+    setChartType(localChartType)
+
     setAxisAndMetric({
-      colField,
-      rowField,
-      metric,
+      colField: localColField,
+      rowField: localRowField,
+      metric: localMetric,
     })
 
     if (onApply) {
@@ -288,16 +326,16 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
             <div className='mt-3 border-t border-gray-200 pt-3'>
               <div className='mb-2 text-sm font-semibold text-gray-900'>Column 값 선택</div>
               <p className='mb-3 text-xs text-gray-500'>
-                상위 N개만 사용할지, 개별 항목을 직접 선택할지 정할 수 있습니다. (최대 5개)
+                상위 N개만 사용할지, 개별 항목을 직접 선택할지 정할 수 있습니다. (최대 6개)
               </p>
 
               <div className='mb-3 flex gap-3 text-sm'>
                 <button
                   type='button'
-                  onClick={() => setColMode('topN')}
+                  onClick={() => setLocalColMode('topN')}
                   className={[
                     'rounded-full border px-3 py-1',
-                    colMode === 'topN'
+                    localColMode === 'topN'
                       ? 'border-blue bg-blue-50 text-blue'
                       : 'border-gray-300 text-gray-700',
                   ].join(' ')}
@@ -306,10 +344,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </button>
                 <button
                   type='button'
-                  onClick={() => setColMode('manual')}
+                  onClick={() => setLocalColMode('manual')}
                   className={[
                     'rounded-full border px-3 py-1',
-                    colMode === 'manual'
+                    localColMode === 'manual'
                       ? 'border-blue bg-blue-50 text-blue'
                       : 'border-gray-300 text-gray-700',
                   ].join(' ')}
@@ -318,19 +356,19 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </button>
               </div>
 
-              {colMode === 'topN' && (
+              {localColMode === 'topN' && (
                 <div className='flex items-center gap-2 text-sm'>
                   <span className='text-gray-700'>상위</span>
                   <input
                     type='number'
                     min={1}
-                    max={5}
-                    value={colTopN}
+                    max={6}
+                    value={localColTopN}
                     onChange={(e) => {
                       let v = parseInt(e.target.value, 10)
                       if (Number.isNaN(v) || v <= 0) v = 1
-                      if (v > 5) v = 5
-                      setColTopN(v)
+                      if (v > 6) v = 6
+                      setLocalColTopN(v)
                     }}
                     className='w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-800 outline-none focus:border-blue focus:ring-1 focus:ring-blue'
                   />
@@ -338,10 +376,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </div>
               )}
 
-              {colMode === 'manual' && (
+              {localColMode === 'manual' && (
                 <div className='mt-2 rounded-md border border-gray-200 bg-white'>
                   <div className='flex items-center justify-between border-b border-gray-200 px-3 py-2 text-xs text-gray-700'>
-                    <span>값 선택</span>
+                    <span>값 선택 ({localColSelectedItems.length}/6)</span>
                     <button
                       type='button'
                       onClick={toggleColAllItems}
@@ -350,14 +388,12 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       전체 선택/해제
                     </button>
                   </div>
-
                   <div className='h-60 overflow-auto text-sm' onScroll={handleScrollColDistinct}>
                     {isColDistinctLoading && (
                       <div className='flex h-full items-center justify-center text-xs text-gray-400'>
                         로딩 중…
                       </div>
                     )}
-
                     {!isColDistinctLoading &&
                       colDistinctItems.map((v) => {
                         const checked = isColItemChecked(v)
@@ -385,13 +421,11 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                           </label>
                         )
                       })}
-
                     {!isColDistinctLoading && !colDistinctItems.length && (
                       <div className='flex h-full items-center justify-center text-xs text-gray-400'>
                         선택 가능한 값이 없습니다
                       </div>
                     )}
-
                     {isColFetchingNext && (
                       <div className='py-2 text-center text-xs text-gray-400'>더 불러오는 중…</div>
                     )}
@@ -410,7 +444,6 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
               {/* Row 필드 드롭다운 */}
               <div className='mb-3'>
                 <label className='mb-1 block text-xs font-medium text-gray-700'>Row 축 필드</label>
-
                 <div className='relative'>
                   <button
                     type='button'
@@ -426,15 +459,14 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       .filter(Boolean)
                       .join(' ')}
                   >
-                    <span className={rowField ? '' : 'text-gray-400'}>
+                    <span className={localRowField ? '' : 'text-gray-400'}>
                       {(() => {
                         if (!hasRows) return '선택 가능한 행 필드가 없습니다'
-                        if (!rowField) return '행 필드를 선택하세요'
-                        const found = rows.find((r) => r.field === rowField)
-                        return found?.field ?? rowField
+                        if (!localRowField) return '행 필드를 선택하세요'
+                        const found = rows.find((r) => r.field === localRowField)
+                        return found?.field ?? localRowField
                       })()}
                     </span>
-
                     <ArrowDownIcon
                       className={[
                         'h-3 w-3 transition-transform',
@@ -442,7 +474,6 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       ].join(' ')}
                     />
                   </button>
-
                   {isRowFieldOpen && hasRows && (
                     <div className='absolute z-20 mt-1 w-full rounded border border-gray-200 bg-white text-xs shadow'>
                       {rows.map((r) => (
@@ -451,8 +482,8 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                           type='button'
                           className='block w-full px-3 py-2 text-left text-[13px] text-gray-800 hover:bg-gray-50'
                           onClick={() => {
-                            setRowField(r.field)
-                            setRowSelectedItems([])
+                            setLocalRowField(r.field)
+                            setLocalRowSelectedItems([])
                             setIsRowFieldOpen(false)
                           }}
                         >
@@ -468,10 +499,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
               <div className='mb-3 flex gap-3 text-sm'>
                 <button
                   type='button'
-                  onClick={() => setRowMode('topN')}
+                  onClick={() => setLocalRowMode('topN')}
                   className={[
                     'rounded-full border px-3 py-1',
-                    rowMode === 'topN'
+                    localRowMode === 'topN'
                       ? 'border-blue bg-blue-50 text-blue'
                       : 'border-gray-300 text-gray-700',
                   ].join(' ')}
@@ -480,10 +511,10 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </button>
                 <button
                   type='button'
-                  onClick={() => setRowMode('manual')}
+                  onClick={() => setLocalRowMode('manual')}
                   className={[
                     'rounded-full border px-3 py-1',
-                    rowMode === 'manual'
+                    localRowMode === 'manual'
                       ? 'border-blue bg-blue-50 text-blue'
                       : 'border-gray-300 text-gray-700',
                   ].join(' ')}
@@ -492,19 +523,19 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </button>
               </div>
 
-              {rowMode === 'topN' && (
+              {localRowMode === 'topN' && (
                 <div className='flex items-center gap-2 text-sm'>
                   <span className='text-gray-700'>상위</span>
                   <input
                     type='number'
                     min={1}
                     max={5}
-                    value={rowTopN}
+                    value={localRowTopN}
                     onChange={(e) => {
                       let v = parseInt(e.target.value, 10)
                       if (Number.isNaN(v) || v <= 0) v = 1
                       if (v > 5) v = 5
-                      setRowTopN(v)
+                      setLocalRowTopN(v)
                     }}
                     className='w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-800 outline-none focus:border-blue focus:ring-1 focus:ring-blue'
                   />
@@ -512,7 +543,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                 </div>
               )}
 
-              {rowMode === 'manual' && (
+              {localRowMode === 'manual' && (
                 <div className='mt-2 rounded-md border border-gray-200 bg-white'>
                   <div className='flex items-center justify-between border-b border-gray-200 px-3 py-2 text-xs text-gray-700'>
                     <span>값 선택</span>
@@ -524,14 +555,12 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       전체 선택/해제
                     </button>
                   </div>
-
                   <div className='h-60 overflow-auto text-sm' onScroll={handleScrollRowDistinct}>
                     {isRowDistinctLoading && (
                       <div className='flex h-full items-center justify-center text-xs text-gray-400'>
                         로딩 중…
                       </div>
                     )}
-
                     {!isRowDistinctLoading &&
                       rowDistinctItems.map((v) => {
                         const checked = isRowItemChecked(v)
@@ -559,13 +588,11 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                           </label>
                         )
                       })}
-
                     {!isRowDistinctLoading && !rowDistinctItems.length && (
                       <div className='flex h-full items-center justify-center text-xs text-gray-400'>
                         선택 가능한 값이 없습니다
                       </div>
                     )}
-
                     {isRowFetchingNext && (
                       <div className='py-2 text-center text-xs text-gray-400'>더 불러오는 중…</div>
                     )}
@@ -591,7 +618,6 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                   선택된 Value 값이 없습니다.
                 </div>
               )}
-
               {valueOptions.map((v) => {
                 const checked = isMetricChecked(v.field, v.agg)
                 const label = v.alias || `${v.agg?.toUpperCase()}: ${v.field}`
@@ -604,7 +630,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                       type='radio'
                       name='pivot-metric'
                       className='sr-only'
-                      checked={!!checked} // ★ 항상 boolean
+                      checked={!!checked}
                       onChange={() => toggleMetric(v.field, v.agg, v.alias)}
                     />
                     <div
@@ -629,16 +655,15 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
               <p className='mt-1 text-xs text-gray-500'>
                 선택한 축/지표에 어울리는 차트 유형을 선택해보세요.
               </p>
-
               <div className='mt-3 flex flex-wrap gap-2 text-sm'>
                 {chartTypeOptions.map((opt) => (
                   <button
                     key={opt.key}
                     type='button'
-                    onClick={() => setChartType(opt.key)}
+                    onClick={() => setLocalChartType(opt.key)}
                     className={[
                       'rounded-full border px-3 py-1',
-                      chartType === opt.key
+                      localChartType === opt.key
                         ? 'border-blue bg-blue-50 text-blue'
                         : 'border-gray-300 text-gray-700 hover:bg-white',
                     ].join(' ')}
@@ -647,6 +672,17 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
                   </button>
                 ))}
               </div>
+
+              {/* 선택된 차트 타입의 미리보기 이미지 */}
+              {localChartType && (
+                <div className='mt-4 rounded-lg border border-gray-200 bg-white p-4'>
+                  <img
+                    src={chartTypeOptions.find((opt) => opt.key === localChartType)?.image}
+                    alt={chartTypeOptions.find((opt) => opt.key === localChartType)?.label}
+                    className='w-full h-auto object-contain'
+                  />
+                </div>
+              )}
             </div>
           </section>
         </div>

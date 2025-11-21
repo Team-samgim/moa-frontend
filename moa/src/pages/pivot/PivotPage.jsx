@@ -366,9 +366,8 @@ const PivotPage = () => {
 
               <div className='flex items-center gap-1'>
                 {/* 차트 이미지 다운로드 */}
-                {/* className='rounded-md border border-gray-300 bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50' */}
                 <button
-                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   onClick={() => exportChartImageMutation.mutate()}
                   disabled={!isChartMode || exportChartImageMutation.isPending}
                 >
@@ -378,11 +377,9 @@ const PivotPage = () => {
                   </span>
                 </button>
 
-                <div className='w-px h-4 bg-gray-400' />
-
                 {/* 전체보기 (히트맵) */}
                 <button
-                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   type='button'
                   onClick={() => {
                     if (!column?.field || !rows?.length || !values?.length) {
@@ -396,11 +393,9 @@ const PivotPage = () => {
                   <span>전체보기 (테이블 히트맵)</span>
                 </button>
 
-                <div className='w-px h-4 bg-gray-400' />
-
                 {/* 차트 설정 */}
                 <button
-                  className='flex justify-center items-center gap-2 font-medium text-[12.5px] text-gray-700 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   onClick={() => setIsConfigOpen(true)}
                 >
                   <ChartSettingIcon className='w-4 h-4 text-[#595959]' />
@@ -410,7 +405,7 @@ const PivotPage = () => {
             </div>
 
             {/* 실제 결과 영역 */}
-            <div className='flex min-h-[400px] items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400'>
+            <div className='flex min-h-[400px] items-center justify-center rounded border-gray-300 text-xs text-gray-400'>
               <PivotChartView ref={chartViewRef} onChartClick={handleChartClickForDrilldown} />
             </div>
 

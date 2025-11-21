@@ -13,7 +13,7 @@ const useExportChartImage = (chartViewRef) => {
         throw new Error('차트 뷰가 준비되지 않았습니다.')
       }
 
-      const dataUrl = chartViewRef.current.getImageDataUrl()
+      const dataUrl = await chartViewRef.current?.getImageDataUrl()
       if (!dataUrl) {
         throw new Error('차트 이미지를 가져올 수 없습니다.')
       }
