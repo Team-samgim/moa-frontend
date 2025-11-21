@@ -26,6 +26,9 @@ echarts.use([
   CanvasRenderer,
 ])
 
+const WINDOW_MS = 5 * 60 * 1000 // 최근 5분 데이터만 보여줄 시간 창 (필요시 조정)
+const MAX_POINTS = 500 // 메모리 절약 및 자연스러운 스트리밍을 위한 최대 포인트 수
+
 const WIDGET_INFO = {
   title: '실시간 트래픽 추이',
   description: 'Mbps 기준, Request/Response 구분 (실시간)',
@@ -112,20 +115,30 @@ const TrafficTrend = ({ onClose }) => {
       // 병합 후 시간 순 정렬
       const combined = [...prev, ...uniqueNewPoints].sort((a, b) => new Date(a.t) - new Date(b.t))
 
-      // 최근 1000개만 유지
-      return combined.slice(-1000)
+      // 최근 MAX_POINTS개만 유지 (슬라이딩 윈도우)
+      return combined.slice(-MAX_POINTS)
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  // Request/Response 데이터 생성
+  // ⭐ 화면에 실제로 보여줄 슬라이딩 윈도우 데이터 (최근 WINDOW_MS 구간)
+  const visiblePoints = useMemo(() => {
+    if (chartPoints.length === 0) return []
+
+    const latestTime = new Date(chartPoints[chartPoints.length - 1].t).getTime()
+    const cutoff = latestTime - WINDOW_MS
+
+    return chartPoints.filter((p) => new Date(p.t).getTime() >= cutoff)
+  }, [chartPoints])
+
+  // Request/Response 데이터 생성 (최근 구간만 사용)
   const reqData = useMemo(
-    () => chartPoints.map((p) => [new Date(p.t).getTime(), p.req]),
-    [chartPoints],
+    () => visiblePoints.map((p) => [new Date(p.t).getTime(), p.req]),
+    [visiblePoints],
   )
 
   const resData = useMemo(
-    () => chartPoints.map((p) => [new Date(p.t).getTime(), p.res]),
-    [chartPoints],
+    () => visiblePoints.map((p) => [new Date(p.t).getTime(), p.res]),
+    [visiblePoints],
   )
 
   const option = useMemo(() => {
@@ -146,7 +159,7 @@ const TrafficTrend = ({ onClose }) => {
           if (!requestParam && !responseParam) return ''
 
           const dataIndex = (requestParam || responseParam).dataIndex
-          const point = chartPoints[dataIndex]
+          const point = visiblePoints[dataIndex]
           if (!point) return ''
 
           const time = new Date(point.t).toLocaleString('ko-KR', {
@@ -250,10 +263,13 @@ const TrafficTrend = ({ onClose }) => {
         },
       ],
       animation: true,
+      // 초기 렌더링 및 실시간 업데이트 모두 부드럽게
       animationDuration: 300,
       animationEasing: 'linear',
+      animationDurationUpdate: 300,
+      animationEasingUpdate: 'linear',
     }
-  }, [reqData, resData, chartPoints])
+  }, [reqData, resData, visiblePoints])
 
   // 컨테이너 크기 변화 대응
   useEffect(() => {
@@ -275,7 +291,7 @@ const TrafficTrend = ({ onClose }) => {
 
   // ✅ 데이터 소스 표시
   const dataSource = isConnected ? '실시간' : 'DB'
-  const dataCount = chartPoints.length
+  const dataCount = visiblePoints.length
 
   return (
     <WidgetCard
@@ -290,7 +306,8 @@ const TrafficTrend = ({ onClose }) => {
       onClose={onClose}
     >
       <div className='h-70'>
-        {isLoading ? (
+        {isLoading && chartPoints.length === 0 ? (
+          // ✅ 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
           <div className='flex items-center justify-center h-full'>
             <div className='text-center text-gray-500'>
               <div className='w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2'></div>
@@ -298,12 +315,14 @@ const TrafficTrend = ({ onClose }) => {
             </div>
           </div>
         ) : chartPoints.length === 0 ? (
+          // ✅ 요청은 끝났는데도 데이터가 없을 때
           <div className='flex items-center justify-center h-full'>
             <div className='text-center text-gray-500'>
               <p className='text-sm'>데이터가 없습니다</p>
             </div>
           </div>
         ) : (
+          // ✅ 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
           <ReactECharts
             ref={chartRef}
             echarts={echarts}
