@@ -1,9 +1,12 @@
+import { useNavigate } from 'react-router-dom'
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion'
 import OrbitBackground from '@/components/landing/OrbitBackground'
 import OrbitFeatures from '@/components/landing/OrbitFeature'
+import { loggedOutNavigations } from '@/constants/navigations'
 
 const LandingPage = () => {
+  const navigate = useNavigate()
   const title = 'EUM 데이터 분석 시스템'
 
   const gradualSpacingVariants = {
@@ -92,7 +95,10 @@ const LandingPage = () => {
             animate='visible'
             className='mt-8 flex flex-col items-center gap-4 md:flex-row md:gap-6'
           >
-            <button className='rounded-full bg-linear-to-r from-[#4a74cd] to-[#2d50ae] px-8 py-3 text-sm md:text-base font-semibold text-white shadow-lg shadow-blue-400/50 hover:shadow-xl hover:shadow-blue-400/60 transition-shadow'>
+            <button
+              onClick={() => navigate(loggedOutNavigations.LOGIN)}
+              className='rounded-full bg-linear-to-r from-[#4a74cd] to-[#2d50ae] px-8 py-3 text-sm md:text-base font-semibold text-white shadow-lg shadow-blue-400/50 hover:shadow-xl hover:shadow-blue-400/60 transition-shadow'
+            >
               MOA 시작하기
             </button>
           </motion.div>
