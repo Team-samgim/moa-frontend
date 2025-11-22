@@ -27,7 +27,25 @@ const Header = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   // 안읽은 알림 개수 조회
-  const { data: unreadCount = 0 } = useUnreadNotificationCount()
+  const { data: unreadCount = 0, isLoading, isError, refetch } = useUnreadNotificationCount()
+
+  // 디버깅: unreadCount 변화 추적
+  useEffect(() => {
+    console.log('🔔 [Header] Unread count state:', {
+      unreadCount,
+      isLoading,
+      isError,
+      type: typeof unreadCount,
+    })
+  }, [unreadCount, isLoading, isError])
+
+  // 로그인 상태 변경 시 강제 refetch
+  useEffect(() => {
+    if (isLogin) {
+      console.log('👤 [Header] User logged in, refetching unread count')
+      refetch()
+    }
+  }, [isLogin, refetch])
 
   const handleProtectedNavClick = (to) => {
     if (isLogin) {
@@ -121,7 +139,7 @@ const Header = () => {
                   <img src={bell} alt='알림' className='w-7 h-7' />
 
                   {/* 안읽은 알림 개수 뱃지 */}
-                  {unreadCount > 0 && (
+                  {!isLoading && unreadCount > 0 && (
                     <span
                       className='
                         absolute -top-1 -right-1
