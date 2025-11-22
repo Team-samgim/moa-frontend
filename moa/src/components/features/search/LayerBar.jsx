@@ -29,14 +29,15 @@ const LayerBar = ({ active, onChange }) => {
   }
 
   return (
-    <div className=''>
+    <div className='flex-[0.8] 4xl:flex-[0.5]'>
       <div className='flex-col h-full justify-between items-center align'>
-        <div className='mb-3 text-sm font-medium text-gray-800'>조회 계층</div>
-        <div className='flex flex-wrap justify-between w-full gap-2'>
+        <div className='mb-3 text-sm 4xl:text-base font-medium text-gray-800'>조회 계층</div>
+        <div className='flex w-full gap-2 4xl:gap-3'>
           {LAYER_OPTIONS.map((opt) => {
             const isActive = current === opt.key
 
-            const baseClass = 'px-4.5 py-2 rounded border text-xs transition-colors'
+            const baseClass =
+              'flex-1 px-4.5 py-2 4xl:px-6 4xl:py-3 rounded 4xl:rounded-lg border text-xs 4xl:text-sm transition-colors'
 
             // LAYER_ACTIVE_STYLES 키가 key 기준인지 label 기준인지 섞여 있을 수 있어서 둘 다 시도
             const activeStyle =

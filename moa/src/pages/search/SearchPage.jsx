@@ -21,6 +21,7 @@ import { useSearchMeta } from '@/hooks/queries/useSearch'
 import GridToolbar from '@/pages/grid/GridToolbar'
 import { usePivotStore } from '@/stores/pivotStore'
 import { usePresetBridgeStore } from '@/stores/presetBridgeStore'
+import { epochSecToIsoUtc } from '@/utils/dateFormat'
 import { buildSearchPayload } from '@/utils/searchPayload'
 import { toSearchSpecFromConfig } from '@/utils/searchSpec'
 
@@ -245,14 +246,12 @@ const SearchPage = () => {
   // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
     const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
-
     const api = gridApis?.api
-    const sortModel = api?.getSortModel?.()[0] || null
+    const sortModel = api?.getSortModel?.()?.[0] || null
     const sortField = sortModel
       ? api.getColumnDef(sortModel.colId)?.field || sortModel.colId
       : searchPayload?.options?.orderBy || 'ts_server_nsec'
     const sortDirection = (sortModel?.sort || searchPayload?.options?.order || 'DESC').toUpperCase()
-
     const filters = gridRef.current?.getActiveFilters?.() || {}
     const baseSpec =
       searchPayload ||
@@ -265,7 +264,6 @@ const SearchPage = () => {
         globalNot,
         fields,
       })
-
     const searchPreset = {
       version: 1,
       layer,
@@ -276,17 +274,49 @@ const SearchPage = () => {
       query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
     }
 
-    const payload = {
+    const timeSpec = getTimeSpec()
+
+    const presetConfig = {
+      pivot: {
+        mode: 'fromGrid',
+        config: {
+          layer,
+          timeRange: {
+            type: 'custom',
+            value: null,
+            now: new Date().toISOString(),
+          },
+          customRange: {
+            from: timeSpec?.fromEpoch ? epochSecToIsoUtc(timeSpec.fromEpoch) : null,
+            to: timeSpec?.toEpoch ? epochSecToIsoUtc(timeSpec.toEpoch) : null,
+          },
+          column: null,
+          rows: [],
+          values: [],
+          filters: [],
+        },
+      },
+      search: {
+        preset_type: 'SEARCH',
+        config: searchPreset,
+      },
+    }
+
+    // initFromGrid는 여전히 호출 (store 즉시 업데이트)
+    const { initFromGrid } = usePivotStore.getState()
+    initFromGrid({
       layer,
-      time: getTimeSpec(),
+      time: timeSpec,
       columns: cols,
       conditions,
       searchPreset,
-    }
+    })
 
-    const { initFromGrid } = usePivotStore.getState()
-    initFromGrid(payload)
-    navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
+    navigate(userNavigations.PIVOT, {
+      state: {
+        preset: presetConfig,
+      },
+    })
   }, [
     navigate,
     layer,
@@ -297,6 +327,7 @@ const SearchPage = () => {
     searchPayload,
     gridApis,
     fields,
+    globalNot,
   ])
 
   /** 프리셋 주입(브리지 우선, 없으면 라우트 state) */
@@ -413,7 +444,7 @@ const SearchPage = () => {
   })
 
   return (
-    <div className='p-4 mx-30'>
+    <div className='p-4 mx-30 4xl:mx-60'>
       <div className='mx-auto space-y-6'>
         {/* 상단 타이틀 + 프리셋 버튼 */}
         {/* <div className='flex items-center justify-between'>
@@ -437,7 +468,9 @@ const SearchPage = () => {
           {/* 조회 계층 / 조회 기간 한 줄 배치 */}
           <div className='w-full max-w-ws shrink-0 space-y-6'>
             <div className='flex items-center justify-between'>
-              <div className='text-base font-semibold text-gray-900'>그리드 테이블 구성</div>
+              <div className='text-base font-semibold 4xl:text-lg text-gray-900'>
+                그리드 테이블 구성
+              </div>
               <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
                 <button
                   type='button'
@@ -547,7 +580,7 @@ const SearchPage = () => {
 
       {/* 결과 */}
       {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full py-6'>
+        <div className='mx-auto w-full py-6'>
           {searchTotal === 0 ? (
             <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
               조건에 맞는 결과가 없습니다.

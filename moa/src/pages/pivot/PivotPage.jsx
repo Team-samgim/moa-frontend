@@ -224,14 +224,14 @@ const PivotPage = () => {
 
   return (
     <>
-      <div className='flex flex-col gap-4 p-4 mx-30'>
+      <div className='flex flex-col gap-6 p-4 mx-30 4xl:mx-60'>
         <div className='flex items-center'>
           <PivotHeaderTabs pivotMode={pivotMode} />
         </div>
 
         {/* 상단 설정 영역 */}
         <section className='rounded-lg border border-gray-200 bg-white shadow-sm'>
-          <div className='flex flex-row gap-6 p-5 lg:flex-row'>
+          <div className='flex flex-row gap-6 4xl:gap-8 p-5 4xl:p-6 lg:flex-row'>
             {/* 왼쪽 패널 */}
             <PivotConfigPanel
               layer={layer}
@@ -254,60 +254,56 @@ const PivotPage = () => {
               onPresetLoad={() => setIsPresetModalOpen(true)}
               onSavePreset={() => savePivotPresetMutation.mutate()}
             />
-
             <div className='hidden w-px bg-gray-200 lg:block' />
-
             {/* 오른쪽 패널: Column / Rows / Values */}
-            <div className='flex flex-1 flex-col gap-4 lg:flex-row min-h-0 items-stretch'>
+            <div className='flex flex-1 flex-col gap-4 4xl:gap-5 lg:flex-row min-h-0 items-stretch'>
               {/* Column 카드 */}
-              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
-                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded 4xl:rounded-lg border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 4xl:px-4 4xl:py-2.5 text-sm 4xl:text-base font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
-                    <ColumnIcon className='h-4 w-4 text-gray-600' />열 (Column)
+                    <ColumnIcon className='h-4 w-4 4xl:h-5 4xl:w-5 text-gray-600' />열 (Column)
                   </span>
-
                   <button
-                    className='p-1 text-gray-500 hover:text-gray-700'
+                    className='p-1 4xl:p-1.5 text-gray-500 hover:text-gray-700'
                     onClick={openColumnModal}
                   >
-                    <SettingIcon className='h-4 w-4' />
+                    <SettingIcon className='h-4 w-4 4xl:h-5 4xl:w-5' />
                   </button>
                 </div>
-
                 <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   {column && column.field ? (
-                    <div className='flex items-center justify-between px-3 py-2 text-sm text-gray-800'>
+                    <div className='flex items-center justify-between px-3 py-2 4xl:px-4 4xl:py-2.5 text-sm 4xl:text-base text-gray-800'>
                       <span className='flex items-center gap-2'>
-                        <SideKickIcon className='h-4 w-4 text-gray-500' />
+                        <SideKickIcon className='h-4 w-4 4xl:h-5 4xl:w-5 text-gray-500' />
                         {column.field}
                       </span>
-
                       <button
-                        className='p-1 text-gray-400 hover:text-red-500'
+                        className='p-1 4xl:p-1.5 text-gray-400 hover:text-red-500'
                         onClick={() => openFilterForField(column.field)}
                       >
-                        <FilterIcon className='h-4 w-4 text-[#464646]' />
+                        <FilterIcon className='h-4 w-4 4xl:h-5 4xl:w-5 text-[#464646]' />
                       </button>
                     </div>
                   ) : (
-                    <div className='px-3 py-6 text-center text-xs text-gray-400'>
+                    <div className='px-3 py-6 4xl:px-4 4xl:py-8 text-center text-xs 4xl:text-sm text-gray-400'>
                       열을 선택하세요
                     </div>
                   )}
                 </div>
               </div>
-
               {/* Rows 카드 */}
-              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
-                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded 4xl:rounded-lg border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 4xl:px-4 4xl:py-2.5 text-sm 4xl:text-base font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
-                    <RowIcon className='h-4 w-4 text-gray-600' />행 (Rows)
+                    <RowIcon className='h-4 w-4 4xl:h-5 4xl:w-5 text-gray-600' />행 (Rows)
                   </span>
-                  <button className='p-1 text-gray-500 hover:text-gray-700' onClick={openRowsModal}>
-                    <SettingIcon className='h-4 w-4' />
+                  <button
+                    className='p-1 4xl:p-1.5 text-gray-500 hover:text-gray-700'
+                    onClick={openRowsModal}
+                  >
+                    <SettingIcon className='h-4 w-4 4xl:h-5 4xl:w-5' />
                   </button>
                 </div>
-
                 <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   <SortableRowsList
                     rows={rows}
@@ -316,21 +312,19 @@ const PivotPage = () => {
                   />
                 </div>
               </div>
-
               {/* Values 카드 */}
-              <div className='flex-1 flex min-h-0 h-full flex-col rounded border border-gray-200 overflow-hidden'>
-                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800'>
+              <div className='flex-1 flex min-h-0 h-full flex-col rounded 4xl:rounded-lg border border-gray-200 overflow-hidden'>
+                <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 4xl:px-4 4xl:py-2.5 text-sm 4xl:text-base font-medium text-gray-800'>
                   <span className='flex items-center gap-1'>
-                    <ValueIcon className='h-4 w-4 text-gray-600' />값 (Values)
+                    <ValueIcon className='h-4 w-4 4xl:h-5 4xl:w-5 text-gray-600' />값 (Values)
                   </span>
                   <button
-                    className='p-1 text-gray-500 hover:text-gray-700'
+                    className='p-1 4xl:p-1.5 text-gray-500 hover:text-gray-700'
                     onClick={openValuesModal}
                   >
-                    <SettingIcon className='h-4 w-4' />
+                    <SettingIcon className='h-4 w-4 4xl:h-5 4xl:w-5' />
                   </button>
                 </div>
-
                 <div className='flex-1 divide-y divide-gray-200 overflow-y-auto'>
                   <SortableValuesList
                     values={values}
@@ -367,11 +361,11 @@ const PivotPage = () => {
               <div className='flex items-center gap-1'>
                 {/* 차트 이미지 다운로드 */}
                 <button
-                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   onClick={() => exportChartImageMutation.mutate()}
                   disabled={!isChartMode || exportChartImageMutation.isPending}
                 >
-                  <ChartIcon className='w-4 h-4 text-[#595959]' />
+                  <ChartIcon className='w-4 h-4 4xl:w-4.5 4xl:h-4.5 text-[#595959]' />
                   <span>
                     {exportChartImageMutation.isPending ? '내보내는 중…' : '차트 이미지 저장'}
                   </span>
@@ -379,7 +373,7 @@ const PivotPage = () => {
 
                 {/* 전체보기 (히트맵) */}
                 <button
-                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   type='button'
                   onClick={() => {
                     if (!column?.field || !rows?.length || !values?.length) {
@@ -389,16 +383,16 @@ const PivotPage = () => {
                     setIsHeatmapOpen(true)
                   }}
                 >
-                  <HeatmapIcon className='w-4 h-4 text-[#595959]' />
+                  <HeatmapIcon className='w-4 h-4 4xl:w-4.5 4xl:h-4.5 text-[#595959]' />
                   <span>전체보기 (테이블 히트맵)</span>
                 </button>
 
                 {/* 차트 설정 */}
                 <button
-                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
+                  className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
                   onClick={() => setIsConfigOpen(true)}
                 >
-                  <ChartSettingIcon className='w-4 h-4 text-[#595959]' />
+                  <ChartSettingIcon className='w-4 h-4 4xl:w-4.5 4xl:h-4.5 text-[#595959]' />
                   <span>차트 설정</span>
                 </button>
               </div>
@@ -450,9 +444,9 @@ const PivotPage = () => {
                 type='button'
                 onClick={() => exportPivotCsvMutation.mutate()}
                 disabled={exportPivotCsvMutation.isPending}
-                className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] text-gray-500 px-3 py-1 disabled:opacity-50'
+                className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
               >
-                <ExcelIcon className='w-3.5 h-3.5 text-gray-600' />
+                <ExcelIcon className='w-3.5 h-3.5 4xl:w-4.5 4xl:h-4.5 text-gray-600' />
                 <span>{exportPivotCsvMutation.isPending ? '내보내는 중…' : 'CSV 파일 저장'}</span>
               </button>
             </div>
@@ -465,8 +459,8 @@ const PivotPage = () => {
           {!isPivotLoading && pivotResult ? (
             <PivotResultTable pivotResult={pivotResult} />
           ) : (
-            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-              아직 조회되지 않았습니다
+            <div className='flex h-100 items-center justify-center text-xs 4xl:text-lg text-gray-400'>
+              테이블 구성을 완료하고 피벗 테이블을 조회해보세요.
             </div>
           )}
         </section>
