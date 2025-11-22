@@ -6,6 +6,16 @@ const RADIUS = 260
 
 const Dot = ({ angleDeg, radius = RADIUS, offsetX = 0, offsetY = 0, animationOrder }) => {
   const rad = (angleDeg * Math.PI) / 180
+
+  // 반응형 radius: 기본 220, 4xl 260
+  const responsiveRadius = radius * 0.75 // 기본값은 85% (약 221)
+  const responsiveOffsetX = offsetX * 0.7 // 기본값은 80%
+
+  // 기본 화면용 좌표
+  const xBase = responsiveRadius * Math.cos(rad)
+  const yBase = responsiveRadius * -Math.sin(rad)
+
+  // 4xl 화면용 좌표
   const x = radius * Math.cos(rad)
   const y = radius * -Math.sin(rad)
 
@@ -22,25 +32,49 @@ const Dot = ({ angleDeg, radius = RADIUS, offsetX = 0, offsetY = 0, animationOrd
   }
 
   return (
-    <motion.div
-      className='absolute'
-      style={{
-        top: '50%',
-        left: '50%',
-        transform: `translate(-50%, -50%) translate(${x + offsetX}px, ${y + offsetY}px)`,
-      }}
-      variants={fadeInVariants}
-      initial='hidden'
-      animate='visible'
-    >
-      <div className='relative flex items-center justify-center w-10 h-10 orbit-dot-glow'>
-        <div
-          className='absolute inset-0 rounded-full opacity-70
-          bg-[radial-gradient(circle,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.35)_40%,rgba(15,23,42,0)_70%)]'
-        />
-        <div className='relative w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]' />
-      </div>
-    </motion.div>
+    <>
+      {/* 기본 화면 (4xl 미만) */}
+      <motion.div
+        className='absolute 4xl:hidden'
+        style={{
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) translate(${xBase + responsiveOffsetX}px, ${yBase + offsetY}px)`,
+        }}
+        variants={fadeInVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        <div className='relative flex items-center justify-center w-10 h-10 orbit-dot-glow'>
+          <div
+            className='absolute inset-0 rounded-full opacity-70
+            bg-[radial-gradient(circle,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.35)_40%,rgba(15,23,42,0)_70%)]'
+          />
+          <div className='relative w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]' />
+        </div>
+      </motion.div>
+
+      {/* 4xl 화면 */}
+      <motion.div
+        className='absolute hidden 4xl:block'
+        style={{
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) translate(${x + offsetX}px, ${y + offsetY}px)`,
+        }}
+        variants={fadeInVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        <div className='relative flex items-center justify-center w-10 h-10 orbit-dot-glow'>
+          <div
+            className='absolute inset-0 rounded-full opacity-70
+            bg-[radial-gradient(circle,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.35)_40%,rgba(15,23,42,0)_70%)]'
+          />
+          <div className='relative w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]' />
+        </div>
+      </motion.div>
+    </>
   )
 }
 
