@@ -1,6 +1,9 @@
 import React from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { exportGrid } from '@/api/grid'
+import ExcelIcon from '@/assets/icons/excel.svg?react'
+import FilterIcon from '@/assets/icons/filter-grid.svg?react'
+import GoPivotIcon from '@/assets/icons/go-front.svg?react'
 
 function nowForFilename() {
   const iso = new Date().toISOString()
@@ -63,34 +66,54 @@ const GridToolbar = ({
 
   return (
     <div className='mb-4 flex items-center justify-between font-sans w-full'>
-      <div className='rounded-md text-xs bg-[#CDE2FA] px-4.5 py-2 border text-[#003674] border-[#D1D1D6] font-semibold'>
+      {/* <div className='rounded-md text-xs bg-[#CDE2FA] px-4.5 py-2 border text-[#003674] border-[#D1D1D6] font-semibold'>
         {currentLayer}
-      </div>
-      <div className='flex items-center gap-2'>
-        <button
-          onClick={onReset}
-          className='rounded-md text-xs border border-[#3877BE] px-4.5 py-2 text-[#3877BE] bg-white hover:bg-blue-50 transition'
-        >
-          필터 초기화
-        </button>
+      </div> */}
 
+      {onPivot && (
         <button
+          className='
+        flex items-center gap-3 rounded-full px-4 py-1.5 justify-between
+        font-medium text-gray-700 text-[13px]
+        relative overflow-hidden
+        transition-all
+        hover:scale-[1.02]
+        active:scale-[0.98]
+        shadow-[0_0_4px_3px_rgba(150,175,76,0.25)]
+        bg-[#DFE9C3]
+      '
+          onClick={onPivot}
+        >
+          <span>피벗 모드</span>
+          <div
+            className='
+          flex items-center justify-center w-5.5 h-5.5 rounded-full
+          bg-[#B9CF77] shadow-[0_0_10px_0_#A0BC4A]
+        '
+          >
+            <GoPivotIcon className='w-3.5 h-3.5 text-gray-700' />
+          </div>
+        </button>
+      )}
+
+      <div className='flex items-center gap-1'>
+        <button
+          className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
+          onClick={onReset}
+        >
+          <FilterIcon className='w-4 h-4 4xl:w-4.5 4xl:h-4.5 text-[#595959]' />
+          <span>필터 초기화</span>
+        </button>
+        <button
+          className='rounded-md border border-gray-300 hover:bg-gray-50 flex justify-center items-center gap-2 font-medium text-[12px] 4xl:text-[14px] text-gray-500 px-3 py-1 disabled:opacity-50'
+          type='button'
           onClick={() => exportMut.mutate()}
           disabled={disabled}
-          className='rounded-md text-xs bg-[#E6F0C7] px-4.5 py-2 hover:shadow transition'
           title={ready ? '' : '그리드가 준비되면 활성화됩니다'}
         >
-          {exportMut.isPending ? '저장 중…' : 'CSV 저장'}
+          <ExcelIcon className='w-4 h-4 4xl:w-4.5 4xl:h-4.5 text-[#595959]' />
+          <span>{exportMut.isPending ? '저장 중…' : 'CSV 파일 저장'}</span>
         </button>
-
-        {onPivot && (
-          <button
-            onClick={onPivot}
-            className='rounded-md text-xs bg-[#F8F1D0] px-4.5 py-2 hover:shadow transition'
-          >
-            피벗 모드
-          </button>
-        )}
       </div>
     </div>
   )

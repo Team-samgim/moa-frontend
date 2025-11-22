@@ -40,7 +40,7 @@ const FieldPickerModal = ({
       <div className='absolute inset-0 bg-black/30' onClick={onClose} />
       <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl max-h-[85vh] rounded-2xl bg-white shadow-xl overflow-hidden flex flex-col'>
         <div className='flex items-center justify-between px-5 py-4 border-b'>
-          <h3 className='text-base font-semibold'>필드 선택</h3>
+          <h3 className='text-base 4xl:text-lg font-semibold'>필드 선택</h3>
           <button className='text-gray-500 hover:text-gray-700' onClick={onClose}>
             ✕
           </button>
@@ -48,9 +48,9 @@ const FieldPickerModal = ({
 
         <div className='px-5 py-4 space-y-4 flex-1 overflow-hidden'>
           {/* 현재 선택 칩 미리보기 */}
-          <div className='flex flex-wrap items-center gap-2 max-h-28 overflow-auto pr-1'>
+          <div className='flex flex-wrap items-center gap-2 4xl:gap-2.5 max-h-28 overflow-auto pr-1'>
             {selectedSet.size === 0 ? (
-              <span className='text-sm text-gray-400'>선택된 필드가 없습니다.</span>
+              <span className='text-sm 4xl:text-base text-gray-400'>선택된 필드가 없습니다.</span>
             ) : (
               Array.from(selectedSet).map((k) => {
                 const isLocked = lockedKeys.has(k)
@@ -58,7 +58,7 @@ const FieldPickerModal = ({
                   <span
                     key={k}
                     className={[
-                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm',
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1 4xl:px-3.5 4xl:py-1.5 text-sm 4xl:text-base',
                       isLocked
                         ? 'bg-gray-100 text-gray-500 cursor-default'
                         : getUnlockedFieldChipClass(layerKey),
@@ -82,12 +82,12 @@ const FieldPickerModal = ({
           {/* 검색 + 전체선택 */}
           <div className='flex items-center gap-3'>
             <input
-              className='flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200'
+              className='flex-1 rounded-lg border border-gray-300 px-3 py-2 4xl:px-4 4xl:py-2.5 text-sm 4xl:text-base outline-none focus:ring-2 focus:ring-blue-200'
               placeholder='필드 검색 (한글명/영문명)'
               value={query}
               onChange={(e) => onQuery(e.target.value)}
             />
-            <label className='inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none'>
+            <label className='inline-flex items-center gap-2 text-sm 4xl:text-base text-gray-600 cursor-pointer select-none'>
               <input type='checkbox' checked={allShownSelected} onChange={onToggleAll} />
               전체 선택
             </label>
@@ -103,7 +103,7 @@ const FieldPickerModal = ({
                 <label
                   key={f.key}
                   className={[
-                    'flex items-center gap-3 px-4 py-3 border-b last:border-b-0',
+                    'flex items-center gap-3 px-4 py-3 4xl:px-5 4xl:py-3.5 border-b last:border-b-0',
                     isLocked ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50',
                   ].join(' ')}
                 >
@@ -115,9 +115,9 @@ const FieldPickerModal = ({
                     className={isLocked ? 'cursor-not-allowed' : ''}
                   />
                   <div className='flex-1 flex items-center justify-between'>
-                    <span className='text-sm'>{f.labelKo || f.key}</span>
+                    <span className='text-sm 4xl:text-base'>{f.labelKo || f.key}</span>
                     {isLocked && (
-                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                      <span className='text-xs 4xl:text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
                         필수
                       </span>
                     )}
@@ -126,20 +126,22 @@ const FieldPickerModal = ({
               )
             })}
             {shown.length === 0 && (
-              <div className='p-6 text-center text-sm text-gray-400'>검색 결과가 없습니다.</div>
+              <div className='p-6 text-center text-sm 4xl:text-base text-gray-400'>
+                검색 결과가 없습니다.
+              </div>
             )}
           </div>
         </div>
 
         <div className='flex items-center justify-end gap-2 px-5 py-4 border-t '>
           <button
-            className='px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm'
+            className='px-4 py-2 4xl:px-5 4xl:py-2.5 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm 4xl:text-base'
             onClick={onClose}
           >
             취소
           </button>
           <button
-            className='px-4 py-2 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] text-sm'
+            className='px-4 py-2 4xl:px-5 4xl:py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] text-sm 4xl:text-base'
             onClick={onApply}
           >
             적용
@@ -266,11 +268,11 @@ const FieldPicker = ({ fields = [], selected = [], onChange, layerKey }) => {
       <div className='flex flex-col gap-2'>
         {/* 1) 라벨 영역 */}
         <div className='flex justify-between'>
-          <span className='text-sm font-medium'>조회 필드 선택</span>
+          <span className='text-sm 4xl:text-base font-medium'>조회 필드 선택</span>
           <div className='shrink-0 self-center'>
             <button
               type='button'
-              className='px-3.5 py-1.5 rounded border border-gray-300 hover:bg-gray-50 text-xs'
+              className='px-3.5 py-1.5 4xl:px-4 4xl:py-2 rounded 4xl:rounded-lg border border-gray-300 hover:bg-gray-50 text-xs 4xl:text-sm'
               onClick={openPicker}
             >
               필드 선택
@@ -281,9 +283,9 @@ const FieldPicker = ({ fields = [], selected = [], onChange, layerKey }) => {
         {/* 2) 칩(선택된 태그) 영역 */}
         <div className='flex-1 min-w-0'>
           {chipList.length === 0 ? (
-            <span className='text-sm text-gray-400'>선택된 필드가 없습니다.</span>
+            <span className='text-sm 4xl:text-base text-gray-400'>선택된 필드가 없습니다.</span>
           ) : (
-            <div className='flex flex-wrap items-center gap-2.5 pr-1'>
+            <div className='flex flex-wrap items-center gap-2.5 4xl:gap-3 pr-1'>
               {chipList.map((k, idx) => {
                 const isLocked = lockedKeys.has(k)
                 return (
@@ -316,7 +318,7 @@ const FieldPicker = ({ fields = [], selected = [], onChange, layerKey }) => {
                       onChange && onChange(next)
                     }}
                     className={[
-                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm',
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1 4xl:px-3.5 4xl:py-1.5 text-sm 4xl:text-base',
                       isLocked
                         ? 'bg-gray-100 text-gray-500 cursor-default'
                         : `${getUnlockedFieldChipClass(layerKey)} cursor-move`,

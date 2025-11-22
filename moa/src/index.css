@@ -16,6 +16,9 @@
   --color-blue-dark: #2c619c;
   /* scrollbar */
   --scrollbar-comp: 0px;
+  /* custom breakpoints */
+  --breakpoint-3xl: 105rem;
+  --breakpoint-4xl: 120rem;
 }
 
 body {
@@ -70,6 +73,26 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes orbitGlow {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+}
+
+.orbit-dot-glow {
+  animation: orbitGlow 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @layer utilities {
