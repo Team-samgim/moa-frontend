@@ -860,8 +860,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                           <LV label='포트' value={d.srcPort} />
                           <LV label='MAC 주소' value={d.srcMac} />
                           <div className='pt-2 border-t'>
-                            <LV label='국가' value={d.env?.countryReq} />
-                            <LV label='대륙' value={d.env?.continentReq} />
+                            <LV label='국가' value={d.env?.countryReq || 'South Korea'} />
+                            <LV label='대륙' value={d.env?.continentReq || 'Asia'} />
                             <LV label='시/도' value={d.env?.domesticPrimaryReq} />
                             <LV label='시/군/구' value={d.env?.domesticSub1Req} />
                             <LV label='읍/면/동' value={d.env?.domesticSub2Req} />
@@ -878,8 +878,8 @@ const EthernetRowPreviewModal = memo(function EthernetRowPreviewModal({ open, on
                           <LV label='포트' value={d.dstPort} />
                           <LV label='MAC 주소' value={d.dstMac} />
                           <div className='pt-2 border-t'>
-                            <LV label='국가' value={d.env?.countryRes} />
-                            <LV label='대륙' value={d.env?.continentRes} />
+                            <LV label='국가' value={d.env?.countryRes || 'South Korea'} />
+                            <LV label='대륙' value={d.env?.continentRes || 'Asia'} />
                             <LV label='시/도' value={d.env?.domesticPrimaryRes} />
                             <LV label='시/군/구' value={d.env?.domesticSub1Res} />
                             <LV label='읍/면/동' value={d.env?.domesticSub2Res} />

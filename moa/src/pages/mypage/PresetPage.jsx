@@ -9,7 +9,7 @@ import { useMyPresets, useToggleFavoritePreset, useDeletePreset } from '@/hooks/
 import { normalizePresetConfig } from '@/utils/presetNormalizer'
 
 const PresetPage = () => {
-  const [type, setType] = useState('PIVOT')
+  const [type, setType] = useState('SEARCH')
   const [page, setPage] = useState(0)
   const size = 10
   const navigate = useNavigate()

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import bell from '@/assets/icons/bell.svg'
 import logo from '@/assets/images/moa.webp'
+import NotificationDropdown from '@/components/features/notification/NotificationDropdown'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
+import { useUnreadNotificationCount } from '@/hooks/notification/useNotificationList'
 import { useAuthStore } from '@/stores/authStore'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
@@ -24,6 +27,28 @@ const Header = () => {
 
   const [isScrolled, setIsScrolled] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+
+  // 안읽은 알림 개수 조회
+  const { data: unreadCount = 0, isLoading, isError, refetch } = useUnreadNotificationCount()
+
+  // 디버깅: unreadCount 변화 추적
+  useEffect(() => {
+    console.log('🔔 [Header] Unread count state:', {
+      unreadCount,
+      isLoading,
+      isError,
+      type: typeof unreadCount,
+    })
+  }, [unreadCount, isLoading, isError])
+
+  // 로그인 상태 변경 시 강제 refetch
+  useEffect(() => {
+    if (isLogin) {
+      console.log('👤 [Header] User logged in, refetching unread count')
+      refetch()
+    }
+  }, [isLogin, refetch])
 
   const setIsChartMode = usePivotChartStore((s) => s.setIsChartMode)
 
@@ -137,6 +162,47 @@ const Header = () => {
         <div className='flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-2.5 xl:gap-3 shrink-0'>
           {isLogin ? (
             <>
+              <div className='relative'>
+                <button
+                  type='button'
+                  aria-label='알림'
+                  className='
+                    relative flex items-center justify-center
+                    w-9 h-9 rounded-full bg-white
+                    text-gray-600
+                    hover:bg-gray-50 hover:border-[var(--color-blue,#1c4fd7)]
+                    hover:text-[var(--color-blue,#1c4fd7)]
+                    active:scale-[0.97]
+                    transition
+                  '
+                  onClick={() => setIsNotificationOpen((prev) => !prev)}
+                >
+                  <img src={bell} alt='알림' className='w-7 h-7' />
+
+                  {/* 안읽은 알림 개수 뱃지 */}
+                  {!isLoading && unreadCount > 0 && (
+                    <span
+                      className='
+                        absolute -top-1 -right-1
+                        min-w-[18px] h-[18px] px-1
+                        flex items-center justify-center
+                        bg-red-500 text-white
+                        text-[10px] font-bold
+                        rounded-full
+                        border-2 border-white
+                      '
+                    >
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                <NotificationDropdown
+                  open={isNotificationOpen}
+                  onClose={() => setIsNotificationOpen(false)}
+                />
+              </div>
+
               <button
                 type='button'
                 className='
