@@ -7,7 +7,7 @@ const LandingPage = () => {
     <div className='relative min-h-screen overflow-hidden'>
       {/* 오비트 + 점들을 같은 좌표계 안에 넣는 래퍼 */}
       <div className='absolute inset-0 flex items-center justify-center'>
-        <div className='relative mt-10 w-full max-w-[min(90vw,90vh,900px)] aspect-square'>
+        <div className='mt-30 relative w-full max-w-[min(90vw,90vh,1100px)] aspect-square'>
           <OrbitBackground />
           <OrbitFeatures />
         </div>
