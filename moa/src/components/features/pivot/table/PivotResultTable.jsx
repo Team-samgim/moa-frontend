@@ -201,10 +201,6 @@ const PivotResultTable = ({ pivotResult }) => {
   const enableInfiniteScroll = useCallback((row) => {
     const rowData = row.original
 
-    // console.log(
-    //   `[enableInfiniteScroll] ${rowData.rowField} - Expected count: ${rowData.rowInfo?.count}`,
-    // )
-
     setTableData((prev) =>
       prev.map((r) =>
         r.rowField === rowData.rowField
@@ -300,8 +296,21 @@ const PivotResultTable = ({ pivotResult }) => {
 
   const stickyGroup = useStickyGroup(virtualRows, rows)
 
+  // 테이블 최소 너비 계산
+  const tableMinWidth = useMemo(() => {
+    const indexColWidth = 80
+    const rowLabelWidth = 300
+    const metricsCount = columns.slice(2).reduce((acc, col) => {
+      return acc + (col.columns?.length || 0)
+    }, 0)
+    const metricsWidth = metricsCount * 210
+
+    return indexColWidth + rowLabelWidth + metricsWidth
+  }, [columns])
+
   const tableStyle = {
-    tableLayout: 'auto',
+    tableLayout: 'fixed',
+    minWidth: `${tableMinWidth}px`,
   }
 
   return (
@@ -337,16 +346,16 @@ const PivotResultTable = ({ pivotResult }) => {
                     border-r border-b border-gray-200
                     whitespace-nowrap text-left bg-gray-50
                   '
-                  style={{ width: '250px', minWidth: '250px' }}
+                  style={{ width: '250px', minWidth: '250px', maxWidth: '250px' }}
                 >
-                  <div className='flex items-center gap-1'>
-                    <span>{columnFieldName}</span>
+                  <div className='flex items-center gap-1 overflow-hidden' title={columnFieldName}>
+                    <span className='truncate'>{columnFieldName}</span>
 
                     {columnFieldName && (
                       <button
                         type='button'
                         onClick={handleToggleColSort}
-                        className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100'
+                        className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100 flex-shrink-0'
                       >
                         {colSort === 'default' && (
                           <SortColumnIcon className='h-4 w-4 text-[#242424]' />
@@ -366,11 +375,21 @@ const PivotResultTable = ({ pivotResult }) => {
                   <th
                     key={header.id}
                     colSpan={header.colSpan}
-                    className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left bg-gray-50'
+                    className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left bg-gray-50 overflow-hidden'
+                    style={{ maxWidth: `${header.colSpan * 150}px` }}
+                    title={
+                      header.isPlaceholder
+                        ? ''
+                        : typeof header.column.columnDef.header === 'string'
+                          ? header.column.columnDef.header
+                          : ''
+                    }
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    <div className='truncate'>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -383,7 +402,8 @@ const PivotResultTable = ({ pivotResult }) => {
                   <th
                     key={header.id}
                     colSpan={header.colSpan}
-                    className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left bg-gray-50'
+                    className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left bg-gray-50 overflow-hidden'
+                    style={{ width: '150px', minWidth: '150px', maxWidth: '150px' }}
                   >
                     {header.isPlaceholder
                       ? null
@@ -406,14 +426,17 @@ const PivotResultTable = ({ pivotResult }) => {
                 >
                   {stickyGroup.row.getVisibleCells().map((cell, cellIndex) => {
                     const isRowGroupCell = cellIndex === 1
+                    const cellValue =
+                      typeof cell.getValue === 'function' ? cell.getValue() : cell.getValue
 
                     return (
                       <td
                         key={`sticky-${cell.id}`}
-                        className='px-3 py-2 align-middle border-r last:border-r-0 whitespace-nowrap bg-white'
+                        className='px-3 py-2 align-middle border-r last:border-r-0 whitespace-nowrap bg-white overflow-hidden'
                         style={{
                           boxShadow: 'inset 0 -1px 0 0 #e5e7eb',
                         }}
+                        title={cellValue}
                       >
                         {isRowGroupCell ? (
                           <div
@@ -429,7 +452,9 @@ const PivotResultTable = ({ pivotResult }) => {
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </div>
                         ) : (
-                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                          <div className='overflow-hidden text-ellipsis'>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
                         )}
                       </td>
                     )
@@ -474,11 +499,14 @@ const PivotResultTable = ({ pivotResult }) => {
                     <tr className='border-b border-gray-200 text-gray-800'>
                       {row.getVisibleCells().map((cell, cellIndex) => {
                         const isRowGroupCell = cellIndex === 1
+                        const cellValue =
+                          typeof cell.getValue === 'function' ? cell.getValue() : cell.getValue
 
                         return (
                           <td
                             key={cell.id}
-                            className='px-3 py-2 align-middle border-r last:border-r-0 border-gray-100 whitespace-nowrap'
+                            className='px-3 py-2 align-middle border-r last:border-r-0 border-gray-100 whitespace-nowrap overflow-hidden'
+                            title={cellValue}
                           >
                             {isRowGroupCell ? (
                               <div
@@ -490,7 +518,9 @@ const PivotResultTable = ({ pivotResult }) => {
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                               </div>
                             ) : (
-                              flexRender(cell.column.columnDef.cell, cell.getContext())
+                              <div className='overflow-hidden text-ellipsis'>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
                             )}
                           </td>
                         )

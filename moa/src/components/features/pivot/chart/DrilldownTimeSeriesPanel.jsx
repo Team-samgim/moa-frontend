@@ -46,8 +46,6 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
     }
   }
 
-  // TODO: 시리즈 중간 값 유무
-  // const { series, globalMedian, globalMinTime, globalMaxTime, seriesMedianMap } = data
   const { series, globalMedian, globalMinTime, globalMaxTime } = data
 
   const median = typeof globalMedian === 'number' ? globalMedian : null
@@ -86,12 +84,15 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
       ...lineSeries[0],
       markLine: {
         symbol: 'none',
-        silent: true, // 마우스 이벤트/호버 반응 막기
+        silent: true,
         emphasis: {
-          disabled: true, // 강조 상태 비활성화
+          disabled: true,
         },
         label: {
           formatter: () => `중간값: ${median.toFixed(2)}`,
+          fontFamily:
+            'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          fontSize: 12,
         },
         lineStyle: {
           type: 'dashed',
@@ -122,6 +123,10 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
 
   return {
     color: PIVOT_SERIES_COLORS,
+    textStyle: {
+      fontFamily:
+        'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'line' },
@@ -147,15 +152,6 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
         params.forEach((p) => {
           const value = p.value[1]
           const line = `${p.marker} ${p.seriesName}: ${value.toFixed(2)}`
-
-          // TODO: 시리즈 별 중간값 넣을지 말지
-          // const seriesMedian =
-          //   seriesMedianMap && typeof seriesMedianMap[p.seriesName] === 'number'
-          //     ? seriesMedianMap[p.seriesName]
-          //     : null
-          // if (seriesMedian !== null) {
-          //   line += ` (중간값: ${seriesMedian.toFixed(2)})`
-          // }
           bodyLines.push(line)
         })
 
@@ -191,29 +187,62 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
     },
     legend: {
       data: series.map((s) => s.rowKey),
+      bottom: 10,
+      left: 'center',
+      orient: 'horizontal',
+      type: 'scroll',
+      pageIconSize: 12,
+      pageButtonPosition: 'end',
+      textStyle: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      },
+      formatter: (name) => {
+        if (name.length > 20) {
+          return name.substring(0, 20) + '...'
+        }
+        return name
+      },
+      tooltip: {
+        show: true,
+      },
     },
     grid: {
       left: 40,
       right: 100,
       top: 40,
-      bottom: 40,
+      bottom: 60,
       containLabel: true,
     },
     xAxis: {
       type: 'time',
       boundaryGap: false,
+      axisLabel: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      },
     },
     yAxis: {
       type: 'value',
       min: 0,
+      axisLabel: {
+        fontFamily:
+          'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        formatter: (value) => {
+          // 숫자 포맷팅
+          if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M'
+          if (value >= 1000) return (value / 1000).toFixed(1) + 'K'
+          return value
+        },
+      },
     },
     series: lineSeries,
   }
 }
 
 const DrilldownTimeSeriesPanel = ({ selectedColKey, rowKeys, colorMap, onClose }) => {
-  const [plusPercent, setPlusPercent] = useState(50) // + 범위 (%)
-  const [minusPercent, setMinusPercent] = useState(50) // - 범위 (%)
+  const [plusPercent, setPlusPercent] = useState(50)
+  const [minusPercent, setMinusPercent] = useState(50)
 
   const { mutate, data, isPending, isError, reset } = useDrilldownTimeSeries()
 
