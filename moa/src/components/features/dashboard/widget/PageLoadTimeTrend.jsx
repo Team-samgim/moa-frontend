@@ -72,8 +72,6 @@ const PageLoadTimeTrend = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드 (개선됨!)
   useEffect(() => {
     if (!isLoading && dbData?.points && !isInitialized) {
-      console.log('📊 [PageLoadTimeTrend] DB 초기 데이터 로드:', dbData.points.length)
-
       // ⭐ DB 데이터에서 최근 5분 데이터만 필터링
       const now = Date.now()
       const cutoff = now - WINDOW_MS
@@ -88,10 +86,6 @@ const PageLoadTimeTrend = ({ onClose }) => {
           max: p.max || 0,
         }))
         .filter((p) => new Date(p.t).getTime() >= cutoff) // ⭐ 5분 이내만
-
-      console.log(
-        `📊 [PageLoadTimeTrend] DB 데이터 필터링: ${dbData.points.length}개 → ${points.length}개`,
-      )
       setChartPoints(points)
       setIsInitialized(true)
     }
@@ -108,13 +102,13 @@ const PageLoadTimeTrend = ({ onClose }) => {
         const filtered = prev.filter((p) => new Date(p.t).getTime() >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [PageLoadTimeTrend] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [PageLoadTimeTrend] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -132,8 +126,6 @@ const PageLoadTimeTrend = ({ onClose }) => {
     if (realtimeData.length === 0) {
       return // 👈 실시간 데이터 없으면 리턴
     }
-
-    console.log('📡 [PageLoadTimeTrend] 실시간 데이터 추가:', realtimeData.length)
 
     // ⚠️ SSE 데이터는 개별 페이지 로드 시간(tsPage)만 포함하므로 시간 윈도우별로 집계 필요
     // 시간 윈도우: 5초 단위로 그룹화
@@ -198,10 +190,6 @@ const PageLoadTimeTrend = ({ onClose }) => {
 
       // ⭐ 2단계: MAX_POINTS 제한 (메모리 보호)
       const result = timeFiltered.slice(-MAX_POINTS)
-
-      console.log(
-        `🔄 [PageLoadTimeTrend] 슬라이딩 윈도우: ${combined.length}개 → ${result.length}개 (${combined.length - result.length}개 제거)`,
-      )
 
       return result
     })

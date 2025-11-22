@@ -39,11 +39,6 @@ const GeoTrafficDistribution = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.trafficByCountry && !isInitialized) {
-      console.log(
-        '📊 [GeoTrafficDistribution] DB 초기 데이터 로드:',
-        dbData.trafficByCountry.length,
-      )
-
       // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.trafficByCountry.flatMap((item) => {
@@ -63,9 +58,6 @@ const GeoTrafficDistribution = ({ onClose }) => {
           }))
       })
 
-      console.log(
-        `📊 [GeoTrafficDistribution] DB 데이터 ${points.length}개 포인트 로드 완료 (실제 timestamp 사용)`,
-      )
       setTrafficDataPoints(points)
       setIsInitialized(true)
     }
@@ -81,21 +73,19 @@ const GeoTrafficDistribution = ({ onClose }) => {
       return
     }
 
-    console.log('📡 [GeoTrafficDistribution] 실시간 데이터 추가:', realtimeData.length)
-
     // ⚠️ 실제 SSE 데이터 구조 확인용 로그 (필드명 확인 후 제거 가능)
-    if (realtimeData.length > 0) {
-      const sample = realtimeData[0]
-      console.log('📦 [GeoTrafficDistribution] 첫 번째 실시간 데이터 샘플:', {
-        countryNameReq: sample.countryNameReq,
-        countryNameRes: sample.countryNameRes,
-        country: sample.country,
-        geoCountry: sample.geoCountry,
-        tsPage: sample.tsPage,
-        responseTime: sample.responseTime,
-        avgResponseTime: sample.avgResponseTime,
-      })
-    }
+    // if (realtimeData.length > 0) {
+    //   const sample = realtimeData[0]
+    //   console.log('📦 [GeoTrafficDistribution] 첫 번째 실시간 데이터 샘플:', {
+    //     countryNameReq: sample.countryNameReq,
+    //     countryNameRes: sample.countryNameRes,
+    //     country: sample.country,
+    //     geoCountry: sample.geoCountry,
+    //     tsPage: sample.tsPage,
+    //     responseTime: sample.responseTime,
+    //     avgResponseTime: sample.avgResponseTime,
+    //   })
+    // }
 
     setTrafficDataPoints((prev) => {
       // 실시간 데이터를 포인트로 변환

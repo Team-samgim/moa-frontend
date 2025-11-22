@@ -71,8 +71,6 @@ const TrafficTrend = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.points && !isInitialized) {
-      console.log('📊 [TrafficTrend] DB 초기 데이터 로드:', dbData.points.length)
-
       const points = dbData.points.map((p) => ({
         t: p.t,
         req: p.req || 0,
@@ -86,26 +84,44 @@ const TrafficTrend = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. SSE 연결되면 실시간 데이터 추가
+  // ✅ 4. SSE 연결되면 실시간 데이터 추가 (수정)
   useEffect(() => {
     if (!isConnected || !isInitialized) {
-      return // SSE 연결 안 됐거나 초기화 안 됐으면 리턴
+      return
     }
 
     if (realtimeData.length === 0) {
-      return // 실시간 데이터 없으면 리턴
+      return
     }
 
-    console.log('📡 [TrafficTrend] 실시간 데이터 추가:', realtimeData.length)
+    // ⭐ timestamp별로 그룹핑 및 집계
+    const grouped = {}
 
-    // 실시간 데이터를 차트 포인트로 변환
-    const newPoints = realtimeData.map((item) => ({
-      t: item.tsServer || new Date().toISOString(),
-      req: item.mbpsReq || 0,
-      res: item.mbpsRes || 0,
-      requestCount: item.pagePktCntReq || 0,
-      responseCount: item.pagePktCntRes || 0,
-    }))
+    realtimeData.forEach((item) => {
+      // timestamp를 분 단위로 반올림 (필요시 조정)
+      const timestamp = item.tsServer || new Date().toISOString()
+      const roundedTime = new Date(timestamp)
+      roundedTime.setSeconds(0, 0) // 초와 밀리초 제거
+      const key = roundedTime.toISOString()
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          t: key,
+          req: 0,
+          res: 0,
+          requestCount: 0,
+          responseCount: 0,
+        }
+      }
+
+      // 합산
+      grouped[key].req += Number(item.mbpsReq || 0)
+      grouped[key].res += Number(item.mbpsRes || 0)
+      grouped[key].requestCount += Number(item.pagePktCntReq || 0)
+      grouped[key].responseCount += Number(item.pagePktCntRes || 0)
+    })
+
+    const newPoints = Object.values(grouped)
 
     // ⭐ 기존 차트 포인트와 병합 (중복 제거)
     setChartPoints((prev) => {
@@ -115,7 +131,7 @@ const TrafficTrend = ({ onClose }) => {
       // 병합 후 시간 순 정렬
       const combined = [...prev, ...uniqueNewPoints].sort((a, b) => new Date(a.t) - new Date(b.t))
 
-      // 최근 MAX_POINTS개만 유지 (슬라이딩 윈도우)
+      // 최근 MAX_POINTS개만 유지
       return combined.slice(-MAX_POINTS)
     })
   }, [realtimeData, isConnected, isInitialized])
