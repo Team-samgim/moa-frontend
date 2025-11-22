@@ -85,10 +85,10 @@ const FeatureLabel = ({ angleDeg, offsetX, variant, title, description, animatio
 
   const getLabelClasses = () => {
     const positions = {
-      tl: 'left-[-240px] 4xl:left-[-500px] top-[-0px] text-left',
-      tr: 'right-[-240px] 4xl:right-[-550px] top-[-50px] 4xl:top-[-135px] text-right',
-      bl: 'left-[-240px] 4xl:left-[-550px] top-[-65px] 4xl:top-[-5px] text-left',
-      br: 'right-[-240px] 4xl:right-[-500px] top-[-115px] 4xl:top-[-70px] text-right',
+      tl: 'left-[-240px] 4xl:left-[-500px] top-[0px] 4xl:top-[-85px] text-left',
+      tr: 'right-[-240px] 4xl:right-[-550px] top-[-50px] 4xl:top-[-150px] text-right',
+      bl: 'left-[-240px] 4xl:left-[-550px] top-[-65px] 4xl:top-[-20px] text-left',
+      br: 'right-[-240px] 4xl:right-[-500px] top-[-115px] 4xl:top-[-85px] text-right',
     }
     return positions[variant] || ''
   }
@@ -118,10 +118,10 @@ const FeatureLabel = ({ angleDeg, offsetX, variant, title, description, animatio
       animate='visible'
     >
       <div className={`absolute min-w-[200px] 4xl:min-w-[260px] ${getLabelClasses()}`}>
-        <h3 className='text-m 4xl:text-lg font-bold text-[#2a4787] 4xl:mb-1 whitespace-nowrap'>
+        <h3 className='text-m 4xl:text-2xl font-bold text-[#2a4787] 4xl:mb-1 whitespace-nowrap'>
           {title}
         </h3>
-        <p className='text-sm 4xl:text-base text-[#4a74cd] leading-relaxed'>{description}</p>
+        <p className='text-sm 4xl:text-lg text-[#4a74cd] leading-relaxed'>{description}</p>
       </div>
     </motion.div>
   )
