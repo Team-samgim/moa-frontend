@@ -20,13 +20,10 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
         animation: `fadeInUp 0.6s ease-out ${delay}s both`,
       }}
     >
-      {/* 부드러운 배경 그라데이션 - 블루-화이트 톤 */}
       <div className='absolute inset-0 bg-linear-to-br from-blue-50/40 via-sky-50/20 to-white/95' />
 
-      {/* 호버 시 빛나는 효과 - 더 은은하게 */}
       <div className='absolute inset-0 bg-linear-to-br from-blue-100/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500' />
 
-      {/* 컨텐츠 */}
       <div className='relative z-10 p-10 h-full flex flex-col justify-between'>
         <div>
           <div className='text-[23px] font-bold leading-9 tracking-tight text-[#2c5282] mb-4'>
@@ -41,7 +38,6 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
           </div>
         </div>
 
-        {/* 아이콘 영역 - 그라데이션 원형 배경과 함께 */}
         <div className='flex justify-end'>
           <div
             className='relative transform transition-all duration-500 ease-out'
@@ -49,7 +45,6 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
               transform: isHovered ? 'scale(1.05) rotate(-3deg)' : 'scale(1) rotate(0deg)',
             }}
           >
-            {/* 그라데이션 원형 배경 - 더 부드럽게 */}
             <div
               className='absolute inset-0 rounded-full blur-md scale-110 transition-all duration-500'
               style={{
@@ -58,7 +53,6 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
               }}
             />
 
-            {/* 추가 글로우 효과 - 더 은은하게 */}
             <div
               className='absolute inset-0 rounded-full blur-2xl scale-125 transition-opacity duration-500'
               style={{
@@ -67,7 +61,6 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
               }}
             />
 
-            {/* 아이콘 - 크기 축소 */}
             <div className='relative'>
               <div className='[&_img]:h-27 [&_img]:w-27 [&_img]:drop-shadow-[0_2px_8px_rgba(34, 46, 86, 0.8)]'>
                 {icon}
@@ -77,7 +70,6 @@ const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
         </div>
       </div>
 
-      {/* 카드 테두리 하이라이트 */}
       <div className='absolute inset-0 rounded-3xl ring-1 ring-inset ring-blue-100/50 pointer-events-none' />
     </button>
   )
@@ -151,7 +143,6 @@ const MyPage = () => {
             backgroundRepeat: 'no-repeat',
           }}
         >
-          {/* SVG 패턴만 유지 (움직이는 점들 제거) */}
           <div className='absolute inset-0 opacity-[0.08]'>
             <div className='absolute top-[-10%] right-[-5%] w-[600px]'>
               <svg viewBox='0 0 200 200' className='w-full h-full'>

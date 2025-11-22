@@ -110,7 +110,7 @@ const GridPresetDetail = ({ payload }) => {
   }
 
   return (
-    <div className='border-l border-r border-b border-[#D1D1D6] rounded-b-md rounded-t-none bg-white/50 p-5'>
+    <div className='border border-[#eaeaea] rounded bg-white/50 p-5'>
       <div className='mb-3 text-[16px] font-semibold text-gray-800'>조회 기간</div>
       <div className='mb-6 flex items-center gap-3'>
         {badgeText && (

@@ -4,7 +4,7 @@ import { useExportPreview } from '@/hooks/queries/useFiles'
 const PivotCsvPreview = ({ fileId, pivotConfig }) => {
   const { data, isLoading, error } = useExportPreview({
     fileId,
-    limit: 500, // 필요하면 조정
+    limit: 500,
     enabled: !!fileId,
   })
 
@@ -25,22 +25,39 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
 
   return (
     <div>
-      <div className='px-4 py-3 text-sm font-medium text-gray-700'>피벗 미리보기</div>
+      <div className='px-4 py-3 text-[16px] font-semibold text-gray-800'>피벗 미리보기</div>
 
-      {isLoading && <div className='px-4 py-8 text-center text-sm text-gray-500'>불러오는 중…</div>}
+      {isLoading && (
+        <div className='px-4 py-12 text-center'>
+          <div className='inline-flex items-center gap-2 text-blue-600'>
+            <div className='w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin' />
+            <span className='text-sm font-medium'>불러오는 중…</span>
+          </div>
+        </div>
+      )}
 
       {!isLoading && error && (
-        <div className='px-4 py-6 text-center text-sm text-red-500'>
-          피벗 미리보기를 불러오는 중 오류가 발생했습니다.
+        <div className='px-4 py-12 text-center'>
+          <div className='text-gray-400'>
+            <div className='text-4xl mb-3'>⚠️</div>
+            <p className='text-sm font-medium text-red-500'>
+              피벗 미리보기를 불러오는 중 오류가 발생했습니다.
+            </p>
+          </div>
         </div>
       )}
 
       {!isLoading && !error && !hasData && (
-        <div className='px-4 py-6 text-center text-sm text-gray-500'>데이터가 없습니다.</div>
+        <div className='px-4 py-12 text-center'>
+          <div className='text-gray-400'>
+            <div className='text-4xl mb-3'>📊</div>
+            <p className='text-sm font-medium text-gray-600'>데이터가 없습니다.</p>
+          </div>
+        </div>
       )}
 
       {!isLoading && !error && hasData && (
-        <div className='rounded-lg border overflow-hidden border-gray-300'>
+        <div className='rounded-lg border overflow-hidden border-gray-300 shadow-sm'>
           <div className='overflow-x-auto w-full'>
             <div className='max-h-160 overflow-y-auto'>
               <table className='min-w-max border-collapse text-sm text-gray-800 w-full'>
@@ -71,13 +88,12 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                         key={col}
                         className='px-3 py-2 font-medium text-gray-700 align-middle border-r last:border-r-0 border-gray-200 whitespace-nowrap text-left bg-gray-50'
                       >
-                        {/* 컬럼 헤더: http_content_type 값들 */}
                         {col}
                       </th>
                     ))}
                   </tr>
 
-                  {/* 2줄째 헤더: metric alias ("개수: dst_ip") */}
+                  {/* 2줄째 헤더: metric alias */}
                   <tr
                     className='border-b border-gray-200'
                     style={{ boxShadow: 'inset 0 -1px 0 0 #e5e7eb' }}
@@ -95,7 +111,10 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
 
                 <tbody className='bg-white'>
                   {dataRows.map((row, rowIndex) => (
-                    <tr key={rowIndex} className='border-b border-gray-200 text-gray-800'>
+                    <tr
+                      key={rowIndex}
+                      className='border-b border-gray-200 text-gray-800 hover:bg-blue-50/30 transition-colors duration-150'
+                    >
                       {/* meta: "#", rowFieldName, rowFieldValue */}
                       {metaCols.map((col) => (
                         <td
