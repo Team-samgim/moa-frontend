@@ -1,23 +1,23 @@
 const ORBIT_RADIUS = 260
 
-const getPathByVariant = (variant) => {
+const getPathByVariant = (variant, size = 'base') => {
+  const config = {
+    base: { line: 350, diagonal: 350, offset: 80, vertical: 50 },
+    '4xl': { line: 500, diagonal: 550, offset: 100, vertical: 65 },
+  }
+
+  const { line, diagonal, offset, vertical } = config[size]
+
   switch (variant) {
-    // 왼쪽 상단: 점 기준으로 왼쪽으로 쭉
     case 'tl':
-      return 'M 0 0 L -350 0'
-
-    // 오른쪽 상단: 점 → 대각선 위 오른쪽 → 오른쪽 수평
+      return `M 0 0 L -${line} 0`
     case 'tr':
-      return 'M 0 0 L 80 -50 L 350 -50'
-
-    // 왼쪽 하단: 점 → 대각선 아래 왼쪽 → 왼쪽 수평
+      return `M 0 0 L ${offset} -${vertical} L ${diagonal} -${vertical}`
     case 'bl':
-      return 'M 0 0 L -80 50 L -350 50'
-
-    // 오른쪽 하단: 점 기준으로 오른쪽으로 쭉
+      return `M 0 0 L -${offset} ${vertical} L -${diagonal} ${vertical}`
     case 'br':
     default:
-      return 'M 0 0 L 350 0'
+      return `M 0 0 L ${line} 0`
   }
 }
 
@@ -26,9 +26,6 @@ const OrbitBeam = ({ angleDeg, offsetX = 0, radius = ORBIT_RADIUS, variant = 'tl
   const x = radius * Math.cos(rad) + offsetX
   const y = radius * -Math.sin(rad)
 
-  const d = getPathByVariant(variant)
-
-  // 각 OrbitBeam마다 고유한 gradient ID 생성
   const gradientId = `orbitBeamGradient-${variant}-${angleDeg}`
 
   return (
@@ -40,10 +37,16 @@ const OrbitBeam = ({ angleDeg, offsetX = 0, radius = ORBIT_RADIUS, variant = 'tl
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
       }}
     >
-      <svg width='240' height='80' viewBox='-120 -40 240 80' className='overflow-visible'>
+      {/* 기본 (base) 버전 - 4xl 미만 */}
+      <svg
+        width='240'
+        height='80'
+        viewBox='-120 -40 240 80'
+        className='overflow-visible 4xl:hidden'
+      >
         <defs>
           <linearGradient
-            id={gradientId}
+            id={`${gradientId}-base`}
             x1='-350'
             y1='0'
             x2='350'
@@ -59,7 +62,6 @@ const OrbitBeam = ({ angleDeg, offsetX = 0, radius = ORBIT_RADIUS, variant = 'tl
                 repeatCount='indefinite'
               />
             </stop>
-
             <stop offset='100%' stopColor='#FFFFFF' stopOpacity='1'>
               <animate
                 attributeName='stop-color'
@@ -71,11 +73,55 @@ const OrbitBeam = ({ angleDeg, offsetX = 0, radius = ORBIT_RADIUS, variant = 'tl
             </stop>
           </linearGradient>
         </defs>
-
         <path
-          d={d}
+          d={getPathByVariant(variant, 'base')}
           fill='none'
-          stroke={`url(#${gradientId})`}
+          stroke={`url(#${gradientId}-base)`}
+          strokeWidth='2'
+          strokeLinecap='round'
+        />
+      </svg>
+
+      {/* 4xl 버전 - 4xl 이상 */}
+      <svg
+        width='320'
+        height='100'
+        viewBox='-160 -50 320 100'
+        className='overflow-visible hidden 4xl:block'
+      >
+        <defs>
+          <linearGradient
+            id={`${gradientId}-4xl`}
+            x1='-450'
+            y1='0'
+            x2='450'
+            y2='0'
+            gradientUnits='userSpaceOnUse'
+          >
+            <stop offset='0%' stopColor='#649CDB'>
+              <animate
+                attributeName='stop-color'
+                values='#649CDB; #FFFFFF; #FFFFFF; #649CDB; #649CDB'
+                dur='8s'
+                begin={`${delay}s`}
+                repeatCount='indefinite'
+              />
+            </stop>
+            <stop offset='100%' stopColor='#FFFFFF' stopOpacity='1'>
+              <animate
+                attributeName='stop-color'
+                values='#FFFFFF; #649CDB; #649CDB; #FFFFFF'
+                dur='8s'
+                begin={`${delay}s`}
+                repeatCount='indefinite'
+              />
+            </stop>
+          </linearGradient>
+        </defs>
+        <path
+          d={getPathByVariant(variant, '4xl')}
+          fill='none'
+          stroke={`url(#${gradientId}-4xl)`}
           strokeWidth='2'
           strokeLinecap='round'
         />
