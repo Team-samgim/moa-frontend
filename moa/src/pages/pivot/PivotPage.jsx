@@ -224,7 +224,7 @@ const PivotPage = () => {
 
   return (
     <>
-      <div className='flex flex-col gap-4 p-4 mx-30'>
+      <div className='flex flex-col gap-4 p-4 mx-30 4xl:mx-60'>
         <div className='flex items-center'>
           <PivotHeaderTabs pivotMode={pivotMode} />
         </div>

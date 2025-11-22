@@ -54,7 +54,7 @@ const DateTimeField = ({ label, value, onChange }) => {
 
   return (
     <div className='space-y-1'>
-      <div className='text-sm text-gray-600'>{label}</div>
+      <div className='text-sm 4xl:text-base text-gray-600'>{label}</div>
       <div className='relative'>
         {/* 표시용 input */}
         <input
@@ -67,7 +67,7 @@ const DateTimeField = ({ label, value, onChange }) => {
         <button
           type='button'
           onClick={openPicker}
-          className='absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center'
+          className='absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 4xl:w-9 4xl:h-9 rounded-md border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center'
           aria-label='달력 열기'
         >
           <svg
@@ -76,7 +76,7 @@ const DateTimeField = ({ label, value, onChange }) => {
             fill='none'
             stroke='currentColor'
             strokeWidth='2'
-            className='w-4 h-4 opacity-70'
+            className='w-4 h-4 4xl:w-5 4xl:h-5 opacity-70'
           >
             <rect x='3' y='4' width='18' height='18' rx='2' ry='2'></rect>
             <line x1='16' y1='2' x2='16' y2='6'></line>
@@ -185,27 +185,27 @@ const TimePresetBar = ({
   const isCustomActive = value === 'CUSTOM'
 
   return (
-    <div className='section card flex-2'>
+    <div className='section card flex-1 4xl:flex-[0.8]'>
       <div className='flex items-center justify-between'>
         {/* Left: label + pills */}
         <div className='flex-col w-full items-center gap-4'>
           <div className='flex justify-between mb-2'>
-            <div className='text-sm font-medium text-gray-800'>조회 기간</div>
+            <div className='text-sm 4xl:text-base font-medium text-gray-800'>조회 기간</div>
             <button
-              className='rounded border border-gray-300 bg-white p-1 hover:bg-gray-50 disabled:opacity-40'
+              className='rounded border border-gray-300 bg-white p-1 4xl:p-1.5 hover:bg-gray-50 disabled:opacity-40'
               title='시간 새로고침'
               onClick={resetToDefault}
             >
-              <ResetIcon className='h-3.5 w-3.5 text-gray-500' />
+              <ResetIcon className='h-3.5 w-3.5 4xl:h-4 4xl:w-4 text-gray-500' />
             </button>
           </div>
 
           {/* 프리셋 + 직접 설정 버튼 줄 */}
-          <div className='flex w-full gap-2'>
+          <div className='flex w-full gap-2 4xl:gap-3'>
             {PRESETS.map((p) => {
               const isActive = value === p.key
               const baseClass =
-                'flex-1 px-4 py-2 rounded border text-xs transition-colors text-center'
+                'flex-1 px-4 py-2 4xl:px-5 4xl:py-2.5 rounded 4xl:rounded-lg border text-xs 4xl:text-sm transition-colors text-center'
 
               return (
                 <button
@@ -227,7 +227,7 @@ const TimePresetBar = ({
               type='button'
               onClick={handleCustomToggle}
               className={[
-                'flex-4 px-4 py-2 rounded border text-xs transition-colors inline-flex items-center justify-between gap-1.5',
+                'flex-4 px-4 py-2 4xl:px-5 4xl:py-2.5 rounded 4xl:rounded-lg border text-xs 4xl:text-sm transition-colors inline-flex items-center justify-between gap-1.5',
                 isCustomActive ? getActiveButtonClass() : inactiveButtonClass,
               ].join(' ')}
             >
@@ -238,7 +238,7 @@ const TimePresetBar = ({
                 fill='none'
                 stroke='currentColor'
                 strokeWidth='2'
-                className='w-3.5 h-3.5 opacity-70'
+                className='w-3.5 h-3.5 4xl:w-4 4xl:h-4 opacity-70'
               >
                 <path d='M6 9l6 6 6-6' />
               </svg>
@@ -255,7 +255,7 @@ const TimePresetBar = ({
             <DateTimeField label='종료일시' value={to} onChange={setTo} />
           </div>
           <div className='mt-6 flex justify-end'>
-            <button type='button' onClick={applyCustom} className='btn btn-primary'>
+            <button type='button' onClick={applyCustom} className='btn btn-primary 4xl:text-base'>
               적용하기
             </button>
           </div>

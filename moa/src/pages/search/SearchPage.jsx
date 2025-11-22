@@ -413,7 +413,7 @@ const SearchPage = () => {
   })
 
   return (
-    <div className='p-4 mx-30'>
+    <div className='p-4 mx-30 4xl:mx-60'>
       <div className='mx-auto space-y-6'>
         {/* 상단 타이틀 + 프리셋 버튼 */}
         {/* <div className='flex items-center justify-between'>
@@ -437,7 +437,9 @@ const SearchPage = () => {
           {/* 조회 계층 / 조회 기간 한 줄 배치 */}
           <div className='w-full max-w-ws shrink-0 space-y-6'>
             <div className='flex items-center justify-between'>
-              <div className='text-base font-semibold text-gray-900'>그리드 테이블 구성</div>
+              <div className='text-base font-semibold 4xl:text-lg text-gray-900'>
+                그리드 테이블 구성
+              </div>
               <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
                 <button
                   type='button'

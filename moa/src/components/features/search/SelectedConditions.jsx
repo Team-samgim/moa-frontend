@@ -9,12 +9,14 @@ const SelectedConditions = ({
 }) => {
   return (
     <div className='card h-full flex flex-col'>
-      <div className='text-base font-semibold'>선택된 필드 수: {conditions.length}</div>
+      <div className='text-base 4xl:text-lg font-semibold'>선택된 필드 수: {conditions.length}</div>
 
-      {conditions.length === 0 && <div className='muted'>왼쪽에서 필드를 체크하세요.</div>}
+      {conditions.length === 0 && (
+        <div className='muted 4xl:text-base'>왼쪽에서 필드를 체크하세요.</div>
+      )}
 
       {/* 여기 영역만 스크롤 */}
-      <div className='vstack mt-1 max-h-80 overflow-y-auto'>
+      <div className='vstack mt-1 max-h-80 4xl:max-h-96 overflow-y-auto'>
         {conditions.map((row, idx) => {
           const opList = operatorsFor(row.fieldKey)
           return (
