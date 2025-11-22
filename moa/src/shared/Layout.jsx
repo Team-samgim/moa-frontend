@@ -21,7 +21,8 @@ const Layout = () => {
         <main className={isOnboarding ? '' : 'pt-[130px] 4xl:pt-[140px]'}>
           <Outlet />
         </main>
-        <Footer />
+
+        {!isOnboarding && <Footer />}
       </div>
     </div>
   )

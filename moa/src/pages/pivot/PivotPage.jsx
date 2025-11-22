@@ -459,8 +459,8 @@ const PivotPage = () => {
           {!isPivotLoading && pivotResult ? (
             <PivotResultTable pivotResult={pivotResult} />
           ) : (
-            <div className='flex h-32 items-center justify-center text-xs text-gray-400'>
-              아직 조회되지 않았습니다
+            <div className='flex h-100 items-center justify-center text-xs 4xl:text-lg text-gray-400'>
+              테이블 구성을 완료하고 피벗 테이블을 조회해보세요.
             </div>
           )}
         </section>
