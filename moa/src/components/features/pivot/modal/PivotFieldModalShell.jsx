@@ -20,7 +20,7 @@ const PivotFieldModalShell = ({
 
   return (
     <div className='fixed inset-0 z-999 flex items-center justify-center bg-black/50'>
-      <div className='h-[80vh] w-[680px] overflow-hidden rounded-lg bg-white shadow-xl flex flex-col'>
+      <div className='h-[80vh] w-[680px] 4xl:w-[800px] 4xl:h-[75vh] overflow-hidden rounded-lg bg-white shadow-xl flex flex-col'>
         {/* 헤더 */}
         <div className='flex items-start justify-between p-6'>
           <div className='text-lg font-semibold text-gray-900'>{title}</div>

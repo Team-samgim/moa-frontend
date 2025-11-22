@@ -11,7 +11,9 @@ const SortableRowsList = ({ rows, onDragEnd, onFilterRow }) => {
         {rows.length > 0 ? (
           rows.map((r) => <SortableRowItem key={r.field} item={r} onFilter={onFilterRow} />)
         ) : (
-          <div className='px-3 py-6 text-center text-xs text-gray-400'>행을 선택하세요</div>
+          <div className='px-3 py-6 4xl:px-4 4xl:py-8 text-center text-xs 4xl:text-sm text-gray-400'>
+            행을 선택하세요
+          </div>
         )}
       </SortableContext>
     </DndContext>

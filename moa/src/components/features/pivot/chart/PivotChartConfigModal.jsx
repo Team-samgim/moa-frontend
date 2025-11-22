@@ -289,7 +289,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30'>
-      <div className='w-full max-w-5xl h-[80vh] rounded-xl bg-white shadow-xl flex flex-col'>
+      <div className='w-full max-w-5xl h-[60vh] rounded-xl bg-white shadow-xl flex flex-col'>
         {/* 헤더 */}
         <div className='flex items-center justify-between border-b border-gray-200 px-6 py-4'>
           <h2 className='text-lg font-semibold text-gray-900'>차트 설정</h2>

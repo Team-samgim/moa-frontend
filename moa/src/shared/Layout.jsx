@@ -18,7 +18,7 @@ const Layout = () => {
 
       <div className='relative z-10'>
         <Header />
-        <main className={isOnboarding ? '' : 'pt-[130px]'}>
+        <main className={isOnboarding ? '' : 'pt-[130px] 4xl:pt-[140px]'}>
           <Outlet />
         </main>
         <Footer />

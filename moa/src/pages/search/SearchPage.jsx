@@ -302,8 +302,6 @@ const SearchPage = () => {
       },
     }
 
-    console.log('[PIVOT presetConfig]', presetConfig)
-
     // initFromGrid는 여전히 호출 (store 즉시 업데이트)
     const { initFromGrid } = usePivotStore.getState()
     initFromGrid({
@@ -582,7 +580,7 @@ const SearchPage = () => {
 
       {/* 결과 */}
       {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full py-6'>
+        <div className='mx-auto w-full py-6'>
           {searchTotal === 0 ? (
             <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
               조건에 맞는 결과가 없습니다.
