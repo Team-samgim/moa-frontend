@@ -48,9 +48,8 @@ const Header = () => {
     <header
       className='
         w-full flex justify-center items-end bg-transparent 
-        h-[70px] sm:h-[75px] md:h-[80px] lg:h-[85px] xl:h-[88px] 2xl:h-[110px]
+        h-[70px] sm:h-[75px] md:h-[80px] lg:h-[85px] xl:h-[88px] 2xl:h-[92px] 3xl:h-[100px] 4xl:h-[115px]
         fixed top-0 left-0 right-0 z-50
-        px-3 sm:px-4 md:px-6 lg:px-8
         pr-[calc(0.75rem+var(--scrollbar-comp,0px))]
         sm:pr-[calc(1rem+var(--scrollbar-comp,0px))]
         md:pr-[calc(1.5rem+var(--scrollbar-comp,0px))]
@@ -62,12 +61,12 @@ const Header = () => {
           flex w-full items-center justify-between 
           gap-1.5 sm:gap-2 md:gap-3 lg:gap-4
           rounded-full bg-white
-          mx-2 sm:mx-4 md:mx-8 lg:mx-12 xl:mx-20 2xl:mx-26
-          px-3 sm:px-4 md:px-5 lg:px-6 xl:px-7 2xl:px-8 
-          h-[50px] sm:h-[56px] md:h-[62px] lg:h-[68px] xl:h-[74px] 2xl:h-[80px]
+          mx-2 sm:mx-4 md:mx-8 lg:mx-12 xl:mx-20 2xl:mx-24 3xl:mx-26 4xl:mx-30
+          px-3 sm:px-4 md:px-5 lg:px-6 xl:px-7 2xl:px-8 3xl:px-9 4xl:px-10
+          h-[50px] sm:h-[56px] md:h-[62px] lg:h-[68px] xl:h-[72px] 2xl:h-[75px] 3xl:h-[78px] 4xl:h-[82px]
           shadow-[0_6px_8px_rgba(0,103,255,0.06),0_8px_10px_rgba(0,103,255,0.1)]
           transition-transform duration-600 ease-out
-          ${isScrolled ? '-translate-y-18 sm:-translate-y-20 md:-translate-y-21 lg:-translate-y-22 xl:-translate-y-23 2xl:-translate-y-28' : 'translate-y-0'}
+          ${isScrolled ? '-translate-y-18 sm:-translate-y-20 md:-translate-y-21 lg:-translate-y-22 xl:-translate-y-23 2xl:-translate-y-24 3xl:-translate-y-26 4xl:-translate-y-28' : 'translate-y-0'}
         `}
       >
         <div className='flex items-center gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 shrink-0'>
@@ -76,13 +75,13 @@ const Header = () => {
               <img
                 src={logo}
                 alt='moa logo'
-                className='h-8 sm:h-9 md:h-10 lg:h-11 xl:h-12 2xl:h-14 object-contain'
+                className='h-8 sm:h-9 md:h-10 lg:h-11 xl:h-12 2xl:h-13 3xl:h-14 4xl:h-15 object-contain'
               />
             </div>
           </Link>
         </div>
 
-        <nav className='hidden lg:flex items-center gap-3 xl:gap-6 2xl:gap-10 text-[13px] lg:text-[13.5px] xl:text-[14px] 2xl:text-[18px] font-medium flex-shrink-0'>
+        <nav className='hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-6 3xl:gap-8 4xl:gap-10 text-[13px] lg:text-[13.5px] xl:text-[14px] 2xl:text-[15px] 3xl:text-[16px] 4xl:text-[18px] font-medium flex-shrink-0'>
           {navItems.map((item) => {
             const active = location.pathname === item.to
             return (
@@ -132,13 +131,13 @@ const Header = () => {
                 type='button'
                 className='
                   text-white 
-                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[16px] 
+                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 3xl:text-[15px] 4xl:text-[16px]
                   font-semibold
                   bg-[var(--color-blue,#1c4fd7)]
                   hover:brightness-95 active:scale-[0.98]
                   rounded-full 
-                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px]
-                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6
+                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px] 3xl:h-[42px] 4xl:h-[44px]
+                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6 3xl:px-6.5 4xl:px-7
                   transition whitespace-nowrap
                 '
                 onClick={() => {
@@ -153,14 +152,14 @@ const Header = () => {
                 type='button'
                 className='
                   text-[var(--color-blue,#1c4fd7)] 
-                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[16px] 
+                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 3xl:text-[15px] 4xl:text-[16px]
                   font-semibold
                   bg-transparent border border-[var(--color-blue,#1c4fd7)]
                   hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
                   active:scale-[0.98]
                   rounded-full 
-                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px]
-                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6
+                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px] 3xl:h-[42px] 4xl:h-[44px]
+                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6 3xl:px-6.5 4xl:px-7
                   transition whitespace-nowrap
                 '
                 onClick={() => navigate(userNavigations.MY_PAGE)}
@@ -175,13 +174,13 @@ const Header = () => {
                 type='button'
                 className='
                   text-white 
-                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 
+                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 3xl:text-[15px] 4xl:text-[16px]
                   font-semibold
                   bg-[var(--color-blue,#1c4fd7)]
                   hover:brightness-95 active:scale-[0.98]
                   rounded-full 
-                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px]
-                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6
+                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px] 3xl:h-[42px] 4xl:h-[44px]
+                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6 3xl:px-6.5 4xl:px-7
                   transition whitespace-nowrap
                 '
                 onClick={() => navigate(loggedOutNavigations.LOGIN)}
@@ -193,14 +192,14 @@ const Header = () => {
                 type='button'
                 className='
                   text-[var(--color-blue,#1c4fd7)] 
-                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 
+                  text-[11px] sm:text-[11.5px] md:text-[12px] lg:text-[12.5px] xl:text-[13px] 2xl:text-[14px] 3xl:text-[15px] 4xl:text-[16px]
                   font-semibold
                   bg-transparent border border-[var(--color-blue,#1c4fd7)]
                   hover:bg-[var(--color-blue,#1c4fd7)] hover:text-white
                   active:scale-[0.98]
                   rounded-full 
-                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px]
-                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6
+                  h-[28px] sm:h-[30px] md:h-[33px] lg:h-[36px] xl:h-[38px] 2xl:h-[40px] 3xl:h-[42px] 4xl:h-[44px]
+                  px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5 2xl:px-6 3xl:px-6.5 4xl:px-7
                   transition whitespace-nowrap
                 '
                 onClick={() => navigate(loggedOutNavigations.SIGNUP)}

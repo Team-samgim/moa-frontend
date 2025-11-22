@@ -16,6 +16,9 @@
   --color-blue-dark: #2c619c;
   /* scrollbar */
   --scrollbar-comp: 0px;
+  /* custom breakpoints */
+  --breakpoint-3xl: 105rem;
+  --breakpoint-4xl: 120rem;
 }
 
 body {
