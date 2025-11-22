@@ -30,11 +30,11 @@ const BackButton = () => {
   )
 }
 
-const PivotHeaderTabs = () => {
+const PivotHeaderTabs = ({ pivotMode }) => {
   return (
     <div className='flex items-center justify-between gap-5 px-3'>
-      <h2 className='text-[20px] font-bold text-gray-900'>피벗 테이블</h2>
-      <BackButton />
+      <h2 className='text-[20px] font-semibold text-gray-900'>피벗 테이블</h2>
+      {pivotMode === 'fromGrid' && <BackButton />}
     </div>
   )
 }

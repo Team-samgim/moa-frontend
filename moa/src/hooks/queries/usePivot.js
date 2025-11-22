@@ -1,5 +1,11 @@
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
-import { fetchPivotFields, fetchRowGroupItems, fetchValues, runPivotQuery } from '@/api/pivot'
+import {
+  fetchPivotFields,
+  fetchPivotPresets,
+  fetchRowGroupItems,
+  fetchValues,
+  runPivotQuery,
+} from '@/api/pivot'
 import { usePivotStore } from '@/stores/pivotStore'
 
 export function usePivotFields(options = {}) {
@@ -124,5 +130,14 @@ export function useRowGroupItemsInfinite({
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+  })
+}
+
+export function usePivotPresets(params = { page: 0, size: 50 }) {
+  return useQuery({
+    queryKey: ['pivot', 'presets', params],
+    queryFn: () => fetchPivotPresets(params),
+    staleTime: 10_000,
+    keepPreviousData: true,
   })
 }

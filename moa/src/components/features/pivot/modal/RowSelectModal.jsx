@@ -46,11 +46,16 @@ const RowToken = ({ id, onRemove }) => {
   )
 }
 
-const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
+const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose, availableFields }) => {
   const { data, isLoading } = usePivotFields()
-  const fieldNames = (data?.fields || []).map((f) => f.name)
+  const fieldNames = useMemo(() => {
+    if (availableFields && availableFields.length > 0) return availableFields
+    return (data?.fields || []).map((f) => f.name)
+  }, [availableFields, data])
 
   const { column: globalColumn, values: globalValues } = usePivotStore()
+
+  const isLoadingEffective = !availableFields?.length && isLoading
 
   const blockedForRows = useMemo(() => {
     const s = new Set()
@@ -168,7 +173,7 @@ const RowSelectModal = ({ initialSelected = [], onApplyRows, onClose }) => {
 
       {/* 리스트 */}
       <div className='border border-t-0 border-gray-200'>
-        {isLoading ? (
+        {isLoadingEffective ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>로딩중...</div>
         ) : filteredList.length === 0 ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>필드가 없습니다</div>

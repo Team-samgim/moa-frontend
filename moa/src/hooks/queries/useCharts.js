@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { runPivotChart, runPivotHeatmapTable } from '@/api/pivot'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
+import { runDrilldownTimeSeries, runPivotChart, runPivotHeatmapTable } from '@/api/pivot'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
 import { buildTimePayload } from '@/utils/pivotTime'
@@ -22,6 +22,7 @@ export function usePivotChartQuery(enabled = true) {
 
   const metric = usePivotChartStore((s) => s.metric)
   const chartType = usePivotChartStore((s) => s.chartType)
+  const getLayout = usePivotChartStore((s) => s.getLayout)
 
   const time = buildTimePayload(timeRange, customRange)
 
@@ -46,8 +47,10 @@ export function usePivotChartQuery(enabled = true) {
       chartType,
     ],
     enabled: canRun,
-    queryFn: async () =>
-      runPivotChart({
+    queryFn: async () => {
+      const layout = getLayout()
+
+      return runPivotChart({
         layer,
         time,
         filters,
@@ -65,7 +68,9 @@ export function usePivotChartQuery(enabled = true) {
           selectedItems: rowMode === 'manual' ? rowSelectedItems : null,
         },
         metric, // { field, agg, alias }
-      }),
+        layout: layout.chartsPerRow ? { chartsPerRow: layout.chartsPerRow } : null,
+      })
+    },
   })
 }
 
@@ -76,14 +81,6 @@ export function usePivotHeatmapTable(enabled = true) {
   const filters = usePivotStore((s) => s.filters)
 
   const time = buildTimePayload(timeRange, customRange)
-
-  // const column = usePivotStore((s) => s.column)
-  // const rows = usePivotStore((s) => s.rows)
-  // const values = usePivotStore((s) => s.values)
-
-  // const colField = column?.field || null
-  // const rowField = Array.isArray(rows) && rows.length > 0 ? rows[0].field : null
-  // const metric = Array.isArray(values) && values.length > 0 ? values[0] : null // { field, agg, alias }
 
   const colField = usePivotChartStore((s) => s.colField)
   const rowField = usePivotChartStore((s) => s.rowField)
@@ -132,6 +129,41 @@ export function usePivotHeatmapTable(enabled = true) {
       const nextOffset = offset + limit
       if (nextOffset >= totalRowCount) return undefined
       return { offset: nextOffset, limit }
+    },
+  })
+}
+
+export function useDrilldownTimeSeries() {
+  const layer = usePivotStore((s) => s.layer)
+  const timeRange = usePivotStore((s) => s.timeRange)
+  const customRange = usePivotStore((s) => s.customRange)
+  const filters = usePivotStore((s) => s.filters)
+
+  const colField = usePivotChartStore((s) => s.colField)
+  const rowField = usePivotChartStore((s) => s.rowField)
+  const metric = usePivotChartStore((s) => s.metric)
+
+  const time = buildTimePayload(timeRange, customRange)
+
+  return useMutation({
+    mutationKey: ['pivot-drilldown-time-series', layer, time, filters, colField, rowField, metric],
+    mutationFn: async ({ selectedColKey, rowKeys }) => {
+      if (!layer || !time || !colField || !rowField || !metric?.field || !metric?.agg) {
+        throw new Error('드릴다운에 필요한 정보가 부족합니다.')
+      }
+
+      return runDrilldownTimeSeries({
+        layer,
+        time,
+        filters,
+        colField,
+        rowField,
+        selectedColKey,
+        rowKeys,
+        timeField: time.field,
+        metric,
+        timeBucket: 'RAW',
+      })
     },
   })
 }

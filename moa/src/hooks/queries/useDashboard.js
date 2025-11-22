@@ -14,7 +14,6 @@ const presetToMs = (p) => {
 
 /**
  * 프리셋 → step(초)
- * - 예: 1H → 5분(300s), 24H → 15분(900s), 7D → 1시간(3600s)
  */
 const presetToStepSec = (p) => {
   if (p === '24H') return 900
@@ -23,7 +22,8 @@ const presetToStepSec = (p) => {
 }
 
 /**
- * 대시보드 공통 파라미터 (store → API payload 기본값)
+ * 대시보드 공통 파라미터 (store → API payload)
+ * ✅ filters 포함
  */
 export const useDashboardParams = () => {
   const { timePreset, customRange, live, filters } = useDashboardStore()
@@ -35,11 +35,27 @@ export const useDashboardParams = () => {
 
   const step = presetToStepSec(timePreset ?? '1H')
 
-  return { fromEpoch, toEpoch, step, live, filters }
+  // ✅ 백엔드 형식에 맞게 필터 변환
+  const formattedFilters = {
+    countries: filters.countries || [],
+    browsers: filters.browsers || [],
+    devices: filters.devices || [],
+    httpMethods: filters.httpMethods || [],
+    httpHost: filters.httpHost || null,
+    httpUri: filters.httpUri || null,
+    httpResCode: filters.httpResCode
+      ? {
+          operator: filters.httpResCodeOperator || '>=',
+          value: parseFloat(filters.httpResCode),
+        }
+      : null,
+  }
+
+  return { fromEpoch, toEpoch, step, live, filters: formattedFilters }
 }
 
 /**
- * 공통 queryKey (동일 key면 캐시 공유)
+ * 공통 queryKey (필터 포함)
  */
 const dashboardKey = ({ fromEpoch, toEpoch, step, filters }) => [
   'dashboard',
@@ -51,7 +67,6 @@ const dashboardKey = ({ fromEpoch, toEpoch, step, filters }) => [
 
 /**
  * 원본 응답(통합)을 그대로 가져오는 기본 훅
- * - 필요 시 컴포넌트에서 data.trafficTrend 처럼 직접 사용
  */
 export const useDashboardAggregated = () => {
   const { fromEpoch, toEpoch, step, live, filters } = useDashboardParams()
@@ -66,7 +81,6 @@ export const useDashboardAggregated = () => {
 
 /**
  * 위젯별 셀렉터 훅
- * - 같은 queryKey를 사용하므로 네트워크 호출은 1회, 각 훅은 select로 필요한 조각만 반환
  */
 
 // 1) 트래픽 추이
@@ -82,11 +96,12 @@ export const useTrafficTrend = () => {
       }),
     select: (d) => {
       const list = d?.trafficTrend ?? []
-      // 차트용 shape으로 정규화
       const points = list.map((it) => ({
-        t: it.timestamp, // ISO string
-        req: Number(it.requestCount || 0),
-        res: Number(it.responseCount || 0),
+        t: it.timestamp,
+        req: Number(it.mbpsReq || 0),
+        res: Number(it.mbpsRes || 0),
+        requestCount: Number(it.requestCount || 0),
+        responseCount: Number(it.responseCount || 0),
       }))
       return { points, stepSec: p.step }
     },
@@ -96,7 +111,36 @@ export const useTrafficTrend = () => {
   })
 }
 
-// 2) TCP 에러율
+// 2) 페이지 로드 시간 트렌드 ⭐ 신규 추가
+export const usePageLoadTimeTrend = () => {
+  const p = useDashboardParams()
+  return useQuery({
+    queryKey: dashboardKey(p),
+    queryFn: () =>
+      fetchDashboardApi({
+        range: { fromEpoch: p.fromEpoch, toEpoch: p.toEpoch },
+        step: p.step,
+        filters: p.filters,
+      }),
+    select: (d) => {
+      const list = d?.pageLoadTimeTrend ?? []
+      const points = list.map((it) => ({
+        t: it.timestamp,
+        avg: Number(it.avgPageLoadTime || 0),
+        min: Number(it.minPageLoadTime || 0),
+        max: Number(it.maxPageLoadTime || 0),
+        p95: Number(it.p95PageLoadTime || 0),
+        p99: Number(it.p99PageLoadTime || 0),
+      }))
+      return { points, stepSec: p.step }
+    },
+    refetchInterval: p.live ? 5000 : false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  })
+}
+
+// 3) TCP 에러율
 export const useTcpErrorRate = () => {
   const p = useDashboardParams()
   return useQuery({
@@ -125,7 +169,7 @@ export const useTcpErrorRate = () => {
   })
 }
 
-// 3) 국가별 트래픽
+// 4) 국가별 트래픽
 export const useTrafficByCountry = () => {
   const p = useDashboardParams()
   return useQuery({
@@ -143,7 +187,6 @@ export const useTrafficByCountry = () => {
         requestCount: Number(it.requestCount || 0),
         percentage: Number(it.percentage || 0),
       }))
-      // 기본: 트래픽량 내림차순
       rows.sort((a, b) => b.trafficVolume - a.trafficVolume)
       return rows
     },
@@ -153,7 +196,7 @@ export const useTrafficByCountry = () => {
   })
 }
 
-// 4) HTTP 상태 코드 묶음
+// 5) HTTP 상태 코드 묶음
 export const useHttpStatusCodes = () => {
   const p = useDashboardParams()
   return useQuery({
@@ -189,7 +232,7 @@ export const useHttpStatusCodes = () => {
   })
 }
 
-// 5) 상위 도메인
+// 6) 상위 도메인
 export const useTopDomains = (limit = 10) => {
   const p = useDashboardParams()
   return useQuery({
@@ -216,7 +259,7 @@ export const useTopDomains = (limit = 10) => {
   })
 }
 
-// 6) 응답 시간 통계
+// 7) 응답 시간 통계
 export const useResponseTime = () => {
   const p = useDashboardParams()
   return useQuery({

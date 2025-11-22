@@ -12,38 +12,43 @@ export function buildPivotColumns(
   onToggleMetricSort,
 ) {
   if (!pivotResult) return []
-
   const { columnField } = pivotResult
   if (!columnField) return []
 
   const indexCol = {
     id: 'rowNumber',
     header: '#',
-    size: 50,
-    minSize: 50,
-    maxSize: 60,
+    size: 80,
+    minSize: 80,
+    maxSize: 80,
     cell: ({ row, table }) => {
       const visibleRows = table.getRowModel().rows
       const idx = visibleRows.findIndex((r) => r.id === row.id)
       const n = idx === -1 ? '' : idx + 1
-
-      return <div className='text-right text-gray-500 tabular-nums w-full'>{n}</div>
+      return (
+        <div className='text-right text-gray-500 tabular-nums w-full overflow-hidden text-ellipsis'>
+          {n}
+        </div>
+      )
     },
   }
 
   const firstCol = {
     id: 'rowLabel',
     header: columnField.name,
+    size: 300,
+    minSize: 300,
+    maxSize: 300,
     accessorFn: (row) => row.displayLabel,
     cell: ({ row, getValue }) => {
       const canExpand = row.getCanExpand()
       const isExpanded = row.getIsExpanded()
       const isLoading = row.original?.isLoading
+      const value = getValue()
 
       const handleClick = (e) => {
         e.stopPropagation()
         if (isLoading) return
-
         if (isExpanded) {
           row.toggleExpanded()
         } else {
@@ -56,11 +61,11 @@ export function buildPivotColumns(
       }
 
       return (
-        <div className='flex items-center gap-1'>
+        <div className='flex items-center gap-1 overflow-hidden' title={value}>
           {canExpand && (
             <button
               onClick={handleClick}
-              className='text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50'
+              className='text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 flex-shrink-0'
               disabled={isLoading}
             >
               {isExpanded ? (
@@ -70,8 +75,8 @@ export function buildPivotColumns(
               )}
             </button>
           )}
-          <span>{getValue()}</span>
-          {isLoading && <span className='ml-2 text-xs text-gray-500'>로딩중...</span>}
+          <span className='truncate'>{value}</span>
+          {isLoading && <span className='ml-2 text-xs text-gray-500 flex-shrink-0'>로딩중...</span>}
         </div>
       )
     },
@@ -85,7 +90,9 @@ export function buildPivotColumns(
     header: colVal || '(empty)',
     columns: (columnField.metrics || []).map((metric, metricIndex) => ({
       id: `${colIndex}::${metricIndex}::${colVal || '(empty)'}__${metric.alias}`,
-
+      size: 210,
+      minSize: 210,
+      maxSize: 210,
       header: () => {
         const isActive =
           metricSort &&
@@ -93,7 +100,6 @@ export function buildPivotColumns(
           metricSort.metricAlias === metric.alias &&
           metricSort.metricField === metric.field &&
           metricSort.agg === metric.agg
-
         const direction = isActive ? metricSort.direction : 'default'
 
         const handleClick = (e) => {
@@ -103,12 +109,12 @@ export function buildPivotColumns(
         }
 
         return (
-          <div className='flex items-center justify-end gap-1'>
-            <span>{metric.alias}</span>
+          <div className='flex items-center justify-end gap-1 overflow-hidden' title={metric.alias}>
+            <span className='truncate'>{metric.alias}</span>
             <button
               type='button'
               onClick={handleClick}
-              className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100'
+              className='ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100 flex-shrink-0'
             >
               {direction === 'default' && <SortIcon className='h-4 w-4 text-[#242424]' />}
               {direction === 'desc' && <SortDescIcon className='h-4 w-4 text-[#242424]' />}
@@ -117,12 +123,17 @@ export function buildPivotColumns(
           </div>
         )
       },
-
       accessorFn: (row) => row.cells?.[colVal]?.[metric.alias] ?? null,
       cell: ({ getValue }) => {
         const v = getValue()
+        const displayValue = v === null || v === undefined ? '' : v
         return (
-          <div className='text-right tabular-nums'>{v === null || v === undefined ? '' : v}</div>
+          <div
+            className='text-right tabular-nums overflow-hidden text-ellipsis'
+            title={displayValue}
+          >
+            {displayValue}
+          </div>
         )
       },
     })),

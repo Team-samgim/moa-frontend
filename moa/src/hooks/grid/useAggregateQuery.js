@@ -5,16 +5,17 @@ const stableHash = (obj) => JSON.stringify(obj ?? {}, Object.keys(obj ?? {}).sor
 
 export default function useAggregateQuery({ layer, filterModel, columns, baseSpec }) {
   const metrics = (columns || []).reduce((acc, col) => {
-    const field = col?.field
-    const type = col?.filterParams?.type
+    const field = col?.field || col?.name
+    const rawType = col?.filterParams?.type || col?.type || 'string'
+    const type = rawType.toLowerCase()
+
     if (!field) return acc
     if (type === 'date') return acc
 
     if (type === 'number') {
       acc[field] = { type: 'number', ops: ['count', 'sum', 'avg', 'min', 'max'] }
     } else {
-      // 문자열/IP/MAC → Top3까지
-      // 서버가 배열형(top) 지원하면 {ops:['count','distinct',{top:3}]}도 OK
+      // string / ip / mac / port 등
       acc[field] = { type: 'string', ops: ['count', 'distinct', 'top1', 'top2', 'top3'] }
     }
     return acc

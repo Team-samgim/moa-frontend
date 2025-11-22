@@ -4,8 +4,8 @@ const FieldList = ({ loading, error, fields, filter, onFilter, selectedKeys, onT
   return (
     <div className='card'>
       {/* Header */}
-      <div className='flex items-center justify-between mb-2'>
-        <div className='text-base font-medium'>조건 필드 선택</div>
+      <div className='flex items-center justify-between mb-3'>
+        <div className='text-base font-semibold'>조건 필드 선택</div>
         <div className='text-xs text-gray-400'>{selectedCount}개 선택</div>
       </div>
 

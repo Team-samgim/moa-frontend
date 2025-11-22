@@ -1,12 +1,14 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { fetchGridBySearchSpec } from '@/api/grid'
+import { saveGridPreset } from '@/api/presets'
 import AggregatesPanel from '@/components/features/grid/AggregatesPanel'
 import DataGrid from '@/components/features/grid/DataGrid'
-import EthernetRowPreviewModal from '@/components/features/grid/EthernetRowPreviewModal'
-import HttpPageRowPreviewModal from '@/components/features/grid/HttpPageRowPreviewModal'
-import HttpUriRowPreviewModal from '@/components/features/grid/HttpUriRowPreviewModal'
-import TcpRowPreviewModal from '@/components/features/grid/TcpRowPreviewModal'
+import EthernetRowPreviewModal from '@/components/features/grid/detail/EthernetRowPreviewModal'
+import HttpPageRowPreviewModal from '@/components/features/grid/detail/HttpPageRowPreviewModal'
+import HttpUriRowPreviewModal from '@/components/features/grid/detail/HttpUriRowPreviewModal'
+import TcpRowPreviewModal from '@/components/features/grid/detail/TcpRowPreviewModal'
 import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
 import LayerBar from '@/components/features/search/LayerBar'
@@ -17,8 +19,10 @@ import { userNavigations } from '@/constants/navigations'
 import useAggregateQuery from '@/hooks/grid/useAggregateQuery'
 import { useSearchMeta } from '@/hooks/queries/useSearch'
 import GridToolbar from '@/pages/grid/GridToolbar'
+import { usePivotStore } from '@/stores/pivotStore'
 import { usePresetBridgeStore } from '@/stores/presetBridgeStore'
 import { buildSearchPayload } from '@/utils/searchPayload'
+import { toSearchSpecFromConfig } from '@/utils/searchSpec'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const defaultValuesFor = (arity) =>
@@ -52,6 +56,7 @@ const SearchPage = () => {
   const [isSearching, setIsSearching] = useState(false)
   const [searchTotal, setSearchTotal] = useState(null)
   const [aggFilters, setAggFilters] = useState({})
+  const [showRawNumber, setShowRawNumber] = useState(false)
 
   const gridRef = useRef(null)
 
@@ -69,6 +74,9 @@ const SearchPage = () => {
     setCustomTimeRange(null)
     setGridCols([])
     setSearchTotal(null)
+    setSearchPayload(null)
+    setAggFilters({})
+    gridRef.current?.resetFilters?.()
   }, [layer])
 
   const { data: meta, isLoading, error } = useSearchMeta({ layer })
@@ -191,7 +199,7 @@ const SearchPage = () => {
     }
   }, [gridCols, viewKeys.length, layer])
 
-  // === 헬퍼: 현재 상태에서 time 스펙 뽑기 (기존 코드 그대로 사용) ===
+  // === 헬퍼: 현재 상태에서 time 스펙 뽑기 ===
   const toEpochSec = (d) => Math.floor(d.getTime() / 1000)
   const presetSeconds = { '1H': 3600, '2H': 7200, '24H': 86400, '7D': 604800 }
 
@@ -215,12 +223,29 @@ const SearchPage = () => {
     return { field: 'ts_server_nsec', fromEpoch: now - span, toEpoch: now }
   }
 
+  // === 전체 초기화 버튼 (카드 하단 '초기화') ===
+  const handleResetAll = () => {
+    setLayer('HTTP_PAGE')
+    setFieldFilter('')
+    setConditions([])
+    setGlobalNot(false)
+    setTimePreset('1H')
+    setCustomTimeRange(null)
+    setViewKeys([])
+    setGridCols([])
+    setSearchPayload(null)
+    setSearchTotal(null)
+    setHasSearched(false)
+    setAggFilters({})
+    setGridApis(null)
+    gridRef.current?.resetFilters?.()
+    gridRef.current?.purge?.()
+  }
+
   // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
-    // viewKeys만 사용 (비어있으면 빈 배열)
     const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
 
-    // 현재 그리드 상태 기반 검색 프리셋 구성
     const api = gridApis?.api
     const sortModel = api?.getSortModel?.()[0] || null
     const sortField = sortModel
@@ -247,20 +272,20 @@ const SearchPage = () => {
       columns: cols,
       sort: { field: sortField, direction: sortDirection },
       filters,
-      baseSpec, // 기간/조건/옵션 포함된 서버 요청 스펙
+      baseSpec,
       query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
     }
 
     const payload = {
       layer,
-      time: getTimeSpec(), // { field, fromEpoch, toEpoch }
-      columns: cols, // 피벗 페이지에서 x/y/value는 따로 설정
-      conditions, // 현재 조건
-      searchPreset, // 검색 프리셋 같이 전달
+      time: getTimeSpec(),
+      columns: cols,
+      conditions,
+      searchPreset,
     }
 
-    console.log('[PIVOT payload]', payload) // 확인 로그
-
+    const { initFromGrid } = usePivotStore.getState()
+    initFromGrid(payload)
     navigate(userNavigations.PIVOT, { state: { preset: { payload } } })
   }, [
     navigate,
@@ -274,17 +299,19 @@ const SearchPage = () => {
     fields,
   ])
 
-  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) + 자동검색 */
+  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) */
   useEffect(() => {
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
-    // PresetPage에서 navigate(..., { state: { preset: p.config } })
     const fromRoute = location.state?.preset
     const raw = fromStore || fromRoute
     if (!raw) return
 
-    const spec = raw?.payload ?? raw // payload 래핑/비래핑 모두 허용
+    let spec = raw?.payload ?? raw
 
-    // layer 리셋 효과 방지
+    if (!fromStore && spec && spec.search) {
+      spec = toSearchSpecFromConfig(spec)
+    }
+
     skipLayerResetRef.current = true
     setLayer(spec.layer ?? 'HTTP_PAGE')
     setViewKeys(spec.viewKeys ?? [])
@@ -294,7 +321,6 @@ const SearchPage = () => {
     let nextPreset = spec.timePreset ?? '1H'
     let nextCustom = spec.customTimeRange ?? null
 
-    // fallback: spec.time.{fromEpoch,toEpoch}만 있는 케이스
     if (!nextCustom && spec.time?.fromEpoch && spec.time?.toEpoch) {
       nextCustom = {
         from: toDate(spec.time.fromEpoch),
@@ -303,83 +329,225 @@ const SearchPage = () => {
         toEpoch: spec.time.toEpoch,
       }
     }
-    // custom 범위가 있으면 무조건 CUSTOM으로
     if (nextCustom?.from && nextCustom?.to) nextPreset = 'CUSTOM'
 
     setTimePreset(nextPreset)
     setCustomTimeRange(nextCustom ?? null)
 
-    // 다음 틱에 검색 실행
-    setTimeout(() => onClickSearch(), 0)
+    if (fromStore) {
+      setTimeout(() => onClickSearch(), 0)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // 최초 1회만
+  }, [])
+
+  const presetMut = useMutation({
+    mutationFn: async () => {
+      const api = gridApis?.api
+      if (!api) throw new Error('그리드가 아직 준비되지 않았습니다.')
+
+      const columns = api
+        .getAllDisplayedColumns()
+        .map((c) => c.getColDef())
+        .map((def) => def?.field ?? def?.colId)
+        .filter((f) => !!f && f !== '__rowNo')
+
+      const uiQuery = {
+        layer,
+        timePreset,
+        customTimeRange,
+        globalNot,
+        conditions,
+        viewKeys,
+      }
+
+      const baseSpec = searchPayload ?? null
+
+      // === 시간 스냅샷 ===
+      let time = null
+      if (baseSpec?.time?.fromEpoch && baseSpec?.time?.toEpoch) {
+        time = baseSpec.time
+      } else if (customTimeRange?.from && customTimeRange?.to) {
+        time = {
+          field: 'ts_server_nsec',
+          fromEpoch: Math.floor(customTimeRange.from.getTime() / 1000),
+          toEpoch: Math.floor(customTimeRange.to.getTime() / 1000),
+        }
+      } else {
+        const now = Math.floor(Date.now() / 1000)
+        const span = presetSeconds[timePreset] ?? 3600
+        time = {
+          field: 'ts_server_nsec',
+          fromEpoch: now - span,
+          toEpoch: now,
+        }
+      }
+
+      const search = {
+        version: 1,
+        layer,
+        columns,
+        condition: conditions,
+        query: uiQuery,
+        time,
+      }
+
+      const config = { search }
+
+      const fallback = `검색 프리셋 ${new Date().toLocaleString()}`
+      const presetName = (window.prompt('프리셋 이름을 입력하세요', fallback) || fallback).trim()
+
+      return await saveGridPreset({
+        presetName,
+        presetType: 'SEARCH',
+        config,
+        favorite: false,
+      })
+    },
+    onSuccess: (data) => {
+      alert(`프리셋 저장 완료! (ID: ${data?.presetId})`)
+    },
+    onError: (e) => {
+      console.error(e)
+      alert(`프리셋 저장 실패: ${e?.response?.status ?? e?.message ?? ''}`)
+    },
+  })
 
   return (
-    <div className='p-5 flex flex-col gap-4'>
-      {/* 검색 영역 */}
-      <div className='p-6 max-w-[1200px] mx-auto gap-3 flex flex-col'>
-        <TimePresetBar
-          value={timePreset}
-          onChange={(key) => {
-            setTimePreset(key)
-            if (key !== 'CUSTOM') setCustomTimeRange(null) // 프리셋 선택 시 커스텀 해제
-          }}
-          customRange={customTimeRange} // 직접설정 표시 동기화
-          autoOpenOnCustom={false}
-          onApplyCustom={(range) => setCustomTimeRange(range)} // 적용하기 → 부모 상태 업데이트
-          onClearCustom={() => setCustomTimeRange(null)}
-          onRefresh={() => {
-            setTimePreset('1H')
-            setCustomTimeRange(null)
-          }}
-        />
-        <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
-        <FieldPicker fields={fields} selected={viewKeys} onChange={setViewKeys} />
-        <div className='grid grid-cols-3 gap-3'>
-          <div className='col-span-1'>
-            <FieldList
-              loading={isLoading}
-              error={error ? '메타 로드 실패' : null}
-              fields={filteredFields}
-              filter={fieldFilter}
-              onFilter={setFieldFilter}
-              selectedKeys={selectedKeys}
-              onToggle={(field, checked) =>
-                checked ? addConditionFromField(field) : removeByFieldKey(field.key)
-              }
-            />
+    <div className='p-4 mx-30'>
+      <div className='mx-auto space-y-6'>
+        {/* 상단 타이틀 + 프리셋 버튼 */}
+        {/* <div className='flex items-center justify-between'>
+          <h1 className='text-2xl font-semibold text-slate-900'>그리드 테이블 구성</h1>
+          <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
+            <button type='button' className='hover:underline'>
+              프리셋 저장
+            </button>
+            <button type='button' className='hover:underline'>
+              프리셋 불러오기
+            </button>
           </div>
-          <div className='col-span-2'>
-            <SelectedConditions
-              conditions={conditions}
-              operatorsFor={operatorsFor}
-              updateCondition={updateCondition}
-              removeByFieldKey={removeByFieldKey}
-              onChangeOperator={onChangeOperator}
-            />
+        </div> */}
+
+        <div className='flex items-center justify-between gap-5 px-3'>
+          <h2 className='text-[20px] font-semibold text-gray-900'>검색</h2>
+        </div>
+
+        {/* 검색 구성 카드 (스크린샷 영역) */}
+        <div className='flex flex-col rounded-lg bg-white border border-gray-200 shadow-sm p-5 gap-7'>
+          {/* 조회 계층 / 조회 기간 한 줄 배치 */}
+          <div className='w-full max-w-ws shrink-0 space-y-6'>
+            <div className='flex items-center justify-between'>
+              <div className='text-base font-semibold text-gray-900'>그리드 테이블 구성</div>
+              <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
+                <button
+                  type='button'
+                  className='hover:underline'
+                  onClick={() => presetMut.mutate()}
+                >
+                  {presetMut.isPending ? '저장 중…' : '프리셋 저장'}
+                </button>
+                <button type='button' className='hover:underline'>
+                  프리셋 불러오기
+                </button>
+              </div>
+            </div>
+            <div className='flex gap-8'>
+              <LayerBar active={layer} onChange={(opt) => setLayer(opt.key)} />
+              <TimePresetBar
+                value={timePreset}
+                layerKey={layer}
+                onChange={(key) => {
+                  setTimePreset(key)
+                  if (key !== 'CUSTOM') setCustomTimeRange(null)
+                }}
+                customRange={customTimeRange}
+                autoOpenOnCustom={false}
+                onApplyCustom={(range) => setCustomTimeRange(range)}
+                onClearCustom={() => setCustomTimeRange(null)}
+                onRefresh={() => {
+                  setTimePreset('1H')
+                  setCustomTimeRange(null)
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 조회 필드 (그리드 컬럼) */}
+          <FieldPicker
+            fields={fields}
+            selected={viewKeys}
+            onChange={setViewKeys}
+            layerKey={layer}
+          />
+
+          {/* 실시간 쿼리 프리뷰 */}
+          <QueryPreview
+            chips={queryChips}
+            globalNot={globalNot}
+            onToggleNot={() => setGlobalNot((v) => !v)}
+            layerKey={layer}
+          />
+
+          <div className='h-px w-full bg-gray-200' />
+
+          {/* 카드 하단 버튼 영역 */}
+          <div className='flex justify-end gap-3'>
+            <button
+              type='button'
+              onClick={handleResetAll}
+              className='h-10 px-6 rounded-sm border border-blue-dark bg-white text-s font-medium text-blue-dark hover:bg-slate-50'
+            >
+              초기화
+            </button>
+            <button
+              type='button'
+              onClick={onClickSearch}
+              disabled={isSearching}
+              className='h-10 px-6 rounded-sm text-s font-medium text-white bg-[#3877BE] hover:bg-blue-dark border border-[#3877BE] disabled:opacity-60'
+            >
+              {isSearching ? '검색 중…' : '검색하기'}
+            </button>
           </div>
         </div>
 
-        <QueryPreview
-          chips={queryChips}
-          globalNot={globalNot}
-          onToggleNot={() => setGlobalNot((v) => !v)}
-        />
+        {/* 조건 필드 / 상세조건 편집 영역 (카드 밖, 아래쪽에 유지) */}
+        <div
+          className='
+            grid grid-cols-1 
+            lg:grid-cols-[minmax(0,0.6fr)_auto_minmax(0,1.6fr)]
+            items-stretch
+            gap-6 p-5 border border-gray-200 shadow-sm rounded-lg
+          '
+        >
+          {/* 왼쪽: 필드 리스트 */}
+          <FieldList
+            loading={isLoading}
+            error={error ? '메타 로드 실패' : null}
+            fields={filteredFields}
+            filter={fieldFilter}
+            onFilter={setFieldFilter}
+            selectedKeys={selectedKeys}
+            onToggle={(field, checked) =>
+              checked ? addConditionFromField(field) : removeByFieldKey(field.key)
+            }
+          />
 
-        <div className='flex justify-center'>
-          <button
-            className='px-5 py-2.5 rounded-xl text-white bg-[#3877BE] hover:bg-blue-700 border border-[#3877BE] disabled:opacity-60'
-            onClick={onClickSearch}
-            disabled={isSearching}
-          >
-            {isSearching ? '검색 중…' : '검색 하기'}
-          </button>
+          <div className='hidden lg:block w-px bg-gray-200 h-full justify-self-center' />
+
+          {/* 오른쪽: 선택된 조건 영역 */}
+          <SelectedConditions
+            conditions={conditions}
+            operatorsFor={operatorsFor}
+            updateCondition={updateCondition}
+            removeByFieldKey={removeByFieldKey}
+            onChangeOperator={onChangeOperator}
+          />
         </div>
       </div>
 
       {/* 결과 */}
       {hasSearched && (
-        <div className='max-w-[1200px] mx-auto w-full px-6'>
+        <div className='max-w-[1200px] mx-auto w-full py-6'>
           {searchTotal === 0 ? (
             <div className='text-sm text-gray-500 py-10 text-center border rounded-xl'>
               조건에 맞는 결과가 없습니다.
@@ -403,12 +571,22 @@ const SearchPage = () => {
                 })}
               />
               {searchTotal !== null && (
-                <div className='mb-2 text-sm text-gray-600'>
-                  총{' '}
-                  <span className='font-semibold text-blue-600'>
-                    {searchTotal.toLocaleString()}
-                  </span>
-                  건
+                <div className='mb-2 flex items-center justify-between text-sm text-gray-600'>
+                  {/* 왼쪽: 총 건수 */}
+                  <div>
+                    총 <span>{searchTotal.toLocaleString()}</span>건
+                  </div>
+
+                  {/* 오른쪽: 원본 데이터 체크박스 */}
+                  <label className='flex items-center gap-2 text-xs text-gray-600'>
+                    <input
+                      type='checkbox'
+                      className='h-4 w-4'
+                      checked={showRawNumber}
+                      onChange={(e) => setShowRawNumber(e.target.checked)}
+                    />
+                    <span>원본 데이터</span>
+                  </label>
                 </div>
               )}
               <DataGrid
@@ -435,6 +613,7 @@ const SearchPage = () => {
                     setHttpUriRowKey(key)
                   }
                 }}
+                showRawNumber={showRawNumber}
               />
               {aggQuery.isSuccess && (
                 <AggregatesPanel

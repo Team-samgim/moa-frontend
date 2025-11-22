@@ -7,7 +7,7 @@ import { reissueApi } from '@/api/auth'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
-// import GridPage from '@/pages/grid/GridPage'
+import LandingPage from '@/pages/landing/LandingPage'
 import FileManagementPage from '@/pages/mypage/FileManagementPage'
 import MyPage from '@/pages/mypage/MyPage'
 import PresetPage from '@/pages/mypage/PresetPage'
@@ -25,7 +25,7 @@ const AuthBootstrap = () => {
     const run = async () => {
       if (!accessToken && !refreshToken) {
         clearTokens()
-        navigate(loggedOutNavigations.LOGIN, { replace: true })
+        navigate(loggedOutNavigations.LANDING, { replace: true })
         return
       }
 
@@ -44,7 +44,7 @@ const AuthBootstrap = () => {
       } catch (e) {
         console.error(e)
         clearTokens()
-        navigate(loggedOutNavigations.LOGIN, { replace: true })
+        navigate(loggedOutNavigations.LANDING, { replace: true })
       }
     }
 
@@ -60,6 +60,7 @@ const Router = () => {
         <Route element={<Layout />}>
           {/* 비로그인 상태 */}
           <Route path='/' element={<AuthBootstrap />} />
+          <Route path={loggedOutNavigations.LANDING} element={<LandingPage />} />
           <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
           <Route path={loggedOutNavigations.TEST} element={<TestPage />} />
           <Route path={loggedOutNavigations.TEST_2} element={<TestPage2 />} />

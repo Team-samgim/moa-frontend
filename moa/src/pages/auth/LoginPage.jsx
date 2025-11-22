@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
-import MsgRow from '@/components/common/MsgRow'
+import MsgRow from '@/components/_common/MsgRow'
 import IdField from '@/components/features/auth/IdField'
 import PasswordConfirmField from '@/components/features/auth/PasswordConfirmField'
 import PasswordField from '@/components/features/auth/PasswordField'
-import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
+import { userNavigations } from '@/constants/navigations'
 import { useLogin, useSignup } from '@/hooks/queries/useAuth'
 import useIdField from '@/hooks/useIdField'
 import usePasswordMatch from '@/hooks/usePasswordMatch'
@@ -133,22 +133,9 @@ const LoginPage = () => {
     signupMutation.mutate(payload)
   }
 
-  /* TODO: 라우팅 테스트 페이지 추후 삭제 */
-  const goToTestScreen = () => navigate(loggedOutNavigations.TEST)
-  const goToTestScreen2 = () => navigate(loggedOutNavigations.TEST_2)
-
   return (
-    <div className='min-h-screen flex items-center justify-center p-6'>
+    <div className='flex justify-center p-6 mt-30'>
       <div className='relative w-full max-w-5xl bg-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.08)] overflow-hidden'>
-        <div className='flex gap-3 p-3'>
-          <button onClick={goToTestScreen} className='px-3 py-1.5 rounded border'>
-            피벗 라이브러리 테스트
-          </button>
-          <button onClick={goToTestScreen2} className='px-3 py-1.5 rounded border'>
-            피벗 라이브러리 테스트 2
-          </button>
-        </div>
-
         {/* 슬라이드 영역 */}
         <div
           className='w-[200%] flex transition-transform duration-500 ease-out'

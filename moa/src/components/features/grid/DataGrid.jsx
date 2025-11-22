@@ -27,6 +27,7 @@ const DataGrid = forwardRef(function DataGrid(
     onGridApis,
     onActiveFiltersChange,
     onRowClick,
+    showRawNumber = false,
   },
   ref,
 ) {
@@ -144,6 +145,7 @@ const DataGrid = forwardRef(function DataGrid(
         const isDate = col.type === 'date'
         const isNumber = col.type === 'number'
         const vf = isNumber ? pickFormatterByField(col.name) : null
+
         return {
           field: col.name,
           headerName: col.labelKo || col.name,
@@ -156,14 +158,20 @@ const DataGrid = forwardRef(function DataGrid(
           valueGetter: unwrapGetter(col.name),
           ...(isDate && { valueFormatter: ({ value }) => formatUtcToSeoul(value) }),
           ...(isNumber && {
-            valueFormatter: ({ value }) => (value === null ? '' : vf(Number(value))),
+            valueFormatter: ({ value }) => {
+              if (value === null || value === undefined) return ''
+              const num = Number(value)
+              if (Number.isNaN(num)) return ''
+              // false면 기존처럼 1.4k / 2.3M 등 단위 포맷 사용
+              return showRawNumber ? num.toLocaleString() : vf(num)
+            },
             cellClass: 'ag-right-aligned-cell',
           }),
         }
       }),
     ]
     setColumnDefs(defs)
-  }, [columns, layer, unwrapGetter])
+  }, [columns, layer, unwrapGetter, showRawNumber])
 
   const defaultColDef = useMemo(
     () => ({
@@ -191,7 +199,7 @@ const DataGrid = forwardRef(function DataGrid(
         const end = rq.endRow ?? start + cacheBlockSize
         const limit = end - start
 
-        // ✅ 정렬 정보 가져오기 (개선)
+        // 정렬 정보 가져오기
         const sortModel = rq.sortModel || []
 
         let orderBy = basePayload?.options?.orderBy || 'ts_server_nsec'
@@ -199,7 +207,7 @@ const DataGrid = forwardRef(function DataGrid(
 
         if (sortModel.length > 0) {
           const sm = sortModel[0]
-          orderBy = sm.colId // ✅ colId를 그대로 필드로 사용 (위에서 colId=field로 통일)
+          orderBy = sm.colId
           order = (sm.sort || 'desc').toUpperCase()
         }
 
@@ -269,7 +277,10 @@ const DataGrid = forwardRef(function DataGrid(
   }
 
   return (
-    <div className='ag-theme-quartz w-full' style={{ height }}>
+    <div
+      className='ag-theme-quartz w-full font-sans text-xs'
+      style={{ height, overflow: 'visible' }}
+    >
       <AgGridReact
         ref={gridRef}
         columnDefs={columnDefs}
@@ -285,12 +296,9 @@ const DataGrid = forwardRef(function DataGrid(
         onGridReady={onGridReady}
         context={gridContextRef.current}
         onSortChanged={onSortChanged}
-        popupParent={popupParent}
+        popupParent={popupParent || undefined}
         onFilterOpened={onFilterOpened}
         onRowClicked={(e) => {
-          // 무한 스크롤 모델에서도 e.data 사용 가능
-          console.log('[row]', e.data)
-
           onRowClick?.(e.data)
         }}
       />

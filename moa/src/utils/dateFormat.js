@@ -15,3 +15,8 @@ export const seoulInputValueToDate = (value) => {
   const d = dayjs.tz(value, 'Asia/Seoul')
   return d.isValid() ? d.toDate() : null
 }
+
+export const epochSecToIsoUtc = (epochSec) => {
+  if (epochSec === null) return null
+  return dayjs.unix(epochSec).utc().toISOString()
+}

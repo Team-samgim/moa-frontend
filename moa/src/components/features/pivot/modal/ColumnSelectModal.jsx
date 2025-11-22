@@ -3,9 +3,16 @@ import PivotFieldModalShell from './PivotFieldModalShell'
 import { usePivotFields } from '@/hooks/queries/usePivot'
 import { usePivotStore } from '@/stores/pivotStore'
 
-const ColumnSelectModal = ({ initialSelected, onApplyColumn, onClose }) => {
+const ColumnSelectModal = ({ initialSelected, onApplyColumn, onClose, availableFields }) => {
   const { data, isLoading } = usePivotFields()
-  const fieldNames = (data?.fields || []).map((f) => f.name)
+  const fieldNames = useMemo(() => {
+    if (availableFields && availableFields.length > 0) {
+      return availableFields
+    }
+    return (data?.fields || []).map((f) => f.name)
+  }, [availableFields, data])
+
+  const isLoadingEffective = !availableFields?.length && isLoading
 
   const { rows: globalRows, values: globalValues } = usePivotStore()
 
@@ -90,7 +97,7 @@ const ColumnSelectModal = ({ initialSelected, onApplyColumn, onClose }) => {
       </div>
 
       <div className='border border-t-0 border-gray-200'>
-        {isLoading ? (
+        {isLoadingEffective ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>로딩중...</div>
         ) : filteredList.length === 0 ? (
           <div className='px-3 py-4 text-center text-xs text-gray-400'>필드가 없습니다</div>
