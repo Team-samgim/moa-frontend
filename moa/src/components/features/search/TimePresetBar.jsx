@@ -185,7 +185,7 @@ const TimePresetBar = ({
   const isCustomActive = value === 'CUSTOM'
 
   return (
-    <div className='section card flex-1 4xl:flex-[0.8]'>
+    <div className='section card flex-[1.2] 4xl:flex-[0.8]'>
       <div className='flex items-center justify-between'>
         {/* Left: label + pills */}
         <div className='flex-col w-full items-center gap-4'>

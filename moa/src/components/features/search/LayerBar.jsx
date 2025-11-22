@@ -29,7 +29,7 @@ const LayerBar = ({ active, onChange }) => {
   }
 
   return (
-    <div className='flex-0.6 4xl:flex-[0.5]'>
+    <div className='flex-[0.8] 4xl:flex-[0.5]'>
       <div className='flex-col h-full justify-between items-center align'>
         <div className='mb-3 text-sm 4xl:text-base font-medium text-gray-800'>조회 계층</div>
         <div className='flex w-full gap-2 4xl:gap-3'>

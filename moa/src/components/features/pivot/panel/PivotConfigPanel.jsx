@@ -94,7 +94,7 @@ const PivotConfigPanel = ({
   }
 
   return (
-    <div className='w-full max-w-xs 4xl:max-w-xl shrink-0 space-y-6'>
+    <div className='w-full max-w-sm 4xl:max-w-xl shrink-0 space-y-6'>
       <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
         <div className='text-base 4xl:text-lg font-semibold text-gray-900'>피벗 테이블 구성</div>
 
