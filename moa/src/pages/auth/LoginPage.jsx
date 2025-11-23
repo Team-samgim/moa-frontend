@@ -156,7 +156,7 @@ const LoginPage = () => {
                     <input
                       value={login.id}
                       onChange={(e) => setLogin((s) => ({ ...s, id: e.target.value }))}
-                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
+                      className='w-full border-b border-gray-300 focus:border-(--color-blue) outline-none py-2'
                     />
                   </div>
 
@@ -166,7 +166,7 @@ const LoginPage = () => {
                       type='password'
                       value={login.password}
                       onChange={(e) => setLogin((s) => ({ ...s, password: e.target.value }))}
-                      className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2 pr-8'
+                      className='w-full border-b border-gray-300 focus:border-(--color-blue) outline-none py-2 pr-8'
                     />
                   </div>
 
@@ -174,7 +174,7 @@ const LoginPage = () => {
 
                   <button
                     type='submit'
-                    className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                    className='w-full mt-2 rounded-md bg-(--color-blue) text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
                     disabled={loginMutation.isLoading}
                   >
                     {loginMutation.isLoading ? '로그인 중...' : '로그인'}
@@ -191,11 +191,11 @@ const LoginPage = () => {
 
             {/* 오른쪽: 회원가입 CTA */}
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-bl-[200px] z-0' />
+              <div className='absolute inset-0 bg-(--color-blue) rounded-bl-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>아직 회원이 아니신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
-                  Lorem ipsum dolor sit amet consectetur.
+                  MOA의 다양한 기능을 경험해보세요!
                 </p>
                 <button
                   type='button'
@@ -212,16 +212,16 @@ const LoginPage = () => {
           <section className='w-1/2 flex'>
             {/* 왼쪽: 로그인으로 돌아가기 CTA */}
             <div className='w-1/2 relative'>
-              <div className='absolute inset-0 bg-[var(--color-blue)] rounded-br-[200px] z-0' />
+              <div className='absolute inset-0 bg-(--color-blue) rounded-br-[200px] z-0' />
               <div className='relative z-10 h-full flex flex-col items-center justify-center text-center px-6 text-white'>
                 <h3 className='text-2xl font-semibold'>이미 회원이신가요?</h3>
                 <p className='mt-3 opacity-90 leading-relaxed max-w-sm'>
-                  Lorem ipsum dolor sit amet consectetur.
+                  로그인 후 MOA를 이용해보세요.
                 </p>
                 <button
                   type='button'
                   onClick={() => setStep('login')}
-                  className='mt-8 rounded-md bg-white text-[var(--color-blue)] px-6 py-2 hover:opacity-95'
+                  className='mt-8 rounded-md bg-white text-(--color-blue) px-6 py-2 hover:opacity-95'
                 >
                   로그인
                 </button>
@@ -259,7 +259,7 @@ const LoginPage = () => {
                   <input
                     value={email}
                     onChange={(e) => onChangeEmail(e.target.value)}
-                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
+                    className='w-full border-b border-gray-300 focus:border-(--color-blue) outline-none py-2'
                   />
                   {fieldErrors.email && <MsgRow type='error'>{fieldErrors.email}</MsgRow>}
                 </div>
@@ -270,14 +270,14 @@ const LoginPage = () => {
                   <input
                     value={name}
                     onChange={(e) => onChangeName(e.target.value)}
-                    className='w-full border-b border-gray-300 focus:border-[var(--color-blue)] outline-none py-2'
+                    className='w-full border-b border-gray-300 focus:border-(--color-blue) outline-none py-2'
                   />
                   {fieldErrors.name && <MsgRow type='error'>{fieldErrors.name}</MsgRow>}
                 </div>
 
                 <button
                   type='submit'
-                  className='w-full mt-2 rounded-md bg-[var(--color-blue)] text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
+                  className='w-full mt-2 rounded-md bg-(--color-blue) text-white py-3 text-[15px] shadow-md hover:opacity-95 active:scale-[0.99]'
                   disabled={signupMutation.isLoading}
                 >
                   {signupMutation.isLoading ? '가입 중...' : '회원가입'}

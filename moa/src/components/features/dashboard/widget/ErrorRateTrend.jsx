@@ -51,8 +51,6 @@ const ErrorRateTrend = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.errorRateTrend && !isInitialized) {
-      console.log('📊 [ErrorRateTrend] DB 초기 데이터 로드:', dbData.errorRateTrend.length)
-
       // ⭐ DB 데이터에서 최근 1시간 데이터만 필터링
       const now = Date.now()
       const cutoff = now - WINDOW_MS
@@ -85,13 +83,13 @@ const ErrorRateTrend = ({ onClose }) => {
         const filtered = prev.filter((p) => new Date(p.timestamp).getTime() >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [ErrorRateTrend] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [ErrorRateTrend] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -109,8 +107,6 @@ const ErrorRateTrend = ({ onClose }) => {
     if (realtimeData.length === 0) {
       return // 👈 실시간 데이터 없으면 리턴
     }
-
-    console.log('📡 [ErrorRateTrend] 실시간 데이터 추가:', realtimeData.length)
 
     // ⚠️ SSE 데이터는 개별 이벤트만 포함하므로 시간 윈도우별로 집계 필요
     // 시간 윈도우: 5초 단위로 그룹화
@@ -182,10 +178,6 @@ const ErrorRateTrend = ({ onClose }) => {
 
       // ⭐ 추가로 MAX_POINTS 제한 (메모리 보호)
       const result = timeFiltered.slice(-MAX_POINTS)
-
-      console.log(
-        `🔄 [ErrorRateTrend] 슬라이딩 윈도우: ${combined.length}개 → ${result.length}개 (${combined.length - result.length}개 제거)`,
-      )
 
       return result
     })

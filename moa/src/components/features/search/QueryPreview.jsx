@@ -35,31 +35,36 @@ const QueryPreview = ({ chips, globalNot, onToggleNot, layerKey }) => {
     const { op, value } = splitRest(tokens)
 
     return (
-      <span className='inline-flex items-center rounded-full border border-gray-200 bg-white text-gray-700 text-sm'>
-        <span className={['px-3 py-1 rounded-full font-medium', getLayerAccentClasses()].join(' ')}>
+      <span className='inline-flex items-center rounded-full border border-gray-200 bg-white text-gray-700 text-sm 4xl:text-base'>
+        <span
+          className={[
+            'px-3 py-1 4xl:px-3.5 4xl:py-1.5 rounded-full font-medium',
+            getLayerAccentClasses(),
+          ].join(' ')}
+        >
           {field}
         </span>
-        {op && <span className='px-2 text-gray-500'>{op}</span>}
-        {value && <span className='px-3 py-1'>{value}</span>}
+        {op && <span className='px-2 4xl:px-2.5 text-gray-500'>{op}</span>}
+        {value && <span className='px-3 py-1 4xl:px-3.5 4xl:py-1.5'>{value}</span>}
       </span>
     )
   }
 
   const renderJoin = (text) => (
-    <span className='inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm'>
+    <span className='inline-flex items-center px-3 py-1 4xl:px-3.5 4xl:py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm 4xl:text-base'>
       {text}
     </span>
   )
 
   return (
     <div className='flex flex-col gap-1'>
-      <div className='text-sm font-medium mb-2'>실시간 쿼리</div>
-      <div className='flex items-center gap-3 flex-wrap'>
+      <div className='text-sm 4xl:text-base font-medium mb-2'>실시간 쿼리</div>
+      <div className='flex items-center gap-3 4xl:gap-4 flex-wrap'>
         {/* 🔹 NOT 버튼: 모양 그대로, active일 때만 레이어 색 */}
         <button
           type='button'
           className={[
-            'h-8 px-3 rounded-lg border text-sm',
+            'h-8 4xl:h-9 px-3 4xl:px-4 rounded-lg border text-sm 4xl:text-base',
             globalNot
               ? getLayerAccentClasses()
               : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
@@ -77,7 +82,7 @@ const QueryPreview = ({ chips, globalNot, onToggleNot, layerKey }) => {
             </span>
           ))
         ) : (
-          <span className='muted text-sm text-gray-400'>조건이 없습니다.</span>
+          <span className='muted text-sm 4xl:text-base text-gray-400'>조건이 없습니다.</span>
         )}
       </div>
     </div>

@@ -21,8 +21,6 @@ const ErrorPagesTop10 = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
   useEffect(() => {
     if (!isLoading && dbData?.errorPages && !isInitialized) {
-      console.log('📊 [ErrorPagesTop10] DB 초기 데이터 로드:', dbData.errorPages.length)
-
       // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.errorPages.flatMap((item) => {
@@ -44,9 +42,6 @@ const ErrorPagesTop10 = ({ onClose }) => {
           }))
       })
 
-      console.log(
-        `📊 [ErrorPagesTop10] DB 데이터 ${points.length}개 포인트 로드 완료 (실제 timestamp 사용)`,
-      )
       setErrorDataPoints(points)
       setIsInitialized(true)
     }
@@ -63,13 +58,13 @@ const ErrorPagesTop10 = ({ onClose }) => {
         const filtered = prev.filter((p) => p.timestamp >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [ErrorPagesTop10] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [ErrorPagesTop10] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -88,20 +83,18 @@ const ErrorPagesTop10 = ({ onClose }) => {
       return // 👈 실시간 데이터 없으면 처리 안 함
     }
 
-    console.log('📡 [ErrorPagesTop10] 실시간 데이터 추가:', realtimeData.length)
-
     // ⚠️ 실제 SSE 데이터 구조 확인용 로그 (필드명 확인 후 제거 가능)
-    if (realtimeData.length > 0) {
-      const sample = realtimeData[0]
-      console.log('📦 [ErrorPagesTop10] 첫 번째 실시간 데이터 샘플:', {
-        httpResCode: sample.httpResCode,
-        httpUri: sample.httpUri,
-        uri: sample.uri,
-        tsPage: sample.tsPage,
-        responseTime: sample.responseTime,
-        avgResponseTime: sample.avgResponseTime,
-      })
-    }
+    // if (realtimeData.length > 0) {
+    //   const sample = realtimeData[0]
+    //   console.log('📦 [ErrorPagesTop10] 첫 번째 실시간 데이터 샘플:', {
+    //     httpResCode: sample.httpResCode,
+    //     httpUri: sample.httpUri,
+    //     uri: sample.uri,
+    //     tsPage: sample.tsPage,
+    //     responseTime: sample.responseTime,
+    //     avgResponseTime: sample.avgResponseTime,
+    //   })
+    // }
 
     setErrorDataPoints((prev) => {
       // 실시간 데이터에서 에러만 필터링
@@ -143,10 +136,6 @@ const ErrorPagesTop10 = ({ onClose }) => {
       // ⭐ 1시간 이내 데이터만 유지 (슬라이딩 윈도우)
       const cutoff = Date.now() - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
-
-      console.log(
-        `🔄 [ErrorPagesTop10] 슬라이딩 윈도우 적용: ${combined.length}개 → ${filtered.length}개 (${combined.length - filtered.length}개 제거)`,
-      )
 
       return filtered
     })
@@ -194,7 +183,6 @@ const ErrorPagesTop10 = ({ onClose }) => {
     // errorCount 기준 내림차순 정렬 후 Top 10
     const result = aggregated.sort((a, b) => b.errorCount - a.errorCount).slice(0, 10)
 
-    console.log('📊 [ErrorPagesTop10] Top 10 집계 완료:', result)
     return result
   }, [errorDataPoints])
 

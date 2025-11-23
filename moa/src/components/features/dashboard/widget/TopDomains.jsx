@@ -21,8 +21,6 @@ const TopDomains = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
   useEffect(() => {
     if (!isLoading && dbData?.topDomains && !isInitialized) {
-      console.log('📊 [TopDomains] DB 초기 데이터 로드:', dbData.topDomains.length)
-
       // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.topDomains.flatMap((item) => {
@@ -43,9 +41,6 @@ const TopDomains = ({ onClose }) => {
           }))
       })
 
-      console.log(
-        `📊 [TopDomains] DB 데이터 ${points.length}개 포인트 로드 완료 (실제 timestamp 사용)`,
-      )
       setUriDataPoints(points)
       setIsInitialized(true)
     }
@@ -62,13 +57,13 @@ const TopDomains = ({ onClose }) => {
         const filtered = prev.filter((p) => p.timestamp >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [TopDomains] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [TopDomains] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -86,8 +81,6 @@ const TopDomains = ({ onClose }) => {
     if (realtimeData.length === 0) {
       return // 👈 실시간 데이터 없으면 리턴
     }
-
-    console.log('📡 [TopDomains] 실시간 데이터 추가:', realtimeData.length)
 
     setUriDataPoints((prev) => {
       // 실시간 데이터를 포인트로 변환
@@ -117,10 +110,6 @@ const TopDomains = ({ onClose }) => {
       const now = Date.now()
       const cutoff = now - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
-
-      console.log(
-        `🔄 [TopDomains] 슬라이딩 윈도우: ${combined.length}개 → ${filtered.length}개 (${combined.length - filtered.length}개 제거)`,
-      )
 
       return filtered
     })
@@ -168,7 +157,6 @@ const TopDomains = ({ onClose }) => {
 
     const max = Math.max(...sorted.map((d) => d.avgResponseTime), 1)
 
-    console.log('📊 [TopDomains] Top 10 집계 완료:', sorted)
     return { top10: sorted, maxTime: max }
   }, [uriDataPoints])
 

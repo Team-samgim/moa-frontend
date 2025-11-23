@@ -41,8 +41,6 @@ const AvgResponseTime = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드 (개선됨!)
   useEffect(() => {
     if (!isLoading && dbData?.responseTimeStats && !isInitialized) {
-      console.log('📊 [AvgResponseTime] DB 초기 데이터 로드:', dbData.responseTimeStats.length)
-
       const stats = dbData.responseTimeStats
 
       // 가장 최근 "유효한" 집계 포인트 찾기
@@ -98,7 +96,6 @@ const AvgResponseTime = ({ onClose }) => {
         }
       }
 
-      console.log(`📊 [AvgResponseTime] DB 데이터 ${points.length}개 포인트로 분산 배치 완료`)
       setResponseTimePoints(points)
       setIsInitialized(true)
     }
@@ -115,13 +112,13 @@ const AvgResponseTime = ({ onClose }) => {
         const filtered = prev.filter((p) => p.timestamp >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [AvgResponseTime] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [AvgResponseTime] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -139,8 +136,6 @@ const AvgResponseTime = ({ onClose }) => {
     if (realtimeData.length === 0) {
       return // 👈 실시간 데이터 없으면 리턴
     }
-
-    console.log('📡 [AvgResponseTime] 실시간 데이터 추가:', realtimeData.length)
 
     setResponseTimePoints((prev) => {
       // 실시간 데이터를 포인트로 변환
@@ -165,10 +160,6 @@ const AvgResponseTime = ({ onClose }) => {
       const now = Date.now()
       const cutoff = now - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
-
-      console.log(
-        `🔄 [AvgResponseTime] 슬라이딩 윈도우: ${combined.length}개 → ${filtered.length}개 (${combined.length - filtered.length}개 제거)`,
-      )
 
       return filtered
     })
@@ -199,8 +190,6 @@ const AvgResponseTime = ({ onClose }) => {
       p99ResponseTime: values[p99Index] || 0,
       sampleCount: count,
     }
-
-    console.log('📊 [AvgResponseTime] 집계 완료:', result)
     return result
   }, [responseTimePoints])
 

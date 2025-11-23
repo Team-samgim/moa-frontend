@@ -50,11 +50,6 @@ const DevicePerformanceDistribution = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.devicePerformanceDistribution && !isInitialized) {
-      console.log(
-        '📊 [DevicePerformanceDistribution] DB 초기 데이터 로드:',
-        dbData.devicePerformanceDistribution.length,
-      )
-
       // DB 데이터를 시간별 포인트로 변환
       // ⚠️ DB 데이터는 최근 1시간 이내 데이터만 사용 (현재 시간 기준)
       const now = Date.now()
@@ -97,13 +92,13 @@ const DevicePerformanceDistribution = ({ onClose }) => {
         const filtered = prev.filter((p) => p.timestamp >= cutoff)
 
         // 데이터가 변경되었을 때만 업데이트
-        if (filtered.length !== prev.length) {
-          console.log('🕐 [DevicePerformanceDistribution] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
-        }
+        // if (filtered.length !== prev.length) {
+        //   console.log('🕐 [DevicePerformanceDistribution] 슬라이딩 윈도우 적용:', {
+        //     이전: prev.length,
+        //     이후: filtered.length,
+        //     제거된: prev.length - filtered.length,
+        //   })
+        // }
 
         return filtered
       })
@@ -122,22 +117,20 @@ const DevicePerformanceDistribution = ({ onClose }) => {
       return
     }
 
-    console.log('📡 [DevicePerformanceDistribution] 실시간 데이터 추가:', realtimeData.length)
-
     // ⚠️ 실제 SSE 데이터 구조 확인용 로그 (필드명 확인 후 제거 가능)
-    if (realtimeData.length > 0) {
-      const sample = realtimeData[0]
-      console.log('📦 [DevicePerformanceDistribution] 첫 번째 실시간 데이터 샘플:', {
-        userAgentHardwareType: sample.userAgentHardwareType,
-        deviceType: sample.deviceType,
-        userAgent: sample.userAgent,
-        tsPage: sample.tsPage,
-        pageLoadTime: sample.pageLoadTime,
-        avgPageLoadTime: sample.avgPageLoadTime,
-        responseTime: sample.responseTime,
-        avgResponseTime: sample.avgResponseTime,
-      })
-    }
+    // if (realtimeData.length > 0) {
+    //   const sample = realtimeData[0]
+    //   console.log('📦 [DevicePerformanceDistribution] 첫 번째 실시간 데이터 샘플:', {
+    //     userAgentHardwareType: sample.userAgentHardwareType,
+    //     deviceType: sample.deviceType,
+    //     userAgent: sample.userAgent,
+    //     tsPage: sample.tsPage,
+    //     pageLoadTime: sample.pageLoadTime,
+    //     avgPageLoadTime: sample.avgPageLoadTime,
+    //     responseTime: sample.responseTime,
+    //     avgResponseTime: sample.avgResponseTime,
+    //   })
+    // }
 
     setDeviceDataPoints((prev) => {
       // 실시간 데이터를 포인트로 변환

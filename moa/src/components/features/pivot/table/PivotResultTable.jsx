@@ -316,7 +316,7 @@ const PivotResultTable = ({ pivotResult }) => {
   return (
     <div className='rounded-lg border overflow-hidden border-gray-300'>
       <div className='overflow-x-auto w-full'>
-        <div ref={tableContainerRef} className='max-h-160 overflow-y-auto'>
+        <div ref={tableContainerRef} className='max-h-270 overflow-y-auto'>
           <table
             className='min-w-max border-collapse text-sm text-gray-800 w-full'
             style={tableStyle}

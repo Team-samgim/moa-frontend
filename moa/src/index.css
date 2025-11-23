@@ -16,6 +16,9 @@
   --color-blue-dark: #2c619c;
   /* scrollbar */
   --scrollbar-comp: 0px;
+  /* custom breakpoints */
+  --breakpoint-3xl: 105rem;
+  --breakpoint-4xl: 120rem;
 }
 
 body {
@@ -72,6 +75,26 @@ body {
   }
 }
 
+@keyframes orbitGlow {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+}
+
+.orbit-dot-glow {
+  animation: orbitGlow 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 @layer utilities {
   /* .hero-gradient-bg {
     @apply absolute inset-0 -z-10 pointer-events-none;
@@ -126,5 +149,36 @@ body {
     transform-origin: 450px 450px;
     animation: orbit-spin 60s linear infinite;
     will-change: transform;
+  }
+}
+
+/* react-hot-toast 커스텀 애니메이션 */
+[data-react-hot-toast] {
+  animation: slideInRight 0.4s cubic-bezier(0.21, 1.02, 0.73, 1) forwards !important;
+}
+
+[data-react-hot-toast][data-exit] {
+  animation: slideOutRight 0.3s ease-in forwards !important;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(120%);
+    opacity: 0;
   }
 }

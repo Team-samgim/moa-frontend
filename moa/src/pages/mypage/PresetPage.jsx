@@ -1,3 +1,4 @@
+// PresetPage.jsx
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Pagination from '@/components/features/mypage/common/Pagination'
@@ -6,10 +7,11 @@ import PresetTabs from '@/components/features/mypage/preset/PresetTabs'
 import { userNavigations } from '@/constants/navigations'
 import { CLASSES } from '@/constants/tokens'
 import { useMyPresets, useToggleFavoritePreset, useDeletePreset } from '@/hooks/queries/useMyPage'
+import { cx } from '@/utils/misc'
 import { normalizePresetConfig } from '@/utils/presetNormalizer'
 
 const PresetPage = () => {
-  const [type, setType] = useState('PIVOT')
+  const [type, setType] = useState('SEARCH')
   const [page, setPage] = useState(0)
   const size = 10
   const navigate = useNavigate()
@@ -82,12 +84,10 @@ const PresetPage = () => {
     (p) => {
       const routeMap = { SEARCH: userNavigations.SEARCH, PIVOT: userNavigations.PIVOT }
       if (p.presetType === 'SEARCH') {
-        //    toSearchSpecFromConfig로 spec으로 변환
         navigate(routeMap.SEARCH, {
-          state: { preset: p.config }, // ← 여기!
+          state: { preset: p.config },
         })
       } else {
-        // PIVOT 프리셋은 기존대로 (원하면 따로 유틸 만들어도 됨)
         navigate(routeMap.PIVOT, {
           state: { preset: p.config },
         })
@@ -97,7 +97,41 @@ const PresetPage = () => {
   )
 
   return (
-    <div className='mx-auto w-full max-w-[1200px] px-6 py-6'>
+    <div className='mx-auto w-full max-w-[1200px] px-6 py-8'>
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes expandHeight {
+          from {
+            max-height: 0;
+            opacity: 0;
+          }
+          to {
+            max-height: 1000px;
+            opacity: 1;
+          }
+        }
+        
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
+        }
+      `}</style>
+
+      {/* 헤더 */}
+      <div className='mb-8'>
+        <h1 className='text-[20px] font-semibold text-gray-900 mb-2'>프리셋 관리</h1>
+        <p className='text-[15px] text-gray-600'>저장된 프리셋을 확인하고 관리할 수 있습니다</p>
+      </div>
+
       <PresetTabs
         active={type}
         onChange={(t) => {
@@ -107,14 +141,20 @@ const PresetPage = () => {
       />
 
       <div className='overflow-x-auto rounded-xl'>
-        <table className='min-w-[900px] w-full table-fixed border-separate border-spacing-y-[15px] border-spacing-x-0'>
+        <table className='min-w-[900px] w-full table-fixed border-separate border-spacing-y-3 border-spacing-x-0'>
           <thead>
-            <tr className='bg-[#F5F5F7] text-left text-[13px] text-gray-600'>
-              <th className={['w-16', CLASSES.TH, 'first:rounded-l-md'].join(' ')}></th>
-              <th className={CLASSES.TH}>프리셋 이름</th>
-              <th className={CLASSES.TH}>조회 계층</th>
-              <th className={CLASSES.TH}>생성일</th>
-              <th className={[CLASSES.TH, 'last:rounded-r-md text-left w-[260px]'].join(' ')}>
+            <tr className='bg-linear-to-r from-gray-50 to-blue-50/30 text-left text-[13px] text-gray-700'>
+              <th
+                className={['w-16', CLASSES.TH, 'first:rounded-l-lg font-semibold'].join(' ')}
+              ></th>
+              <th className={cx(CLASSES.TH, 'font-semibold')}>프리셋 이름</th>
+              <th className={cx(CLASSES.TH, 'font-semibold')}>조회 계층</th>
+              <th className={cx(CLASSES.TH, 'font-semibold')}>생성일</th>
+              <th
+                className={[CLASSES.TH, 'last:rounded-r-lg text-left w-[260px] font-semibold'].join(
+                  ' ',
+                )}
+              >
                 작업
               </th>
             </tr>
@@ -122,14 +162,21 @@ const PresetPage = () => {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className='px-4 py-8 text-center text-sm text-gray-500'>
-                  불러오는 중…
+                <td colSpan={5} className='px-4 py-12 text-center'>
+                  <div className='inline-flex items-center gap-2 text-blue-600'>
+                    <div className='w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin' />
+                    <span className='text-sm font-medium'>불러오는 중…</span>
+                  </div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className='px-4 py-8 text-center text-sm text-gray-500'>
-                  저장된 프리셋이 없습니다.
+                <td colSpan={5} className='px-4 py-12 text-center'>
+                  <div className='text-gray-400'>
+                    <div className='text-4xl mb-3'>📋</div>
+                    <p className='text-sm font-medium text-gray-600'>저장된 프리셋이 없습니다.</p>
+                    <p className='text-xs text-gray-500 mt-1'>새로운 프리셋을 만들어보세요</p>
+                  </div>
                 </td>
               </tr>
             ) : (

@@ -38,12 +38,6 @@ export const useDashboardStore = create((set, get) => ({
       // ⭐ 2. 중복되지 않은 새 데이터만 필터링
       const uniqueNewData = newData.filter((d) => !existingTimestamps.has(d.tsServer))
 
-      console.log('📊 중복 제거:', {
-        받은데이터: newData.length,
-        중복제거후: uniqueNewData.length,
-        제거된개수: newData.length - uniqueNewData.length,
-      })
-
       // ⭐ 3. 기존 데이터와 병합
       const combined = [...state.realtimeData, ...uniqueNewData]
 

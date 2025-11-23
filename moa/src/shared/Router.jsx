@@ -17,18 +17,18 @@ import TestPage from '@/pages/test/TestPage'
 import TestPage2 from '@/pages/test/TestPage2'
 import { useAuthStore } from '@/stores/authStore'
 
-const AuthBootstrap = () => {
+const LandingWithAuth = () => {
   const navigate = useNavigate()
   const { accessToken, refreshToken, setTokens, clearTokens } = useAuthStore()
 
   useEffect(() => {
     const run = async () => {
+      // 토큰이 없으면 그냥 랜딩 페이지 표시
       if (!accessToken && !refreshToken) {
-        clearTokens()
-        navigate(loggedOutNavigations.LANDING, { replace: true })
         return
       }
 
+      // 토큰이 있으면 재발급 시도 후 대시보드로 이동
       try {
         if (refreshToken) {
           const { accessToken: newAccess, refreshToken: newRefresh } =
@@ -44,13 +44,14 @@ const AuthBootstrap = () => {
       } catch (e) {
         console.error(e)
         clearTokens()
-        navigate(loggedOutNavigations.LANDING, { replace: true })
+        // 에러 발생 시 토큰 제거하고 랜딩 페이지 유지
       }
     }
 
     run()
   }, [accessToken, refreshToken, clearTokens, navigate, setTokens])
-  return null
+
+  return <LandingPage />
 }
 
 const Router = () => {
@@ -59,8 +60,7 @@ const Router = () => {
       <Routes>
         <Route element={<Layout />}>
           {/* 비로그인 상태 */}
-          <Route path='/' element={<AuthBootstrap />} />
-          <Route path={loggedOutNavigations.LANDING} element={<LandingPage />} />
+          <Route path='/' element={<LandingWithAuth />} />
           <Route path={loggedOutNavigations.LOGIN} element={<LoginPage />} />
           <Route path={loggedOutNavigations.TEST} element={<TestPage />} />
           <Route path={loggedOutNavigations.TEST_2} element={<TestPage2 />} />
@@ -73,7 +73,6 @@ const Router = () => {
             <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />
             <Route path={userNavigations.PRESET} element={<PresetPage />} />
             <Route path={userNavigations.MY_PAGE} element={<MyPage />} />
-            {/* <Route path={userNavigations.GRID} element={<GridPage />} /> */}
           </Route>
         </Route>
       </Routes>
