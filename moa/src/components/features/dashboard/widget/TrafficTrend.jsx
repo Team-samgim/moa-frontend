@@ -11,6 +11,7 @@ import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import ReactECharts from 'echarts-for-react'
 import PropTypes from 'prop-types'
+import { createNotification } from '@/api/notification'
 import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { showTrafficAnomalyToast } from '@/components/features/dashboard/toast'
@@ -64,15 +65,14 @@ const TrafficTrend = ({ onClose }) => {
   const [chartPoints, setChartPoints] = useState([])
   const [isInitialized, setIsInitialized] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [lastCheckedTime, setLastCheckedTime] = useState(null) // ⭐ 추가
+  const [lastCheckedTime, setLastCheckedTime] = useState(null)
   const notifiedAnomaliesRef = useRef(new Set())
 
-  // ⭐ 임계값 설정 state
   const [thresholdSettings, setThresholdSettings] = useState({
     requestMin: 0,
-    requestMax: 0.2, // Request 정상 범위
+    requestMax: 0.2,
     responseMin: 0,
-    responseMax: 0.4, // Response 정상 범위 (차트 기준)
+    responseMax: 0.4,
     enabled: true,
   })
 
@@ -155,40 +155,19 @@ const TrafficTrend = ({ onClose }) => {
     [visiblePoints],
   )
 
-  // ⭐ 디버깅 코드
-  useEffect(() => {
-    console.log('📊 Current threshold settings:', thresholdSettings)
-    console.log('📈 Visible points count:', visiblePoints.length)
-
-    if (visiblePoints.length > 0) {
-      const latest = visiblePoints[visiblePoints.length - 1]
-      console.log('📍 Latest point:', {
-        time: latest.t,
-        req: latest.req,
-        res: latest.res,
-        reqAnomaly:
-          latest.req < thresholdSettings.requestMin || latest.req > thresholdSettings.requestMax,
-        resAnomaly:
-          latest.res < thresholdSettings.responseMin || latest.res > thresholdSettings.responseMax,
-      })
-    }
-  }, [visiblePoints, thresholdSettings])
-
   // ⭐ 새로운 이상치만 감지하도록 수정
   useEffect(() => {
     if (!thresholdSettings.enabled || visiblePoints.length === 0) return
 
-    // 마지막으로 체크한 시간 이후의 새로운 포인트만 확인
     const newPoints = lastCheckedTime
       ? visiblePoints.filter(
           (point) => new Date(point.t).getTime() > new Date(lastCheckedTime).getTime(),
         )
-      : visiblePoints.slice(-1) // 처음에는 마지막 포인트만
+      : visiblePoints.slice(-1)
 
     if (newPoints.length === 0) return
 
-    newPoints.forEach((point) => {
-      // ⭐ key를 타임스탬프만으로 생성 (더 안정적)
+    newPoints.forEach(async (point) => {
       const key = point.t
 
       if (notifiedAnomaliesRef.current.has(key)) return
@@ -224,18 +203,39 @@ const TrafficTrend = ({ onClose }) => {
           )
         }
 
-        console.log('🚨 이상치 감지:', { time, point, anomalies }) // ⭐ 디버깅용
+        console.log('🚨 이상치 감지:', { time, point, anomalies })
 
+        // 토스트 표시
         showTrafficAnomalyToast({ time, anomalies })
+
+        // ⭐ DB에 알림 저장
+        try {
+          await createNotification({
+            type: 'DASHBOARD',
+            title: '⚠️ 트래픽 이상 감지',
+            content: `${time}\n${anomalies.join('\n')}`,
+            config: {
+              // ⭐ JSON.stringify 제거! 그냥 객체로 보내기
+              timestamp: point.t,
+              requestMbps: point.req,
+              responseMbps: point.res,
+              requestCount: point.requestCount,
+              responseCount: point.responseCount,
+              thresholds: thresholdSettings,
+            },
+          })
+          console.log('✅ 알림이 DB에 저장되었습니다')
+        } catch (error) {
+          console.error('❌ 알림 저장 실패:', error)
+          console.error('에러 응답:', error.response?.data)
+        }
       }
     })
 
-    // ⭐ 마지막 체크 시간 업데이트
     if (newPoints.length > 0) {
       setLastCheckedTime(newPoints[newPoints.length - 1].t)
     }
 
-    // 오래된 알림 정리 (5분 이상 된 것)
     const now = Date.now()
     const cleanupThreshold = now - WINDOW_MS
 
@@ -246,11 +246,10 @@ const TrafficTrend = ({ onClose }) => {
     })
   }, [visiblePoints, thresholdSettings, lastCheckedTime])
 
-  // ⭐ 임계값 설정 적용 핸들러
   const handleApplyThreshold = (newSettings) => {
     setThresholdSettings(newSettings)
-    notifiedAnomaliesRef.current.clear() // ⭐ 새로운 임계값 적용 시 초기화
-    setLastCheckedTime(null) // ⭐ 처음부터 다시 체크
+    notifiedAnomaliesRef.current.clear()
+    setLastCheckedTime(null)
     console.log('✅ 새로운 임계값 설정:', newSettings)
     setIsSettingsOpen(false)
   }
@@ -259,7 +258,6 @@ const TrafficTrend = ({ onClose }) => {
     setIsSettingsOpen(false)
   }
 
-  // ⭐ 이상치 감지 로직 개선 (스캐터 추가)
   const anomalyPoints = useMemo(() => {
     if (!thresholdSettings.enabled) return { reqAnomalies: [], resAnomalies: [] }
 
@@ -269,12 +267,10 @@ const TrafficTrend = ({ onClose }) => {
     visiblePoints.forEach((point) => {
       const timestamp = new Date(point.t).getTime()
 
-      // Request 이상치
       if (point.req < thresholdSettings.requestMin || point.req > thresholdSettings.requestMax) {
         reqAnomalies.push([timestamp, point.req])
       }
 
-      // Response 이상치
       if (point.res < thresholdSettings.responseMin || point.res > thresholdSettings.responseMax) {
         resAnomalies.push([timestamp, point.res])
       }
@@ -284,10 +280,9 @@ const TrafficTrend = ({ onClose }) => {
   }, [visiblePoints, thresholdSettings])
 
   const option = useMemo(() => {
-    // ⭐ 2. markArea 생성 로직 개선
     const createMarkArea = (min, max, color) => {
       if (!thresholdSettings.enabled) {
-        return undefined // null 대신 undefined 반환
+        return undefined
       }
 
       return {
@@ -437,7 +432,6 @@ const TrafficTrend = ({ onClose }) => {
             ),
           }),
         },
-        // Request 이상치 스캐터
         {
           name: 'Request 이상',
           type: 'scatter',
@@ -449,9 +443,8 @@ const TrafficTrend = ({ onClose }) => {
             borderWidth: 2,
           },
           data: anomalyPoints.reqAnomalies,
-          z: 10, // 다른 시리즈 위에 표시
+          z: 10,
         },
-        // Response 이상치 스캐터
         {
           name: 'Response 이상',
           type: 'scatter',
@@ -534,22 +527,18 @@ const TrafficTrend = ({ onClose }) => {
         </div>
       </WidgetCard>
 
-      {/* 설정 모달 */}
       {isSettingsOpen && (
         <div className='fixed inset-0 z-[100] flex items-center justify-center p-4'>
-          {/* 배경 오버레이 */}
           <div
             className='absolute inset-0 bg-black/40'
             onClick={handleCloseSettings}
             aria-hidden='true'
           />
 
-          {/* 모달 컨텐츠 */}
           <div
             className='relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto'
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 바디 */}
             <div className='p-6'>
               <TrafficTrendSetting
                 currentSettings={thresholdSettings}
