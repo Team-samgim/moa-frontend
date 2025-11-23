@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react'
-import { LineChart } from 'echarts/charts'
+import { LineChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -13,11 +13,14 @@ import ReactECharts from 'echarts-for-react'
 import PropTypes from 'prop-types'
 import ChartLineIcon from '@/assets/icons/chart-line.svg?react'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
+import { showTrafficAnomalyToast } from '@/components/features/dashboard/toast'
+import TrafficTrendSetting from '@/components/features/dashboard/widgetsetting/TrafficTrendSetting'
 import { useTrafficTrend } from '@/hooks/queries/useDashboard'
 import { useDashboardStore } from '@/stores/dashboardStore'
 
 echarts.use([
   LineChart,
+  ScatterChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -26,8 +29,8 @@ echarts.use([
   CanvasRenderer,
 ])
 
-const WINDOW_MS = 5 * 60 * 1000 // 최근 5분 데이터만 보여줄 시간 창 (필요시 조정)
-const MAX_POINTS = 500 // 메모리 절약 및 자연스러운 스트리밍을 위한 최대 포인트 수
+const WINDOW_MS = 5 * 60 * 1000
+const MAX_POINTS = 500
 
 const WIDGET_INFO = {
   title: '실시간 트래픽 추이',
@@ -58,17 +61,25 @@ const WIDGET_INFO = {
 
 const TrafficTrend = ({ onClose }) => {
   const chartRef = useRef(null)
-  const [chartPoints, setChartPoints] = useState([]) // ⭐ 차트에 표시할 포인트
-  const [isInitialized, setIsInitialized] = useState(false) // ⭐ DB 데이터 로드 완료
+  const [chartPoints, setChartPoints] = useState([])
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [lastCheckedTime, setLastCheckedTime] = useState(null) // ⭐ 추가
+  const notifiedAnomaliesRef = useRef(new Set())
 
-  // ✅ 1. DB에서 초기 데이터 로드
+  // ⭐ 임계값 설정 state
+  const [thresholdSettings, setThresholdSettings] = useState({
+    requestMin: 0,
+    requestMax: 0.2, // Request 정상 범위
+    responseMin: 0,
+    responseMax: 0.4, // Response 정상 범위 (차트 기준)
+    enabled: true,
+  })
+
   const { data: dbData, isLoading } = useTrafficTrend()
-
-  // ✅ 2. SSE 실시간 데이터
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
 
-  // ✅ 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.points && !isInitialized) {
       const points = dbData.points.map((p) => ({
@@ -84,7 +95,6 @@ const TrafficTrend = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. SSE 연결되면 실시간 데이터 추가 (수정)
   useEffect(() => {
     if (!isConnected || !isInitialized) {
       return
@@ -94,14 +104,12 @@ const TrafficTrend = ({ onClose }) => {
       return
     }
 
-    // ⭐ timestamp별로 그룹핑 및 집계
     const grouped = {}
 
     realtimeData.forEach((item) => {
-      // timestamp를 분 단위로 반올림 (필요시 조정)
       const timestamp = item.tsServer || new Date().toISOString()
       const roundedTime = new Date(timestamp)
-      roundedTime.setSeconds(0, 0) // 초와 밀리초 제거
+      roundedTime.setSeconds(0, 0)
       const key = roundedTime.toISOString()
 
       if (!grouped[key]) {
@@ -114,7 +122,6 @@ const TrafficTrend = ({ onClose }) => {
         }
       }
 
-      // 합산
       grouped[key].req += Number(item.mbpsReq || 0)
       grouped[key].res += Number(item.mbpsRes || 0)
       grouped[key].requestCount += Number(item.pagePktCntReq || 0)
@@ -123,30 +130,21 @@ const TrafficTrend = ({ onClose }) => {
 
     const newPoints = Object.values(grouped)
 
-    // ⭐ 기존 차트 포인트와 병합 (중복 제거)
     setChartPoints((prev) => {
       const existingTimestamps = new Set(prev.map((p) => p.t))
       const uniqueNewPoints = newPoints.filter((p) => !existingTimestamps.has(p.t))
-
-      // 병합 후 시간 순 정렬
       const combined = [...prev, ...uniqueNewPoints].sort((a, b) => new Date(a.t) - new Date(b.t))
-
-      // 최근 MAX_POINTS개만 유지
       return combined.slice(-MAX_POINTS)
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  // ⭐ 화면에 실제로 보여줄 슬라이딩 윈도우 데이터 (최근 WINDOW_MS 구간)
   const visiblePoints = useMemo(() => {
     if (chartPoints.length === 0) return []
-
     const latestTime = new Date(chartPoints[chartPoints.length - 1].t).getTime()
     const cutoff = latestTime - WINDOW_MS
-
     return chartPoints.filter((p) => new Date(p.t).getTime() >= cutoff)
   }, [chartPoints])
 
-  // Request/Response 데이터 생성 (최근 구간만 사용)
   const reqData = useMemo(
     () => visiblePoints.map((p) => [new Date(p.t).getTime(), p.req]),
     [visiblePoints],
@@ -157,7 +155,158 @@ const TrafficTrend = ({ onClose }) => {
     [visiblePoints],
   )
 
+  // ⭐ 디버깅 코드
+  useEffect(() => {
+    console.log('📊 Current threshold settings:', thresholdSettings)
+    console.log('📈 Visible points count:', visiblePoints.length)
+
+    if (visiblePoints.length > 0) {
+      const latest = visiblePoints[visiblePoints.length - 1]
+      console.log('📍 Latest point:', {
+        time: latest.t,
+        req: latest.req,
+        res: latest.res,
+        reqAnomaly:
+          latest.req < thresholdSettings.requestMin || latest.req > thresholdSettings.requestMax,
+        resAnomaly:
+          latest.res < thresholdSettings.responseMin || latest.res > thresholdSettings.responseMax,
+      })
+    }
+  }, [visiblePoints, thresholdSettings])
+
+  // ⭐ 새로운 이상치만 감지하도록 수정
+  useEffect(() => {
+    if (!thresholdSettings.enabled || visiblePoints.length === 0) return
+
+    // 마지막으로 체크한 시간 이후의 새로운 포인트만 확인
+    const newPoints = lastCheckedTime
+      ? visiblePoints.filter(
+          (point) => new Date(point.t).getTime() > new Date(lastCheckedTime).getTime(),
+        )
+      : visiblePoints.slice(-1) // 처음에는 마지막 포인트만
+
+    if (newPoints.length === 0) return
+
+    newPoints.forEach((point) => {
+      // ⭐ key를 타임스탬프만으로 생성 (더 안정적)
+      const key = point.t
+
+      if (notifiedAnomaliesRef.current.has(key)) return
+
+      const reqAnomaly =
+        point.req < thresholdSettings.requestMin || point.req > thresholdSettings.requestMax
+
+      const resAnomaly =
+        point.res < thresholdSettings.responseMin || point.res > thresholdSettings.responseMax
+
+      if (reqAnomaly || resAnomaly) {
+        notifiedAnomaliesRef.current.add(key)
+
+        const time = new Date(point.t).toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+
+        const anomalies = []
+
+        if (reqAnomaly) {
+          const status = point.req > thresholdSettings.requestMax ? '초과' : '미달'
+          anomalies.push(
+            `🔵 Request: ${point.req.toFixed(2)} Mbps ${status} (정상: ${thresholdSettings.requestMin}~${thresholdSettings.requestMax})`,
+          )
+        }
+
+        if (resAnomaly) {
+          const status = point.res > thresholdSettings.responseMax ? '초과' : '미달'
+          anomalies.push(
+            `🟢 Response: ${point.res.toFixed(2)} Mbps ${status} (정상: ${thresholdSettings.responseMin}~${thresholdSettings.responseMax})`,
+          )
+        }
+
+        console.log('🚨 이상치 감지:', { time, point, anomalies }) // ⭐ 디버깅용
+
+        showTrafficAnomalyToast({ time, anomalies })
+      }
+    })
+
+    // ⭐ 마지막 체크 시간 업데이트
+    if (newPoints.length > 0) {
+      setLastCheckedTime(newPoints[newPoints.length - 1].t)
+    }
+
+    // 오래된 알림 정리 (5분 이상 된 것)
+    const now = Date.now()
+    const cleanupThreshold = now - WINDOW_MS
+
+    Array.from(notifiedAnomaliesRef.current).forEach((key) => {
+      if (new Date(key).getTime() < cleanupThreshold) {
+        notifiedAnomaliesRef.current.delete(key)
+      }
+    })
+  }, [visiblePoints, thresholdSettings, lastCheckedTime])
+
+  // ⭐ 임계값 설정 적용 핸들러
+  const handleApplyThreshold = (newSettings) => {
+    setThresholdSettings(newSettings)
+    notifiedAnomaliesRef.current.clear() // ⭐ 새로운 임계값 적용 시 초기화
+    setLastCheckedTime(null) // ⭐ 처음부터 다시 체크
+    console.log('✅ 새로운 임계값 설정:', newSettings)
+    setIsSettingsOpen(false)
+  }
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false)
+  }
+
+  // ⭐ 이상치 감지 로직 개선 (스캐터 추가)
+  const anomalyPoints = useMemo(() => {
+    if (!thresholdSettings.enabled) return { reqAnomalies: [], resAnomalies: [] }
+
+    const reqAnomalies = []
+    const resAnomalies = []
+
+    visiblePoints.forEach((point) => {
+      const timestamp = new Date(point.t).getTime()
+
+      // Request 이상치
+      if (point.req < thresholdSettings.requestMin || point.req > thresholdSettings.requestMax) {
+        reqAnomalies.push([timestamp, point.req])
+      }
+
+      // Response 이상치
+      if (point.res < thresholdSettings.responseMin || point.res > thresholdSettings.responseMax) {
+        resAnomalies.push([timestamp, point.res])
+      }
+    })
+
+    return { reqAnomalies, resAnomalies }
+  }, [visiblePoints, thresholdSettings])
+
   const option = useMemo(() => {
+    // ⭐ 2. markArea 생성 로직 개선
+    const createMarkArea = (min, max, color) => {
+      if (!thresholdSettings.enabled) {
+        return undefined // null 대신 undefined 반환
+      }
+
+      return {
+        silent: true,
+        itemStyle: {
+          color: color,
+          opacity: 0.15,
+        },
+        label: {
+          show: true,
+          position: 'insideTopLeft',
+          formatter: `정상 범위\n${min} - ${max} Mbps`,
+          fontSize: 10,
+          color: '#666',
+        },
+        data: [[{ yAxis: min }, { yAxis: max }]],
+      }
+    }
+
     return {
       grid: { top: 56, left: 44, right: 16, bottom: 30 },
       tooltip: {
@@ -168,7 +317,6 @@ const TrafficTrend = ({ onClose }) => {
         formatter: (params) => {
           if (!params || params.length === 0) return ''
 
-          // ⭐ Request와 Response 각 1개씩만
           const requestParam = params.find((p) => p.seriesName === 'Request')
           const responseParam = params.find((p) => p.seriesName === 'Response')
 
@@ -188,7 +336,6 @@ const TrafficTrend = ({ onClose }) => {
 
           let result = `<div style="font-size: 12px; font-weight: 500; margin-bottom: 4px;">${time}</div>`
 
-          // Request 정보
           if (requestParam) {
             const mbps = requestParam.value[1]?.toFixed(2) || '0.00'
             result += `
@@ -201,7 +348,6 @@ const TrafficTrend = ({ onClose }) => {
             `
           }
 
-          // Response 정보
           if (responseParam) {
             const mbps = responseParam.value[1]?.toFixed(2) || '0.00'
             result += `
@@ -264,6 +410,13 @@ const TrafficTrend = ({ onClose }) => {
           lineStyle: { width: 2.4 },
           areaStyle: { opacity: 0.3 },
           data: reqData,
+          ...(thresholdSettings.enabled && {
+            markArea: createMarkArea(
+              thresholdSettings.requestMin,
+              thresholdSettings.requestMax,
+              '#5470c6',
+            ),
+          }),
         },
         {
           name: 'Response',
@@ -276,18 +429,51 @@ const TrafficTrend = ({ onClose }) => {
           lineStyle: { width: 1.6 },
           areaStyle: { opacity: 0.18 },
           data: resData,
+          ...(thresholdSettings.enabled && {
+            markArea: createMarkArea(
+              thresholdSettings.responseMin,
+              thresholdSettings.responseMax,
+              '#91cc75',
+            ),
+          }),
+        },
+        // Request 이상치 스캐터
+        {
+          name: 'Request 이상',
+          type: 'scatter',
+          symbol: 'circle',
+          symbolSize: 12,
+          itemStyle: {
+            color: '#ff4d4f',
+            borderColor: '#fff',
+            borderWidth: 2,
+          },
+          data: anomalyPoints.reqAnomalies,
+          z: 10, // 다른 시리즈 위에 표시
+        },
+        // Response 이상치 스캐터
+        {
+          name: 'Response 이상',
+          type: 'scatter',
+          symbol: 'circle',
+          symbolSize: 12,
+          itemStyle: {
+            color: '#faad14',
+            borderColor: '#fff',
+            borderWidth: 2,
+          },
+          data: anomalyPoints.resAnomalies,
+          z: 10,
         },
       ],
       animation: true,
-      // 초기 렌더링 및 실시간 업데이트 모두 부드럽게
       animationDuration: 300,
       animationEasing: 'linear',
       animationDurationUpdate: 300,
       animationEasingUpdate: 'linear',
     }
-  }, [reqData, resData, visiblePoints])
+  }, [reqData, resData, visiblePoints, thresholdSettings, anomalyPoints])
 
-  // 컨테이너 크기 변화 대응
   useEffect(() => {
     const inst = chartRef.current?.getEchartsInstance?.()
     if (!inst) return
@@ -305,51 +491,76 @@ const TrafficTrend = ({ onClose }) => {
     }
   }, [])
 
-  // ✅ 데이터 소스 표시
   const dataSource = isConnected ? '실시간' : 'DB'
   const dataCount = visiblePoints.length
 
   return (
-    <WidgetCard
-      icon={<ChartLineIcon />}
-      title='실시간 트래픽 추이'
-      description={`Mbps 기준, Request/Response 구분 (${dataSource} - ${dataCount}개)`}
-      showInfo={true}
-      showSettings={true}
-      showClose={true}
-      widgetInfo={WIDGET_INFO}
-      onSettings={() => console.log('트래픽 추이 설정')}
-      onClose={onClose}
-    >
-      <div className='h-70'>
-        {isLoading && chartPoints.length === 0 ? (
-          // ✅ 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
-          <div className='flex items-center justify-center h-full'>
-            <div className='text-center text-gray-500'>
-              <div className='w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2'></div>
-              <p className='text-sm'>데이터 로딩 중...</p>
+    <>
+      <WidgetCard
+        icon={<ChartLineIcon />}
+        title='실시간 트래픽 추이'
+        description={`Mbps 기준, Request/Response 구분 (${dataSource} - ${dataCount}개)`}
+        showInfo={true}
+        showSettings={true}
+        showClose={true}
+        widgetInfo={WIDGET_INFO}
+        onClose={onClose}
+        onSettings={() => setIsSettingsOpen(true)}
+      >
+        <div className='h-70'>
+          {isLoading && chartPoints.length === 0 ? (
+            <div className='flex items-center justify-center h-full'>
+              <div className='text-center text-gray-500'>
+                <div className='w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2'></div>
+                <p className='text-sm'>데이터 로딩 중...</p>
+              </div>
             </div>
-          </div>
-        ) : chartPoints.length === 0 ? (
-          // ✅ 요청은 끝났는데도 데이터가 없을 때
-          <div className='flex items-center justify-center h-full'>
-            <div className='text-center text-gray-500'>
-              <p className='text-sm'>데이터가 없습니다</p>
+          ) : chartPoints.length === 0 ? (
+            <div className='flex items-center justify-center h-full'>
+              <div className='text-center text-gray-500'>
+                <p className='text-sm'>데이터가 없습니다</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          // ✅ 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
-          <ReactECharts
-            ref={chartRef}
-            echarts={echarts}
-            option={option}
-            notMerge={false}
-            lazyUpdate={true}
-            style={{ width: '100%', height: '100%' }}
+          ) : (
+            <ReactECharts
+              ref={chartRef}
+              echarts={echarts}
+              option={option}
+              notMerge={false}
+              lazyUpdate={true}
+              style={{ width: '100%', height: '100%' }}
+            />
+          )}
+        </div>
+      </WidgetCard>
+
+      {/* 설정 모달 */}
+      {isSettingsOpen && (
+        <div className='fixed inset-0 z-[100] flex items-center justify-center p-4'>
+          {/* 배경 오버레이 */}
+          <div
+            className='absolute inset-0 bg-black/40'
+            onClick={handleCloseSettings}
+            aria-hidden='true'
           />
-        )}
-      </div>
-    </WidgetCard>
+
+          {/* 모달 컨텐츠 */}
+          <div
+            className='relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto'
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 바디 */}
+            <div className='p-6'>
+              <TrafficTrendSetting
+                currentSettings={thresholdSettings}
+                onSave={handleApplyThreshold}
+                onClose={handleCloseSettings}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
