@@ -13,6 +13,7 @@ import FieldList from '@/components/features/search/FieldList'
 import FieldPicker from '@/components/features/search/FieldPicker'
 import LayerBar from '@/components/features/search/LayerBar'
 import QueryPreview from '@/components/features/search/QueryPreview'
+import SearchPresetModal from '@/components/features/search/SearchPresetModal'
 import SelectedConditions from '@/components/features/search/SelectedConditions'
 import TimePresetBar from '@/components/features/search/TimePresetBar'
 import { userNavigations } from '@/constants/navigations'
@@ -37,6 +38,7 @@ const SearchPage = () => {
   const [httpPageRowKey, setHttpPageRowKey] = useState(null)
   const [httpUriRowKey, setHttpUriRowKey] = useState(null)
   const [ethernetRowKey, setEthernetRowKey] = useState(null)
+  const [showPresetModal, setShowPresetModal] = useState(false)
 
   const withRowKeyIfDetail = (keys, lyr) =>
     ['TCP', 'HTTP_PAGE', 'ETHERNET', 'HTTP_URI'].includes(lyr)
@@ -330,6 +332,66 @@ const SearchPage = () => {
     globalNot,
   ])
 
+  /** 프리셋 적용 핸들러 */
+  const handleApplyPreset = useCallback(
+    (preset) => {
+      setShowPresetModal(false)
+
+      // 프리셋 config에서 search 정보 추출
+      const searchConfig = preset.config?.search
+
+      if (!searchConfig) {
+        alert('프리셋 정보가 올바르지 않습니다.')
+        return
+      }
+
+      skipLayerResetRef.current = true
+
+      // 레이어 설정
+      setLayer(searchConfig.layer ?? 'HTTP_PAGE')
+
+      // 컬럼 설정
+      setViewKeys(searchConfig.columns ?? [])
+
+      // 조건 설정
+      const loadedConditions = searchConfig.condition || searchConfig.query?.conditions || []
+      setConditions(
+        loadedConditions.map((c) => ({
+          ...c,
+          id: c.id || uid(),
+        })),
+      )
+
+      // Global NOT 설정
+      const queryInfo = searchConfig.query || {}
+      setGlobalNot(!!queryInfo.globalNot)
+
+      // 시간 설정
+      const toDate = (sec) => (Number.isFinite(sec) ? new Date(sec * 1000) : null)
+      let nextPreset = queryInfo.timePreset ?? '1H'
+      let nextCustom = queryInfo.customTimeRange ?? null
+
+      // time 객체에서 epoch 가져오기
+      if (!nextCustom && searchConfig.time?.fromEpoch && searchConfig.time?.toEpoch) {
+        nextCustom = {
+          from: toDate(searchConfig.time.fromEpoch),
+          to: toDate(searchConfig.time.toEpoch),
+          fromEpoch: searchConfig.time.fromEpoch,
+          toEpoch: searchConfig.time.toEpoch,
+        }
+      }
+
+      if (nextCustom?.from && nextCustom?.to) nextPreset = 'CUSTOM'
+
+      setTimePreset(nextPreset)
+      setCustomTimeRange(nextCustom ?? null)
+
+      // 자동 검색 실행
+      setTimeout(() => onClickSearch(), 0)
+    },
+    [onClickSearch],
+  )
+
   /** 프리셋 주입(브리지 우선, 없으면 라우트 state) */
   useEffect(() => {
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
@@ -446,19 +508,6 @@ const SearchPage = () => {
   return (
     <div className='p-4 mx-30 4xl:mx-60'>
       <div className='mx-auto space-y-6'>
-        {/* 상단 타이틀 + 프리셋 버튼 */}
-        {/* <div className='flex items-center justify-between'>
-          <h1 className='text-2xl font-semibold text-slate-900'>그리드 테이블 구성</h1>
-          <div className='flex items-center gap-6 text-sm font-medium text-[#3877BE]'>
-            <button type='button' className='hover:underline'>
-              프리셋 저장
-            </button>
-            <button type='button' className='hover:underline'>
-              프리셋 불러오기
-            </button>
-          </div>
-        </div> */}
-
         <div className='flex items-center justify-between gap-5 px-3'>
           <h2 className='text-[20px] font-semibold text-gray-900'>검색</h2>
         </div>
@@ -479,7 +528,11 @@ const SearchPage = () => {
                 >
                   {presetMut.isPending ? '저장 중…' : '프리셋 저장'}
                 </button>
-                <button type='button' className='hover:underline'>
+                <button
+                  type='button'
+                  className='hover:underline'
+                  onClick={() => setShowPresetModal(true)}
+                >
                   프리셋 불러오기
                 </button>
               </div>
@@ -691,6 +744,11 @@ const SearchPage = () => {
             </>
           )}
         </div>
+      )}
+
+      {/* 프리셋 불러오기 모달 */}
+      {showPresetModal && (
+        <SearchPresetModal onClose={() => setShowPresetModal(false)} onSelect={handleApplyPreset} />
       )}
     </div>
   )
