@@ -5,7 +5,7 @@ import files from '@/assets/images/files.webp'
 import settings from '@/assets/images/settings.webp'
 
 import { userNavigations } from '@/constants/navigations'
-import { useMyProfile } from '@/hooks/queries/useMyPage'
+import { useMyProfile, useMyStats } from '@/hooks/queries/useMyPage'
 
 const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
   const [isHovered, setIsHovered] = useState(false)
@@ -89,9 +89,14 @@ const StatBadge = ({ label, value, delay = 0 }) => (
 
 const MyPage = () => {
   const { data: me } = useMyProfile()
+  const { data: stats } = useMyStats()
   const nickname = me?.nickname ?? 'Username'
   const email = me?.email ?? 'abc@abc.com'
   const navigate = useNavigate()
+
+  const totalPresets = stats?.totalPresets ?? 0
+  const favoritePresets = stats?.favoritePresets ?? 0
+  const totalExports = stats?.totalExports ?? 0
 
   const scrollTo = (id) => {
     const el = document.querySelector(id)
@@ -194,9 +199,9 @@ const MyPage = () => {
 
             {/* 통계 배지들 */}
             <div className='flex gap-6'>
-              <StatBadge label='저장된 프리셋' value='12' delay={0.2} />
-              <StatBadge label='생성한 문서' value='34' delay={0.3} />
-              <StatBadge label='즐겨찾는 프리셋' value='5' delay={0.4} />
+              <StatBadge label='저장된 프리셋' value={totalPresets} delay={0.2} />
+              <StatBadge label='생성한 문서' value={totalExports} delay={0.3} />
+              <StatBadge label='즐겨찾는 프리셋' value={favoritePresets} delay={0.4} />
             </div>
           </div>
         </section>
