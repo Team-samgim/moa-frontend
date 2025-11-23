@@ -1,42 +1,90 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import calculatorIcon from '@/assets/icons/calculator.svg'
-import file from '@/assets/icons/file.svg'
-import profile from '@/assets/icons/profile-edit.svg'
+import calculator from '@/assets/images/calculator.webp'
+import files from '@/assets/images/files.webp'
+import settings from '@/assets/images/settings.webp'
+
 import { userNavigations } from '@/constants/navigations'
 import { useMyProfile } from '@/hooks/queries/useMyPage'
 
-const QuickCard = ({ title, desc, icon, onClick }) => (
-  <button
-    type='button'
-    onClick={onClick}
-    className={[
-      'group relative block h-full w-full text-left',
-      'rounded-[16px] border border-[#E3EDFF] bg-[#F3F7FD]',
-      'p-0 shadow-[0_6px_8px_rgba(0,103,255,0.06),0_10px_16px_rgba(0,103,255,0.08)]',
-      'transition-transform hover:-translate-y-0.5 overflow-hidden',
-      'cursor-pointer',
-    ].join(' ')}
-  >
-    <div className='absolute top-4 left-4 right-[96px] m-3'>
-      <div className='text-[24px] font-semibold leading-[30px] tracking-wide'>{title}</div>
-      <div className='mt-2 text-[14px] leading-[22px] tracking-[0.02em] text-gray-600 whitespace-pre-line'>
-        {desc}
-      </div>
-    </div>
-
-    <div
-      className='pointer-events-none absolute bottom-4 right-4
-                 [&_img]:h-[100px] [&_img]:w-[100px] [&_img]:opacity-95
-                 [&_img]:drop-shadow-[0_10px_24px_rgba(0,0,0,0.18)]'
+const QuickCard = ({ title, desc, icon, onClick, iconBgColor, delay = 0 }) => {
+  const [isHovered, setIsHovered] = useState(false)
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className='group relative block h-full w-full text-left rounded-3xl p-0 overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/90 backdrop-blur-sm border border-blue-100/50'
+      style={{
+        animation: `fadeInUp 0.6s ease-out ${delay}s both`,
+      }}
     >
-      {icon}
-    </div>
+      <div className='absolute inset-0 bg-linear-to-br from-blue-50/40 via-sky-50/20 to-white/95' />
 
-    <div
-      aria-hidden={true}
-      className='pointer-events-none absolute -bottom-2 right-1 h-16 w-28 rounded-full bg-white/40 blur-2xl'
-    />
-  </button>
+      <div className='absolute inset-0 bg-linear-to-br from-blue-100/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500' />
+
+      <div className='relative z-10 p-10 h-full flex flex-col justify-between'>
+        <div>
+          <div className='text-[23px] font-bold leading-9 tracking-tight text-[#2c5282] mb-4'>
+            {title}
+          </div>
+          <div className='space-y-1'>
+            {desc.split('\n').map((line, idx) => (
+              <div key={idx} className='text-[17px] tracking-[-0.01em] text-[#4678b3]'>
+                {line}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className='flex justify-end'>
+          <div
+            className='relative transform transition-all duration-500 ease-out'
+            style={{
+              transform: isHovered ? 'scale(1.05) rotate(-3deg)' : 'scale(1) rotate(0deg)',
+            }}
+          >
+            <div
+              className='absolute inset-0 rounded-full blur-md scale-110 transition-all duration-500'
+              style={{
+                background: iconBgColor,
+                opacity: isHovered ? 0.6 : 0.9,
+              }}
+            />
+
+            <div
+              className='absolute inset-0 rounded-full blur-2xl scale-125 transition-opacity duration-500'
+              style={{
+                background: iconBgColor,
+                opacity: isHovered ? 0.3 : 0.15,
+              }}
+            />
+
+            <div className='relative'>
+              <div className='[&_img]:h-27 [&_img]:w-27 [&_img]:drop-shadow-[0_2px_8px_rgba(34, 46, 86, 0.8)]'>
+                {icon}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className='absolute inset-0 rounded-3xl ring-1 ring-inset ring-blue-100/50 pointer-events-none' />
+    </button>
+  )
+}
+
+const StatBadge = ({ label, value, delay = 0 }) => (
+  <div
+    className='flex flex-col items-center px-6 py-5 bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/30 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105'
+    style={{
+      animation: `fadeInUp 0.6s ease-out ${delay}s both`,
+    }}
+  >
+    <div className='text-[28px] font-bold text-[#4A7EBB] leading-none'>{value}</div>
+    <div className='text-[13px] text-[#6B8CAE] mt-1.5 font-medium'>{label}</div>
+  </div>
 )
 
 const MyPage = () => {
@@ -51,44 +99,134 @@ const MyPage = () => {
   }
 
   return (
-    <div className='w-full flex justify-center'>
-      <div className='w-[1280px] min-h-[834px] px-0 py-6'>
-        <section className='mx-auto w-[1080px] h-[240px] rounded-[20px] border border-gray-200 bg-white p-8 shadow-sm flex flex-col justify-center'>
-          <div className='flex flex-col gap-2.5'>
-            <h1 className='text-[30px] font-bold leading-[38px] tracking-[-0.3px]'>
-              안녕하세요, <span className='text-blue-600'>{nickname}</span>님
-            </h1>
-            <p className='text-[20px] leading-[30px] tracking-[-0.2px] text-gray-500'>{email}</p>
-            <p className='text-[20px] leading-[30px] tracking-[-0.15px] text-gray-600 mt-5'>
-              마이페이지에서 {nickname}님만의 공간을 확인해보아요.
-            </p>
+    <div className='w-full flex justify-center mt-5 pb-50'>
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+
+      <div className='w-6xl 4xl:w-8xl px-5 pt-8'>
+        {/* 헤더 섹션 - hero-gradient-bg 스타일 적용 */}
+        <section
+          className='mx-auto w-6xl 4xl:w-7xl rounded-3xl px-10 py-10 shadow-xl relative overflow-hidden'
+          style={{
+            animation: 'fadeInUp 0.6s ease-out',
+            backgroundImage: `
+              radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.85), transparent 60%),
+              radial-gradient(circle at 80% 18%, rgba(191, 219, 254, 0.9), transparent 60%),
+              radial-gradient(circle at 15% 85%, rgba(191, 219, 254, 0.9), transparent 60%),
+              radial-gradient(circle at 85% 82%, rgba(129, 199, 255, 0.8), transparent 60%),
+              linear-gradient(135deg, #e7f2ff, #9fc3ff)
+            `,
+            backgroundSize: `
+              120% 120%,
+              120% 120%,
+              120% 120%,
+              120% 120%,
+              100% 100%
+            `,
+            backgroundPosition: `
+              0% 0%,
+              100% 0%,
+              0% 100%,
+              100% 100%,
+              50% 50%
+            `,
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          <div className='absolute inset-0 opacity-[0.08]'>
+            <div className='absolute top-[-10%] right-[-5%] w-[600px]'>
+              <svg viewBox='0 0 200 200' className='w-full h-full'>
+                <defs>
+                  <pattern id='grid' width='20' height='20' patternUnits='userSpaceOnUse'>
+                    <path d='M 20 0 L 0 0 0 20' fill='none' stroke='white' strokeWidth='0.5' />
+                  </pattern>
+                </defs>
+                <circle cx='100' cy='100' r='90' fill='url(#grid)' opacity='0.3' />
+                <circle
+                  cx='100'
+                  cy='100'
+                  r='70'
+                  fill='none'
+                  stroke='white'
+                  strokeWidth='0.5'
+                  opacity='0.5'
+                />
+                <circle
+                  cx='100'
+                  cy='100'
+                  r='50'
+                  fill='none'
+                  stroke='white'
+                  strokeWidth='0.5'
+                  opacity='0.5'
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className='relative z-10 flex items-center justify-between'>
+            <div className='flex-1'>
+              <div className='flex items-center gap-5 mb-4'>
+                <div className='w-18 h-18 rounded-full bg-linear-to-br from-white to-[#D0E4F7] flex items-center justify-center text-3xl font-bold text-[#4A7EBB] shadow-lg'>
+                  {nickname.charAt(0).toUpperCase()}
+                </div>
+                <div className='flex flex-col justify-center'>
+                  <h1 className='text-[26px] font-bold tracking-tight text-[#1e3a5f]'>
+                    안녕하세요, <span className='text-blue'>{nickname}</span>님
+                  </h1>
+                  <p className='text-[16px] text-[#4A7EBB]'>{email}</p>
+                </div>
+              </div>
+              <p className='text-[18px] ml-2 mt-6 text-[#2c5282]'>
+                마이페이지에서 정보를 관리하고, 프리셋과 문서를 손쉽게 확인하세요.
+              </p>
+            </div>
+
+            {/* 통계 배지들 */}
+            <div className='flex gap-6'>
+              <StatBadge label='저장된 프리셋' value='12' delay={0.2} />
+              <StatBadge label='생성한 문서' value='34' delay={0.3} />
+              <StatBadge label='즐겨찾는 프리셋' value='5' delay={0.4} />
+            </div>
           </div>
         </section>
 
-        <section className='mt-6 w-full'>
-          <div className='mx-auto w-[1080px] h-[191px] grid grid-cols-3 gap-[24px] items-stretch'>
-            {/* 프로필은 스크롤 이동 유지 */}
+        {/* 퀵 액션 카드들 */}
+        <section className='mt-13 w-full'>
+          <div className='mx-auto w-6xl 4xl:w-7xl grid grid-cols-3 gap-6 items-stretch'>
             <QuickCard
               title='프로필 수정'
               desc={'이메일 변경\n비밀번호 변경'}
-              icon={<img src={profile} alt='프로필' />}
+              icon={<img src={settings} alt='프로필' />}
               onClick={() => scrollTo('#profile')}
+              iconBgColor='linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%)'
+              delay={0.5}
             />
-
-            {/* 프리셋 → 프리셋 페이지로 이동 */}
             <QuickCard
               title='프리셋'
               desc={'검색 프리셋\n피벗 프리셋'}
-              icon={<img src={calculatorIcon} alt='프리셋' />}
+              icon={<img src={calculator} alt='프리셋' />}
               onClick={() => navigate(userNavigations.PRESET)}
+              iconBgColor='linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+              delay={0.6}
             />
-
-            {/* 문서 → 파일 관리 페이지로 이동 */}
             <QuickCard
               title='문서'
               desc={'그리드 CSV\n피벗 CSV\n차트 이미지'}
-              icon={<img src={file} alt='문서' />}
+              icon={<img src={files} alt='문서' />}
               onClick={() => navigate(userNavigations.FILE_MANAGEMENT)}
+              iconBgColor='linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)'
+              delay={0.7}
             />
           </div>
         </section>

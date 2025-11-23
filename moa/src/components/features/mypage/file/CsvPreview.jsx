@@ -13,11 +13,21 @@ const CsvPreview = ({ fileId }) => {
 
   return (
     <div>
-      <div className='px-4 py-3 text-sm font-medium text-gray-700'>CSV 미리보기</div>
+      <div className='px-4 py-3 text-[16px] font-semibold text-gray-800'>CSV 미리보기</div>
       {isLoading ? (
-        <div className='px-4 py-8 text-center text-sm text-gray-500'>불러오는 중…</div>
+        <div className='px-4 py-12 text-center'>
+          <div className='inline-flex items-center gap-2 text-blue-600'>
+            <div className='w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin' />
+            <span className='text-sm font-medium'>불러오는 중…</span>
+          </div>
+        </div>
       ) : rows.length === 0 ? (
-        <div className='px-4 py-6 text-center text-sm text-gray-500'>데이터가 없습니다.</div>
+        <div className='px-4 py-12 text-center'>
+          <div className='text-gray-400'>
+            <div className='text-4xl mb-3'>📄</div>
+            <p className='text-sm font-medium text-gray-600'>데이터가 없습니다.</p>
+          </div>
+        </div>
       ) : (
         <PreviewGrid rows={rows} columns={columns} height={360} />
       )}

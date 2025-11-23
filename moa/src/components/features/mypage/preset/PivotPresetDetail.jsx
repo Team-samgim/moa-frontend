@@ -51,7 +51,7 @@ const PivotPresetDetail = ({ payload }) => {
   }, [cfg])
 
   return (
-    <div className='border-l border-r border-b border-[#D1D1D6] rounded-b-md rounded-t-none bg-white/50 p-5'>
+    <div className='border border-[#eaeaea] rounded bg-white/50 p-5'>
       <div className='grid grid-cols-3 gap-4'>
         {/* 열 (Column) 카드 */}
         <div className='flex min-h-0 h-full flex-col rounded border border-gray-200 bg-white overflow-hidden'>

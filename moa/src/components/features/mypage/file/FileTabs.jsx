@@ -2,11 +2,12 @@ import { memo, useCallback, useRef, useEffect, useState } from 'react'
 import { cx } from '@/utils/misc'
 
 const TABS = [
-  { key: 'SEARCH', label: '검색 프리셋', panelId: 'tabpanel-search' },
-  { key: 'PIVOT', label: '피벗 프리셋', panelId: 'tabpanel-pivot' },
+  { key: 'GRID', label: '검색 CSV', panelId: 'tabpanel-grid' },
+  { key: 'PIVOT', label: '피벗 CSV', panelId: 'tabpanel-pivot' },
+  { key: 'CHART', label: '차트 이미지', panelId: 'tabpanel-chart' },
 ]
 
-const PresetTabs = ({ active, onChange, className }) => {
+const FileTabs = ({ active, onChange, className }) => {
   const activeIndex = TABS.findIndex((t) => t.key === active)
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const tabRefs = useRef([])
@@ -35,7 +36,7 @@ const PresetTabs = ({ active, onChange, className }) => {
     <div
       className={cx('mb-8', className)}
       role='tablist'
-      aria-label='프리셋 종류'
+      aria-label='파일 종류'
       onKeyDown={handleKeyDown}
     >
       <nav className='relative flex gap-8 border-b border-gray-200'>
@@ -76,4 +77,4 @@ const PresetTabs = ({ active, onChange, className }) => {
   )
 }
 
-export default memo(PresetTabs)
+export default memo(FileTabs)
