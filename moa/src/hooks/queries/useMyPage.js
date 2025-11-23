@@ -5,7 +5,17 @@ import {
   toggleFavoritePreset,
   renamePreset,
   deletePreset,
+  fetchMyStats,
 } from '@/api/mypage'
+
+/* ===== 통계 ===== */
+export function useMyStats() {
+  return useQuery({
+    queryKey: ['mypage', 'stats'],
+    queryFn: fetchMyStats,
+    staleTime: 30_000,
+  })
+}
 
 /* ===== 프로필 ===== */
 export function useMyProfile() {

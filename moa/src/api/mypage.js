@@ -1,6 +1,12 @@
 // src/api/mypage.js
 import api from '@/api/axios'
 
+/** ========= 통계 ========= **/
+export async function fetchMyStats() {
+  const { data } = await api.get('/mypage/stats')
+  return data // { totalPresets, favoritePresets, totalExports }
+}
+
 /** ========= 프로필 ========= **/
 export async function fetchMyProfile() {
   const { data } = await api.get('/members/me') // baseURL이 .../api 라면 OK
