@@ -54,8 +54,6 @@ const BrowserPerformance = ({ onClose }) => {
   // ✅ 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
   useEffect(() => {
     if (!isLoading && dbData?.browserPerformance && !isInitialized) {
-      console.log('📊 [BrowserPerformance] DB 초기 데이터 로드:', dbData.browserPerformance.length)
-
       // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.browserPerformance.flatMap((item) => {
@@ -76,9 +74,6 @@ const BrowserPerformance = ({ onClose }) => {
           }))
       })
 
-      console.log(
-        `📊 [BrowserPerformance] DB 데이터 ${points.length}개 포인트 로드 완료 (실제 timestamp 사용)`,
-      )
       setBrowserDataPoints(points)
       setIsInitialized(true)
     }
@@ -96,11 +91,11 @@ const BrowserPerformance = ({ onClose }) => {
 
         // 데이터가 변경되었을 때만 업데이트
         if (filtered.length !== prev.length) {
-          console.log('🕐 [BrowserPerformance] 슬라이딩 윈도우 적용:', {
-            이전: prev.length,
-            이후: filtered.length,
-            제거된: prev.length - filtered.length,
-          })
+          // console.log('🕐 [BrowserPerformance] 슬라이딩 윈도우 적용:', {
+          //   이전: prev.length,
+          //   이후: filtered.length,
+          //   제거된: prev.length - filtered.length,
+          // })
         }
 
         return filtered
@@ -120,12 +115,11 @@ const BrowserPerformance = ({ onClose }) => {
       return // 👈 실시간 데이터 없으면 처리 안 함
     }
 
-    console.log('📡 [BrowserPerformance] 실시간 데이터 추가:', realtimeData.length)
+    ;('📡 [BrowserPerformance] 실시간 데이터 추가:', realtimeData.length)
 
     // ⚠️ 실제 SSE 데이터 구조 확인용 로그 (필드명 확인 후 제거 가능)
     if (realtimeData.length > 0) {
-      const sample = realtimeData[0]
-      console.log('📦 [BrowserPerformance] 첫 번째 실시간 데이터 샘플:', {
+      const sample = realtimeData[0]('📦 [BrowserPerformance] 첫 번째 실시간 데이터 샘플:', {
         userAgentSoftwareName: sample.userAgentSoftwareName,
         browser: sample.browser,
         userAgent: sample.userAgent,
@@ -180,10 +174,6 @@ const BrowserPerformance = ({ onClose }) => {
       const cutoff = Date.now() - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
 
-      console.log(
-        `🔄 [BrowserPerformance] 슬라이딩 윈도우 적용: ${combined.length}개 → ${filtered.length}개 (${combined.length - filtered.length}개 제거)`,
-      )
-
       return filtered
     })
   }, [realtimeData, isConnected, isInitialized])
@@ -228,7 +218,6 @@ const BrowserPerformance = ({ onClose }) => {
       requestCount: item.totalCount,
     }))
 
-    console.log('📊 [BrowserPerformance] 집계 완료:', result)
     return result
   }, [browserDataPoints])
 

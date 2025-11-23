@@ -151,3 +151,34 @@ body {
     will-change: transform;
   }
 }
+
+/* react-hot-toast 커스텀 애니메이션 */
+[data-react-hot-toast] {
+  animation: slideInRight 0.4s cubic-bezier(0.21, 1.02, 0.73, 1) forwards !important;
+}
+
+[data-react-hot-toast][data-exit] {
+  animation: slideOutRight 0.3s ease-in forwards !important;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}

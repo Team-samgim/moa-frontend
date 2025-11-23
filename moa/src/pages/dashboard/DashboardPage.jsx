@@ -21,12 +21,12 @@ import BrowserPerformance from '@/components/features/dashboard/widget/BrowserPe
 import DevicePerformanceDistribution from '@/components/features/dashboard/widget/DevicePerformanceDistribution'
 import ErrorPagesTop10 from '@/components/features/dashboard/widget/ErrorPagesTop10'
 import ErrorRateTrend from '@/components/features/dashboard/widget/ErrorRateTrend'
+import httpStatusCodeDistribution from '@/components/features/dashboard/widget/HttpStatusCodeDistribution'
 import PageLoadTimeTrend from '@/components/features/dashboard/widget/PageLoadTimeTrend'
 import ResponseTimeStats from '@/components/features/dashboard/widget/ResponseTimeStats'
 import TopDomains from '@/components/features/dashboard/widget/TopDomains'
 import TrafficByCountry from '@/components/features/dashboard/widget/TrafficByCountry'
 import TrafficTrend from '@/components/features/dashboard/widget/TrafficTrend'
-import httpStatusCodeDistribution from '@/components/features/dashboard/widget/httpStatusCodeDistribution'
 import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
 import { useDashboardSSE } from '@/hooks/useDashboardSSE'
 import { useDashboardStore } from '@/stores/dashboardStore'
@@ -92,11 +92,6 @@ const DashboardPage = () => {
   useEffect(() => {
     console.log('📊 [DashboardPage] 실시간 데이터 길이:', realtimeData.length)
     console.log('🔌 [DashboardPage] SSE 연결 상태:', isConnected)
-    if (realtimeData.length > 0) {
-      console.log('📦 [DashboardPage] 첫 번째 데이터:', realtimeData[0])
-      console.log('📦 [DashboardPage] mbpsReq:', realtimeData[0].mbpsReq)
-      console.log('📦 [DashboardPage] mbpsRes:', realtimeData[0].mbpsRes)
-    }
   }, [realtimeData, isConnected])
 
   // ✅ SSE 연결 (페이지 로드 시 즉시 연결)
@@ -116,8 +111,6 @@ const DashboardPage = () => {
   }
 
   const handleApplyFilters = () => {
-    console.log('적용된 필터:', filters)
-
     // Zustand store에 필터 저장
     const { setFilters: setStoreFilters } = useDashboardStore.getState()
     setStoreFilters(filters)
@@ -204,10 +197,7 @@ const DashboardPage = () => {
         <Toolbar
           onAddWidget={() => setLibraryOpen(true)}
           onFilterSettings={() => setIsFilterOpen(true)}
-          onSaveLayout={() => {
-            console.log('현재 위젯 순서:', widgets)
-            console.log('현재 필터:', filters)
-          }}
+          onSaveLayout={() => {}}
         />
 
         {/* ✅ 필터 컴포넌트 */}

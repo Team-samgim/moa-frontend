@@ -65,3 +65,10 @@ export async function fetchUnreadCount() {
   console.warn('⚠️ Unexpected response format:', data)
   return 0
 }
+
+// 알림 생성 함수
+export async function createNotification(notificationData) {
+  const res = await axiosInstance.post('/notifications', notificationData)
+
+  return res.data
+}

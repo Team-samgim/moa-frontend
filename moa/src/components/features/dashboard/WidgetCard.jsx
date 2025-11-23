@@ -1,8 +1,9 @@
-import { memo } from 'react'
+import { memo, forwardRef } from 'react'
 import PropTypes from 'prop-types'
-import WidgetFilter from './WidgetFilter'
 import CloseIcon from '@/assets/icons/delete.svg?react'
 import SettingIcon from '@/assets/icons/setting.svg?react'
+import SideKickIcon from '@/assets/icons/side-kick.svg?react'
+import { useDragHandle } from '@/components/features/dashboard/DragHandleContext'
 
 /**
  * 공통 위젯 카드
@@ -32,132 +33,141 @@ IconButton.propTypes = {
   children: PropTypes.node.isRequired,
 }
 
-const WidgetCard = ({
-  title,
-  description,
-  icon, // ReactNode | string(emoji)
-  children,
-  showSettings = true,
-  showClose = true,
-  showInfo = false, // 정보 아이콘 표시 여부
-  onSettings,
-  onClose,
-  headerRight = null, // 우측 커스텀 영역
-  // 필터 팝업 사용 시 전달 (선택)
-  filterOptions = null, // { widgetId, title, description, badgeCount, size }
-  renderFilterBody = null, // ({ register, close }) => ReactNode
-  onApplyFilter = null,
-  // 위젯 설명 정보
-  widgetInfo = null, // { title, description, sections: [{ icon, title, items: [] }] }
-}) => {
-  return (
-    <section>
-      {/* 헤더 (타이틀, 설명, 설정, 닫기) */}
-      <div className='flex items-start justify-between p-4'>
-        <div className='flex items-start gap-3'>
-          {icon ? (
-            <div className='mt-0.5 text-xl'>
-              {typeof icon === 'string' ? <span aria-hidden='true'>{icon}</span> : icon}
-            </div>
-          ) : null}
-          <div>
-            <div className='flex items-center gap-2'>
-              <h3 className='font-semibold leading-6'>{title}</h3>
+const WidgetCard = forwardRef(
+  (
+    {
+      title,
+      description,
+      icon, // ReactNode | string(emoji)
+      children,
+      showSettings = true,
+      showClose = true,
+      showInfo = false, // 정보 아이콘 표시 여부
+      onSettings,
+      onClose,
+      headerRight = null, // 우측 커스텀 영역
 
-              {/* 제목 옆 정보 아이콘 (호버시 툴팁) */}
-              {showInfo && widgetInfo && (
-                <div className='relative group'>
-                  <button
-                    type='button'
-                    className='inline-flex items-center justify-center w-4 h-4 text-gray-400 hover:text-blue-600 transition-colors cursor-help'
-                    aria-label='위젯 설명'
-                  >
-                    <svg className='w-full h-full' fill='currentColor' viewBox='0 0 20 20'>
-                      <path
-                        fillRule='evenodd'
-                        d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z'
-                        clipRule='evenodd'
-                      />
-                    </svg>
-                  </button>
+      // 위젯 설명 정보
+      widgetInfo = null, // { title, description, sections: [{ icon, title, items: [] }] }
+    },
+    ref,
+  ) => {
+    const { listeners, attributes } = useDragHandle()
 
-                  {/* 툴팁 - 호버시만 표시 */}
-                  <div className='absolute left-0 top-full mt-2 w-80 p-4 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] pointer-events-none'>
-                    {/* 화살표 */}
-                    <div className='absolute left-4 bottom-full w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white' />
-                    <div className='absolute left-4 bottom-full mb-px w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-200' />
+    return (
+      <section ref={ref}>
+        {/* 헤더 (타이틀, 설명, 설정, 닫기) */}
+        <div className='flex items-start justify-between p-4'>
+          <div className='flex items-start gap-3'>
+            {/* 드래그 핸들 아이콘 */}
+            {listeners && attributes ? (
+              <button
+                {...attributes}
+                {...listeners}
+                type='button'
+                className='mt-0.5 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 rounded'
+                aria-label='위젯 이동'
+                title='위젯 이동'
+              >
+                <SideKickIcon className='h-5 w-5' />
+              </button>
+            ) : (
+              <div className='mt-0.5 text-gray-400' aria-label='위젯 이동' title='위젯 이동'>
+                <SideKickIcon className='h-5 w-5' />
+              </div>
+            )}
 
-                    {/* 툴팁 내용 */}
-                    <div className='space-y-3'>
-                      {widgetInfo.sections.map((section, idx) => (
-                        <div key={idx}>
-                          <div className='flex items-center gap-2 mb-2'>
-                            <span className='text-lg'>{section.icon}</span>
-                            <h4 className='text-sm font-semibold text-gray-900'>{section.title}</h4>
+            {icon ? (
+              <div className='mt-0.5 text-xl'>
+                {typeof icon === 'string' ? <span aria-hidden='true'>{icon}</span> : icon}
+              </div>
+            ) : null}
+            <div>
+              <div className='flex items-center gap-2'>
+                <h3 className='font-semibold leading-6'>{title}</h3>
+
+                {/* 제목 옆 정보 아이콘 (호버시 툴팁) */}
+                {showInfo && widgetInfo && (
+                  <div className='relative group'>
+                    <button
+                      type='button'
+                      className='inline-flex items-center justify-center w-4 h-4 text-gray-400 hover:text-blue-600 transition-colors cursor-help'
+                      aria-label='위젯 설명'
+                    >
+                      <svg className='w-full h-full' fill='currentColor' viewBox='0 0 20 20'>
+                        <path
+                          fillRule='evenodd'
+                          d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z'
+                          clipRule='evenodd'
+                        />
+                      </svg>
+                    </button>
+
+                    {/* 툴팁 - 호버시만 표시 */}
+                    <div className='absolute left-0 top-full mt-2 w-80 p-4 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] pointer-events-none'>
+                      {/* 화살표 */}
+                      <div className='absolute left-4 bottom-full w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white' />
+                      <div className='absolute left-4 bottom-full mb-px w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-200' />
+
+                      {/* 툴팁 내용 */}
+                      <div className='space-y-3'>
+                        {widgetInfo.sections.map((section, idx) => (
+                          <div key={idx}>
+                            <div className='flex items-center gap-2 mb-2'>
+                              <span className='text-lg'>{section.icon}</span>
+                              <h4 className='text-sm font-semibold text-gray-900'>
+                                {section.title}
+                              </h4>
+                            </div>
+                            <ul className='space-y-1 ml-7'>
+                              {section.items.map((item, itemIdx) => (
+                                <li
+                                  key={itemIdx}
+                                  className='flex items-start gap-2 text-xs text-gray-600'
+                                >
+                                  <span className='text-blue-600 mt-0.5 flex-shrink-0'>•</span>
+                                  <span className='leading-relaxed'>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                          <ul className='space-y-1 ml-7'>
-                            {section.items.map((item, itemIdx) => (
-                              <li
-                                key={itemIdx}
-                                className='flex items-start gap-2 text-xs text-gray-600'
-                              >
-                                <span className='text-blue-600 mt-0.5 flex-shrink-0'>•</span>
-                                <span className='leading-relaxed'>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {description ? (
-              <p className='mt-0.5 text-sm text-muted-foreground text-gray-400'>{description}</p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className='flex items-center gap-1'>
-          {headerRight}
-
-          {showSettings &&
-            (renderFilterBody ? (
-              <WidgetFilter
-                widgetId={filterOptions?.widgetId || title}
-                title={filterOptions?.title || '위젯 필터'}
-                description={filterOptions?.description || '선택한 조건만 이 위젯에 적용됩니다.'}
-                badgeCount={filterOptions?.badgeCount || 0}
-                size={filterOptions?.size || 'xl'}
-                onApply={onApplyFilter}
-                renderTrigger={(open, setOpen) => (
-                  <IconButton label='설정' onClick={() => setOpen(true)}>
-                    <SettingIcon />
-                  </IconButton>
                 )}
-              >
-                {renderFilterBody}
-              </WidgetFilter>
-            ) : (
+              </div>
+
+              {description ? (
+                <p className='mt-0.5 text-sm text-muted-foreground text-gray-400'>{description}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className='flex items-center gap-1'>
+            {headerRight}
+
+            {showSettings && (
               <IconButton label='설정' onClick={onSettings}>
                 <SettingIcon />
               </IconButton>
-            ))}
-          {showClose && (
-            <IconButton label='닫기' onClick={onClose}>
-              <CloseIcon />
-            </IconButton>
-          )}
+            )}
+            {showClose && (
+              <IconButton label='닫기' onClick={onClose}>
+                <CloseIcon />
+              </IconButton>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 그래프, 차트 등  */}
-      <div className='px-4 pb-4'>{children}</div>
-    </section>
-  )
-}
+        {/* 그래프, 차트 등  */}
+        <div className='px-4 pb-4'>{children}</div>
+      </section>
+    )
+  },
+)
+
+WidgetCard.displayName = 'WidgetCard'
 
 WidgetCard.propTypes = {
   title: PropTypes.string.isRequired,

@@ -1,6 +1,8 @@
+import React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import PropTypes from 'prop-types'
+import { DragHandleContext } from './DragHandleContext'
 
 const SortableWidget = ({ id, children, className }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -11,19 +13,19 @@ const SortableWidget = ({ id, children, className }) => {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
   }
 
   return (
-    <section
-      ref={setNodeRef}
-      style={style}
-      className={`${className} rounded-lg border border-gray-200 bg-white shadow-sm`}
-      {...attributes}
-      {...listeners}
-    >
-      {children}
-    </section>
+    <DragHandleContext.Provider value={{ listeners, attributes }}>
+      <section
+        ref={setNodeRef}
+        style={style}
+        className={`${className} rounded-lg border border-gray-200 bg-white shadow-sm`}
+        {...attributes}
+      >
+        {children}
+      </section>
+    </DragHandleContext.Provider>
   )
 }
 
