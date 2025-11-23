@@ -113,10 +113,10 @@ const MyPage = () => {
         }
       `}</style>
 
-      <div className='w-8xl px-5 pt-8'>
+      <div className='w-6xl 4xl:w-8xl px-5 pt-8'>
         {/* 헤더 섹션 - hero-gradient-bg 스타일 적용 */}
         <section
-          className='mx-auto w-7xl rounded-3xl px-10 py-10 shadow-xl relative overflow-hidden'
+          className='mx-auto w-6xl 4xl:w-7xl rounded-3xl px-10 py-10 shadow-xl relative overflow-hidden'
           style={{
             animation: 'fadeInUp 0.6s ease-out',
             backgroundImage: `
@@ -203,7 +203,7 @@ const MyPage = () => {
 
         {/* 퀵 액션 카드들 */}
         <section className='mt-13 w-full'>
-          <div className='mx-auto w-7xl grid grid-cols-3 gap-6 items-stretch'>
+          <div className='mx-auto w-6xl 4xl:w-7xl grid grid-cols-3 gap-6 items-stretch'>
             <QuickCard
               title='프로필 수정'
               desc={'이메일 변경\n비밀번호 변경'}
