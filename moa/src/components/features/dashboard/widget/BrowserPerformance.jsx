@@ -119,7 +119,8 @@ const BrowserPerformance = ({ onClose }) => {
 
     // ⚠️ 실제 SSE 데이터 구조 확인용 로그 (필드명 확인 후 제거 가능)
     if (realtimeData.length > 0) {
-      const sample = realtimeData[0]('📦 [BrowserPerformance] 첫 번째 실시간 데이터 샘플:', {
+      const sample = realtimeData[0]
+      console.log('📡 [BrowserPerformance] 첫 번째 실시간 데이터 샘플:', {
         userAgentSoftwareName: sample.userAgentSoftwareName,
         browser: sample.browser,
         userAgent: sample.userAgent,
