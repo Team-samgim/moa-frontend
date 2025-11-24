@@ -97,7 +97,7 @@ const DashboardPage = () => {
   // ✅ SSE 연결 (페이지 로드 시 즉시 연결)
   useDashboardSSE({
     enabled: true,
-    moaDataUrl: 'http://localhost:9090',
+    moaDataUrl: 'https://data.mo-a.site',
   })
 
   // ✅ availableFilters 처리 (API 실패 시 Mock 데이터 사용)

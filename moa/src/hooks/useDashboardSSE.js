@@ -3,7 +3,8 @@ import { sseService } from '@/hooks/services/sseService'
 import { useDashboardStore } from '@/stores/dashboardStore'
 
 export function useDashboardSSE(options = {}) {
-  const { enabled = true, moaDataUrl = 'http://localhost:9090' } = options
+  // const { enabled = true, moaDataUrl = 'http://localhost:9090' } = options
+  const { enabled = true, moaDataUrl = 'https://data.mo-a.site' } = options
 
   const addRealtimeData = useDashboardStore((state) => state.addRealtimeData)
   const setWebSocketConnected = useDashboardStore((state) => state.setWebSocketConnected)
