@@ -1,4 +1,5 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react'
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LineChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -61,6 +62,7 @@ const WIDGET_INFO = {
 }
 
 const TrafficTrend = ({ onClose }) => {
+  const navigate = useNavigate()
   const chartRef = useRef(null)
   const [chartPoints, setChartPoints] = useState([])
   const [isInitialized, setIsInitialized] = useState(false)
@@ -79,6 +81,98 @@ const TrafficTrend = ({ onClose }) => {
   const { data: dbData, isLoading } = useTrafficTrend()
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
+  const filters = useDashboardStore((state) => state.filters)
+
+  // visiblePoints는 여기서 먼저 계산 (useCallback에서 사용하기 위해)
+  const visiblePoints = useMemo(() => {
+    if (chartPoints.length === 0) return []
+    const latestTime = new Date(chartPoints[chartPoints.length - 1].t).getTime()
+    const cutoff = latestTime - WINDOW_MS
+    return chartPoints.filter((p) => new Date(p.t).getTime() >= cutoff)
+  }, [chartPoints])
+
+  // ⭐ 이상치 클릭 시 검색 페이지로 이동
+  const handleAnomalyClick = useCallback(
+    (point) => {
+      const clickedTime = new Date(point.t).getTime() / 1000
+
+      const reqAnomaly =
+        point.req < thresholdSettings.requestMin || point.req > thresholdSettings.requestMax
+      const resAnomaly =
+        point.res < thresholdSettings.responseMin || point.res > thresholdSettings.responseMax
+
+      let anomalyType = ''
+      if (reqAnomaly && resAnomaly) {
+        anomalyType = 'Request & Response 이상'
+      } else if (reqAnomaly) {
+        anomalyType = point.req > thresholdSettings.requestMax ? 'Request 초과' : 'Request 미달'
+      } else if (resAnomaly) {
+        anomalyType = point.res > thresholdSettings.responseMax ? 'Response 초과' : 'Response 미달'
+      }
+
+      navigate('/search', {
+        state: {
+          autoFill: true,
+          layer: 'HTTP_PAGE',
+          timeRange: {
+            fromEpoch: clickedTime - 1800,
+            toEpoch: clickedTime + 1800,
+          },
+          viewKeys: [
+            'ts_server_nsec',
+            'ts_server',
+            'http_host',
+            'http_uri',
+            'http_method',
+            'http_res_code',
+            'country_name_req',
+            'src_ip',
+          ],
+          dashboardFilters: filters,
+          anomalyContext: {
+            timestamp: point.t,
+            requestMbps: point.req,
+            responseMbps: point.res,
+            requestCount: point.requestCount,
+            responseCount: point.responseCount,
+            type: anomalyType,
+          },
+        },
+      })
+    },
+    [navigate, filters, thresholdSettings],
+  )
+
+  // ⭐ 차트 클릭 핸들러
+  const handleChartClick = useCallback(
+    (params) => {
+      console.log('🖱️ 차트 클릭 감지:', params)
+
+      if (params.seriesName === 'Request 이상' || params.seriesName === 'Response 이상') {
+        console.log('🎯 이상치 포인트 클릭!')
+
+        const timestamp = params.value[0]
+        const point = visiblePoints.find((p) => new Date(p.t).getTime() === timestamp)
+
+        if (point) {
+          console.log('✅ 매칭된 포인트 찾음:', point)
+          handleAnomalyClick(point)
+        } else {
+          console.log('❌ 매칭된 포인트 못 찾음')
+        }
+      }
+    },
+    [visiblePoints, handleAnomalyClick],
+  )
+
+  // ⭐ 차트 준비 완료 핸들러
+  const handleChartReady = useCallback(
+    (chartInstance) => {
+      console.log('✅ 차트 준비 완료! 클릭 이벤트 등록')
+      chartInstance.on('click', handleChartClick)
+    },
+    [handleChartClick],
+  )
 
   useEffect(() => {
     if (!isLoading && dbData?.points && !isInitialized) {
@@ -138,13 +232,6 @@ const TrafficTrend = ({ onClose }) => {
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  const visiblePoints = useMemo(() => {
-    if (chartPoints.length === 0) return []
-    const latestTime = new Date(chartPoints[chartPoints.length - 1].t).getTime()
-    const cutoff = latestTime - WINDOW_MS
-    return chartPoints.filter((p) => new Date(p.t).getTime() >= cutoff)
-  }, [chartPoints])
-
   const reqData = useMemo(
     () => visiblePoints.map((p) => [new Date(p.t).getTime(), p.req]),
     [visiblePoints],
@@ -155,7 +242,7 @@ const TrafficTrend = ({ onClose }) => {
     [visiblePoints],
   )
 
-  // ⭐ 새로운 이상치만 감지하도록 수정
+  // 이상치 감지 및 알림
   useEffect(() => {
     if (!thresholdSettings.enabled || visiblePoints.length === 0) return
 
@@ -205,17 +292,14 @@ const TrafficTrend = ({ onClose }) => {
 
         console.log('🚨 이상치 감지:', { time, point, anomalies })
 
-        // 토스트 표시
         showTrafficAnomalyToast({ time, anomalies })
 
-        // ⭐ DB에 알림 저장
         try {
           await createNotification({
             type: 'DASHBOARD',
             title: '⚠️ 트래픽 이상 감지',
             content: `${time}\n${anomalies.join('\n')}`,
             config: {
-              // ⭐ JSON.stringify 제거! 그냥 객체로 보내기
               timestamp: point.t,
               requestMbps: point.req,
               responseMbps: point.res,
@@ -227,7 +311,6 @@ const TrafficTrend = ({ onClose }) => {
           console.log('✅ 알림이 DB에 저장되었습니다')
         } catch (error) {
           console.error('❌ 알림 저장 실패:', error)
-          console.error('에러 응답:', error.response?.data)
         }
       }
     })
@@ -444,6 +527,14 @@ const TrafficTrend = ({ onClose }) => {
           },
           data: anomalyPoints.reqAnomalies,
           z: 10,
+          silent: false,
+          emphasis: {
+            scale: 1.3,
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(255, 77, 79, 0.5)',
+            },
+          },
         },
         {
           name: 'Response 이상',
@@ -457,6 +548,14 @@ const TrafficTrend = ({ onClose }) => {
           },
           data: anomalyPoints.resAnomalies,
           z: 10,
+          silent: false,
+          emphasis: {
+            scale: 1.3,
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(250, 173, 20, 0.5)',
+            },
+          },
         },
       ],
       animation: true,
@@ -521,7 +620,8 @@ const TrafficTrend = ({ onClose }) => {
               option={option}
               notMerge={false}
               lazyUpdate={true}
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: '100%', height: '100%', cursor: 'pointer' }}
+              onChartReady={handleChartReady}
             />
           )}
         </div>
