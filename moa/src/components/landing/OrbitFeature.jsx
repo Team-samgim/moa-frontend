@@ -154,8 +154,8 @@ const OrbitFeatures = () => {
       offsetX: -250,
       variant: 'tl',
       delay: 0,
-      title: '실시간 대시보드',
-      description: 'lorem ipsum dolor sit amet',
+      title: '대시보드',
+      description: '실시간 모니터링과 스마트 이상 징후 알림',
       animationOrder: 0,
     },
     {
@@ -164,7 +164,7 @@ const OrbitFeatures = () => {
       variant: 'tr',
       delay: 2,
       title: '검색 & 그리드',
-      description: '대규모 데이터를 검색하고 그리드 테이블로',
+      description: '조건 선택만으로 필요한 데이터 즉시 조회',
       animationOrder: 1,
     },
     {
@@ -173,7 +173,7 @@ const OrbitFeatures = () => {
       variant: 'bl',
       delay: 6,
       title: '피벗 모드',
-      description: 'lorem ipsum dolor sit amet',
+      description: '테이블과 차트를 통한 다차원 분석',
       animationOrder: 2,
     },
     {
@@ -181,8 +181,8 @@ const OrbitFeatures = () => {
       offsetX: 250,
       variant: 'br',
       delay: 4,
-      title: '파일 관리',
-      description: 'lorem ipsum dolor sit amet',
+      title: '프리셋/파일 관리',
+      description: '프리셋과 파일 저장으로 작업 시간 단축',
       animationOrder: 3,
     },
   ]
