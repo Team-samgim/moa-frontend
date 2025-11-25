@@ -214,12 +214,40 @@ const buildDrilldownLineOption = (data, plusPercent, minusPercent, colorMap) => 
       bottom: 60,
       containLabel: true,
     },
+    // xAxis: {
+    //   type: 'time',
+    //   boundaryGap: false,
+    //   axisLabel: {
+    //     fontFamily:
+    //       'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    //   },
+    // },
     xAxis: {
       type: 'time',
       boundaryGap: false,
+      min: () => {
+        const now = new Date()
+        const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
+        return koreaTime.getTime() - 24 * 60 * 60 * 1000 // 24시간 전
+      },
+      max: () => {
+        const now = new Date()
+        const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
+        return koreaTime.getTime()
+      },
       axisLabel: {
         fontFamily:
           'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        formatter: (value) => {
+          const date = new Date(value)
+          return date.toLocaleString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        },
       },
     },
     yAxis: {
