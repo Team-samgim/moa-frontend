@@ -35,7 +35,7 @@ const readTop = (agg, k = 3) => {
 /**
  * 컬럼 기준 집계 카드 뷰
  * - DataGrid 컬럼 순서대로 카드 생성
- * - 한 줄 가로 스크롤
+ * - 5개씩 여러 줄로 표시 (그리드 레이아웃)
  * - 숫자 타입 : 개수 / 합계 / 평균 / 최소 / 최대
  * - 문자열/IP/MAC : 개수 / 고유값 / Top1~3
  */
@@ -78,9 +78,10 @@ const AggregatesGrid = ({ columns = [], aggregates = {} }) => {
         <span className='text-xs text-gray-400'>{visibleColumns.length}개 컬럼</span>
       </div>
 
-      {/* 가로 스크롤 영역 */}
-      <div className='overflow-x-auto'>
-        <div className='flex gap-3 pb-1 min-w-max'>
+      {/* 스크롤 가능한 컨테이너 */}
+      <div className='max-h-[600px] overflow-y-auto pr-1'>
+        {/* 5개씩 여러 줄로 표시하는 그리드 */}
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3'>
           {visibleColumns.map((col) => {
             const field = col.field || col.name
             const header = col.headerName || col.labelKo || field
@@ -142,25 +143,25 @@ const AggregatesGrid = ({ columns = [], aggregates = {} }) => {
             return (
               <article
                 key={field}
-                className='min-w-[220px] max-w-xs rounded-xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm shadow-slate-100'
+                className='rounded-xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm shadow-slate-100'
               >
                 {/* 카드 헤더 */}
-                <header className='mb-2 flex items-center justify-between gap-2'>
+                <header className='mb-3 flex items-center justify-between gap-2'>
                   <div className='flex-1 truncate'>
-                    <h4 className='truncate text-xs font-semibold text-slate-800'>{header}</h4>
-                    <p className='truncate text-[10px] text-slate-400'>{field}</p>
+                    <h4 className='truncate text-sm font-semibold text-slate-800'>{header}</h4>
+                    <p className='truncate text-xs text-slate-400'>{field}</p>
                   </div>
                 </header>
 
                 {/* 메트릭 리스트 */}
-                <dl className='space-y-1'>
+                <dl className='space-y-1.5'>
                   {items.map((it) => (
                     <div
                       key={it.label}
-                      className='flex items-center justify-between rounded-lg px-1 py-0.5 hover:bg-slate-50'
+                      className='flex items-center justify-between rounded-lg px-2 py-1 hover:bg-slate-50'
                     >
-                      <dt className='text-[11px] text-slate-500'>{it.label}</dt>
-                      <dd className='max-w-[120px] truncate text-right text-[11px] font-mono text-slate-800'>
+                      <dt className='text-xs text-slate-500'>{it.label}</dt>
+                      <dd className='max-w-[140px] truncate text-right text-xs font-mono text-slate-800'>
                         {it.value}
                       </dd>
                     </div>

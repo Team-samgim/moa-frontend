@@ -426,7 +426,11 @@ const HttpPageRowPreviewModal = memo(function HttpPageRowPreviewModal({ open, on
                         <LV label='클라이언트 IP' value={d.srcIp} />
                         <LV label='클라이언트 포트' value={d.srcPort} />
                         <LV label='브라우저' value={d.userAgentInfo?.softwareName} />
-                        <LV label='운영체제' value={d.userAgentInfo?.operatingSystemName} />
+                        <LV label='운영체제' value={d.userAgentInfo?.osName} />
+                        <LV label='OS 플랫폼' value={d.userAgentInfo?.osPlatform} />
+                        <LV label='소프트웨어 타입' value={d.userAgentInfo?.softwareType} />
+                        <LV label='하드웨어 타입' value={d.userAgentInfo?.hardwareType} />
+                        <LV label='레이아웃 엔진' value={d.userAgentInfo?.layoutEngineName} />
                         <LV label='HTTP 메소드' value={d.httpMethod} />
                         <LV label='요청 URI' value={d.httpUri} />
                         <LV label='Referer' value={d.httpReferer} />
