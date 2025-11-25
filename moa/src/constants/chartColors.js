@@ -9,4 +9,4 @@ export const PIVOT_SERIES_COLORS = [
 
 // 드릴다운 median & band 색
 export const DRILLDOWN_MEDIAN_COLOR = '#999999'
-export const DRILLDOWN_BAND_COLOR = 'rgba(37, 99, 235, 0.5)'
+export const DRILLDOWN_BAND_COLOR = 'rgba(37, 99, 235, 0.65)'
