@@ -6,7 +6,7 @@ import ProtectedRoute from './ProtedtedRoute'
 import { reissueApi } from '@/api/auth'
 import { loggedOutNavigations, userNavigations } from '@/constants/navigations'
 import LoginPage from '@/pages/auth/LoginPage'
-import DashboardPage from '@/pages/dashboard/DashboardPage'
+import DashboardPage1 from '@/pages/dashboard/DashboardPage1'
 import LandingPage from '@/pages/landing/LandingPage'
 import FileManagementPage from '@/pages/mypage/FileManagementPage'
 import MyPage from '@/pages/mypage/MyPage'
@@ -67,7 +67,7 @@ const Router = () => {
 
           {/* 로그인 상태: 보호 영역 */}
           <Route element={<ProtectedRoute />}>
-            <Route path={userNavigations.DASHBOARD} element={<DashboardPage />} />
+            <Route path={userNavigations.DASHBOARD} element={<DashboardPage1 />} />
             <Route path={userNavigations.SEARCH} element={<SearchPage />} />
             <Route path={userNavigations.PIVOT} element={<PivotPage />} />
             <Route path={userNavigations.FILE_MANAGEMENT} element={<FileManagementPage />} />

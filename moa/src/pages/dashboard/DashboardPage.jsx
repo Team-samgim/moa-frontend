@@ -44,7 +44,8 @@ const DashboardPage = () => {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filters, setFilters] = useState({})
-  const [initialLoadDone, setInitialLoadDone] = useState(false) // ⭐ 초기 로딩 완료 플래그
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
+  const [forceShowDashboard, setForceShowDashboard] = useState(false) // ⭐ 추가
 
   // 기본으로 보여줄 위젯
   const [widgets, setWidgets] = useState([
@@ -76,14 +77,36 @@ const DashboardPage = () => {
   // ============================================
   // React Query로 대시보드 데이터 조회
   // ============================================
-  const { data: dashboardData, isLoading } = useDashboardAggregated()
+  const { data: dashboardData, isLoading, isError, error } = useDashboardAggregated()
 
   // ⭐ 초기 로딩 완료 체크
   useEffect(() => {
     if (!isLoading && !initialLoadDone) {
+      console.log('✅ [DashboardPage] 초기 로딩 완료')
       setInitialLoadDone(true)
     }
   }, [isLoading, initialLoadDone])
+
+  // ⭐ 5초 후 강제로 대시보드 표시
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!initialLoadDone) {
+        console.warn('⚠️ [DashboardPage] 로딩 타임아웃 - 강제로 대시보드 표시')
+        setForceShowDashboard(true)
+        setInitialLoadDone(true)
+      }
+    }, 5000) // 5초
+
+    return () => clearTimeout(timer)
+  }, [initialLoadDone])
+
+  // ⭐ 에러 발생 시 처리
+  useEffect(() => {
+    if (isError) {
+      console.error('❌ [DashboardPage] 대시보드 데이터 로드 실패:', error)
+      setInitialLoadDone(true) // 에러여도 화면 표시
+    }
+  }, [isError, error])
 
   // ✅ 디버깅: 실시간 데이터 확인
   const realtimeData = useDashboardStore((state) => state.realtimeData)
@@ -92,12 +115,15 @@ const DashboardPage = () => {
   useEffect(() => {
     console.log('📊 [DashboardPage] 실시간 데이터 길이:', realtimeData.length)
     console.log('🔌 [DashboardPage] SSE 연결 상태:', isConnected)
-  }, [realtimeData, isConnected])
+    console.log('⏳ [DashboardPage] isLoading:', isLoading)
+    console.log('✅ [DashboardPage] initialLoadDone:', initialLoadDone)
+    console.log('🚀 [DashboardPage] forceShowDashboard:', forceShowDashboard)
+  }, [realtimeData, isConnected, isLoading, initialLoadDone, forceShowDashboard])
 
   // ✅ SSE 연결 (페이지 로드 시 즉시 연결)
   useDashboardSSE({
     enabled: true,
-    moaDataUrl: 'https://data.mo-a.site',
+    moaDataUrl: 'http://localhost:9090',
   })
 
   // ✅ availableFilters 처리 (API 실패 시 Mock 데이터 사용)
@@ -111,11 +137,8 @@ const DashboardPage = () => {
   }
 
   const handleApplyFilters = () => {
-    // Zustand store에 필터 저장
     const { setFilters: setStoreFilters } = useDashboardStore.getState()
     setStoreFilters(filters)
-
-    // 필터 적용 후 닫기
     setIsFilterOpen(false)
   }
 
@@ -124,15 +147,12 @@ const DashboardPage = () => {
     delete newFilters[filterKey]
     setFilters(newFilters)
 
-    // store 업데이트
     const { setFilters: setStoreFilters } = useDashboardStore.getState()
     setStoreFilters(newFilters)
   }
 
   const handleResetFilters = () => {
     setFilters({})
-
-    // store에서도 초기화
     const { setFilters: setStoreFilters } = useDashboardStore.getState()
     setStoreFilters({})
   }
@@ -173,12 +193,13 @@ const DashboardPage = () => {
   // ============================================
   // ✅ 로딩 상태 표시 - 초기 로딩 시에만!
   // ============================================
-  if (isLoading && !initialLoadDone) {
+  if (isLoading && !initialLoadDone && !forceShowDashboard) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
           <div className='w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
           <p className='text-gray-600'>대시보드 로딩 중...</p>
+          <p className='text-xs text-gray-400 mt-2'>5초 후 자동으로 표시됩니다</p>
         </div>
       </div>
     )
