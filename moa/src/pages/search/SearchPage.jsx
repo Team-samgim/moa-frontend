@@ -245,9 +245,10 @@ const SearchPage = () => {
     gridRef.current?.purge?.()
   }
 
-  // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
-    const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
+    // ⭐ viewKeys 대신 실제 gridCols 사용
+    const cols = gridCols.map((c) => c.name).filter(Boolean)
+
     const api = gridApis?.api
     const sortModel = api?.getSortModel?.()?.[0] || null
     const sortField = sortModel
@@ -255,25 +256,27 @@ const SearchPage = () => {
       : searchPayload?.options?.orderBy || 'ts_server_nsec'
     const sortDirection = (sortModel?.sort || searchPayload?.options?.order || 'DESC').toUpperCase()
     const filters = gridRef.current?.getActiveFilters?.() || {}
+
     const baseSpec =
       searchPayload ||
       buildSearchPayload({
         layer,
-        viewKeys,
+        viewKeys: cols, // ⭐ 여기도 수정
         conditions,
         timePreset,
         customTimeRange,
         globalNot,
         fields,
       })
+
     const searchPreset = {
       version: 1,
       layer,
-      columns: cols,
+      columns: cols, // ⭐ 실제 그리드 컬럼 사용
       sort: { field: sortField, direction: sortDirection },
       filters,
       baseSpec,
-      query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
+      query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys: cols },
     }
 
     const timeSpec = getTimeSpec()
@@ -304,12 +307,11 @@ const SearchPage = () => {
       },
     }
 
-    // initFromGrid는 여전히 호출 (store 즉시 업데이트)
     const { initFromGrid } = usePivotStore.getState()
     initFromGrid({
       layer,
       time: timeSpec,
-      columns: cols,
+      columns: cols, // ⭐ 실제 그리드 컬럼 사용
       conditions,
       searchPreset,
     })
@@ -322,7 +324,7 @@ const SearchPage = () => {
   }, [
     navigate,
     layer,
-    viewKeys,
+    gridCols, // ⭐ viewKeys 대신 gridCols 의존성 추가
     conditions,
     timePreset,
     customTimeRange,
@@ -553,6 +555,97 @@ const SearchPage = () => {
       window.history.replaceState({}, document.title)
 
       return // ⭐ 프리셋 로직 실행 안함
+    }
+    // ⭐ 대시보드 이상치 클릭 처리 추가
+    if (location.state?.autoFill) {
+      const {
+        layer: targetLayer,
+        timeRange,
+        viewKeys: targetViewKeys,
+        filters,
+        anomalyContext,
+      } = location.state
+
+      console.log('🔍 대시보드에서 이상치 클릭:', location.state)
+
+      if (targetLayer) {
+        skipLayerResetRef.current = true
+        setLayer(targetLayer)
+      }
+
+      if (timeRange?.fromEpoch && timeRange?.toEpoch) {
+        const fromDate = new Date(timeRange.fromEpoch * 1000)
+        const toDate = new Date(timeRange.toEpoch * 1000)
+        setTimePreset('CUSTOM')
+        setCustomTimeRange({
+          from: fromDate,
+          to: toDate,
+          fromEpoch: timeRange.fromEpoch,
+          toEpoch: timeRange.toEpoch,
+        })
+      }
+
+      if (targetViewKeys && targetViewKeys.length > 0) {
+        setViewKeys(targetViewKeys)
+      }
+
+      if (filters && Object.keys(filters).length > 0) {
+        const newConditions = []
+
+        if (filters.http_uri) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'http_uri',
+            dataType: 'STRING',
+            operator: 'EQ',
+            values: [filters.http_uri],
+          })
+        }
+        if (filters.country_name_res) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'country_name_res',
+            dataType: 'STRING',
+            operator: 'EQ',
+            values: [filters.country_name_res],
+          })
+        }
+        if (filters.user_agent_opperating_platform) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'user_agent_opperating_platform',
+            dataType: 'STRING',
+            operator: 'EQ',
+            values: [filters.user_agent_opperating_platform],
+          })
+        }
+        if (filters.ts_page_min) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'ts_page',
+            dataType: 'NUMBER',
+            operator: 'GTE',
+            values: [String(filters.ts_page_min)],
+          })
+        }
+
+        if (newConditions.length > 0) {
+          newConditions[0].join = 'AND'
+          setConditions(newConditions)
+        }
+      }
+
+      if (anomalyContext) {
+        console.log('📊 이상치 정보:', anomalyContext)
+      }
+
+      setTimeout(() => onClickSearch(), 100)
+      window.history.replaceState({}, document.title)
+      return
     }
 
     // ⭐ 2. 기존 프리셋 로직 (autoFill이 없을 때만 실행)
