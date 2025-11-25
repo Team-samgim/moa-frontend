@@ -245,9 +245,10 @@ const SearchPage = () => {
     gridRef.current?.purge?.()
   }
 
-  // === 피벗으로 이동 (columns = viewKeys 고정) ===
   const handleGoPivot = useCallback(() => {
-    const cols = Array.isArray(viewKeys) ? viewKeys.filter(Boolean) : []
+    // ⭐ viewKeys 대신 실제 gridCols 사용
+    const cols = gridCols.map((c) => c.name).filter(Boolean)
+
     const api = gridApis?.api
     const sortModel = api?.getSortModel?.()?.[0] || null
     const sortField = sortModel
@@ -255,25 +256,27 @@ const SearchPage = () => {
       : searchPayload?.options?.orderBy || 'ts_server_nsec'
     const sortDirection = (sortModel?.sort || searchPayload?.options?.order || 'DESC').toUpperCase()
     const filters = gridRef.current?.getActiveFilters?.() || {}
+
     const baseSpec =
       searchPayload ||
       buildSearchPayload({
         layer,
-        viewKeys,
+        viewKeys: cols, // ⭐ 여기도 수정
         conditions,
         timePreset,
         customTimeRange,
         globalNot,
         fields,
       })
+
     const searchPreset = {
       version: 1,
       layer,
-      columns: cols,
+      columns: cols, // ⭐ 실제 그리드 컬럼 사용
       sort: { field: sortField, direction: sortDirection },
       filters,
       baseSpec,
-      query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys },
+      query: { layer, timePreset, customTimeRange, globalNot, conditions, viewKeys: cols },
     }
 
     const timeSpec = getTimeSpec()
@@ -304,12 +307,11 @@ const SearchPage = () => {
       },
     }
 
-    // initFromGrid는 여전히 호출 (store 즉시 업데이트)
     const { initFromGrid } = usePivotStore.getState()
     initFromGrid({
       layer,
       time: timeSpec,
-      columns: cols,
+      columns: cols, // ⭐ 실제 그리드 컬럼 사용
       conditions,
       searchPreset,
     })
@@ -322,7 +324,7 @@ const SearchPage = () => {
   }, [
     navigate,
     layer,
-    viewKeys,
+    gridCols, // ⭐ viewKeys 대신 gridCols 의존성 추가
     conditions,
     timePreset,
     customTimeRange,
@@ -395,165 +397,165 @@ const SearchPage = () => {
   /** ⭐ 프리셋 주입(브리지 우선, 없으면 라우트 state) + 대시보드 이상치 클릭 처리 */
   useEffect(() => {
     // ⭐ 1. 대시보드 이상치 클릭 처리 (우선순위 최상위)
-    // if (location.state?.autoFill) {
-    //   const {
-    //     layer: targetLayer,
-    //     timeRange,
-    //     viewKeys: targetViewKeys,
-    //     dashboardFilters,
-    //     anomalyContext,
-    //   } = location.state
+    if (location.state?.autoFill) {
+      const {
+        layer: targetLayer,
+        timeRange,
+        viewKeys: targetViewKeys,
+        dashboardFilters,
+        anomalyContext,
+      } = location.state
 
-    //   console.log('🔍 대시보드에서 이상치 클릭:', location.state)
+      console.log('🔍 대시보드에서 이상치 클릭:', location.state)
 
-    //   // 레이어 설정
-    //   if (targetLayer) {
-    //     skipLayerResetRef.current = true
-    //     setLayer(targetLayer)
-    //   }
+      // 레이어 설정
+      if (targetLayer) {
+        skipLayerResetRef.current = true
+        setLayer(targetLayer)
+      }
 
-    //   // 시간 설정
-    //   if (timeRange?.fromEpoch && timeRange?.toEpoch) {
-    //     const fromDate = new Date(timeRange.fromEpoch * 1000)
-    //     const toDate = new Date(timeRange.toEpoch * 1000)
+      // 시간 설정
+      if (timeRange?.fromEpoch && timeRange?.toEpoch) {
+        const fromDate = new Date(timeRange.fromEpoch * 1000)
+        const toDate = new Date(timeRange.toEpoch * 1000)
 
-    //     setTimePreset('CUSTOM')
-    //     setCustomTimeRange({
-    //       from: fromDate,
-    //       to: toDate,
-    //       fromEpoch: timeRange.fromEpoch,
-    //       toEpoch: timeRange.toEpoch,
-    //     })
-    //   }
+        setTimePreset('CUSTOM')
+        setCustomTimeRange({
+          from: fromDate,
+          to: toDate,
+          fromEpoch: timeRange.fromEpoch,
+          toEpoch: timeRange.toEpoch,
+        })
+      }
 
-    //   // 컬럼 설정
-    //   if (targetViewKeys && targetViewKeys.length > 0) {
-    //     setViewKeys(targetViewKeys)
-    //   }
+      // 컬럼 설정
+      if (targetViewKeys && targetViewKeys.length > 0) {
+        setViewKeys(targetViewKeys)
+      }
 
-    //   // 대시보드 필터를 조건으로 변환
-    //   if (dashboardFilters && Object.keys(dashboardFilters).length > 0) {
-    //     const newConditions = []
+      // 대시보드 필터를 조건으로 변환
+      if (dashboardFilters && Object.keys(dashboardFilters).length > 0) {
+        const newConditions = []
 
-    //     // HTTP Host 필터
-    //     if (dashboardFilters.httpHost) {
-    //       newConditions.push({
-    //         id: uid(),
-    //         join: 'AND',
-    //         fieldKey: 'http_host',
-    //         dataType: 'STRING',
-    //         operator: 'EQ',
-    //         values: [dashboardFilters.httpHost],
-    //       })
-    //     }
+        // HTTP Host 필터
+        if (dashboardFilters.httpHost) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'http_host',
+            dataType: 'STRING',
+            operator: 'EQ',
+            values: [dashboardFilters.httpHost],
+          })
+        }
 
-    //     // HTTP URI 필터
-    //     if (dashboardFilters.httpUri) {
-    //       newConditions.push({
-    //         id: uid(),
-    //         join: 'AND',
-    //         fieldKey: 'http_uri',
-    //         dataType: 'STRING',
-    //         operator: 'CONTAINS',
-    //         values: [dashboardFilters.httpUri],
-    //       })
-    //     }
+        // HTTP URI 필터
+        if (dashboardFilters.httpUri) {
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'http_uri',
+            dataType: 'STRING',
+            operator: 'CONTAINS',
+            values: [dashboardFilters.httpUri],
+          })
+        }
 
-    //     // HTTP Method 필터
-    //     if (dashboardFilters.httpMethods && dashboardFilters.httpMethods.length > 0) {
-    //       dashboardFilters.httpMethods.forEach((method, idx) => {
-    //         newConditions.push({
-    //           id: uid(),
-    //           join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
-    //           fieldKey: 'http_method',
-    //           dataType: 'STRING',
-    //           operator: 'EQ',
-    //           values: [method],
-    //         })
-    //       })
-    //     }
+        // HTTP Method 필터
+        if (dashboardFilters.httpMethods && dashboardFilters.httpMethods.length > 0) {
+          dashboardFilters.httpMethods.forEach((method, idx) => {
+            newConditions.push({
+              id: uid(),
+              join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
+              fieldKey: 'http_method',
+              dataType: 'STRING',
+              operator: 'EQ',
+              values: [method],
+            })
+          })
+        }
 
-    //     // 국가 필터
-    //     if (dashboardFilters.countries && dashboardFilters.countries.length > 0) {
-    //       dashboardFilters.countries.forEach((country, idx) => {
-    //         newConditions.push({
-    //           id: uid(),
-    //           join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
-    //           fieldKey: 'country_name_req',
-    //           dataType: 'STRING',
-    //           operator: 'EQ',
-    //           values: [country],
-    //         })
-    //       })
-    //     }
+        // 국가 필터
+        if (dashboardFilters.countries && dashboardFilters.countries.length > 0) {
+          dashboardFilters.countries.forEach((country, idx) => {
+            newConditions.push({
+              id: uid(),
+              join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
+              fieldKey: 'country_name_req',
+              dataType: 'STRING',
+              operator: 'EQ',
+              values: [country],
+            })
+          })
+        }
 
-    //     // 브라우저 필터
-    //     if (dashboardFilters.browsers && dashboardFilters.browsers.length > 0) {
-    //       dashboardFilters.browsers.forEach((browser, idx) => {
-    //         newConditions.push({
-    //           id: uid(),
-    //           join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
-    //           fieldKey: 'user_agent_software_name',
-    //           dataType: 'STRING',
-    //           operator: 'EQ',
-    //           values: [browser],
-    //         })
-    //       })
-    //     }
+        // 브라우저 필터
+        if (dashboardFilters.browsers && dashboardFilters.browsers.length > 0) {
+          dashboardFilters.browsers.forEach((browser, idx) => {
+            newConditions.push({
+              id: uid(),
+              join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
+              fieldKey: 'user_agent_software_name',
+              dataType: 'STRING',
+              operator: 'EQ',
+              values: [browser],
+            })
+          })
+        }
 
-    //     // 디바이스 필터
-    //     if (dashboardFilters.devices && dashboardFilters.devices.length > 0) {
-    //       dashboardFilters.devices.forEach((device, idx) => {
-    //         newConditions.push({
-    //           id: uid(),
-    //           join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
-    //           fieldKey: 'user_agent_hardware_type',
-    //           dataType: 'STRING',
-    //           operator: 'EQ',
-    //           values: [device],
-    //         })
-    //       })
-    //     }
+        // 디바이스 필터
+        if (dashboardFilters.devices && dashboardFilters.devices.length > 0) {
+          dashboardFilters.devices.forEach((device, idx) => {
+            newConditions.push({
+              id: uid(),
+              join: idx === 0 && newConditions.length === 0 ? 'AND' : 'OR',
+              fieldKey: 'user_agent_hardware_type',
+              dataType: 'STRING',
+              operator: 'EQ',
+              values: [device],
+            })
+          })
+        }
 
-    //     // HTTP 응답 코드 필터
-    //     if (dashboardFilters.httpResCode) {
-    //       const operator = dashboardFilters.httpResCodeOperator || '>='
-    //       let opCode = 'GTE'
-    //       if (operator === '<=') opCode = 'LTE'
-    //       else if (operator === '==') opCode = 'EQ'
+        // HTTP 응답 코드 필터
+        if (dashboardFilters.httpResCode) {
+          const operator = dashboardFilters.httpResCodeOperator || '>='
+          let opCode = 'GTE'
+          if (operator === '<=') opCode = 'LTE'
+          else if (operator === '==') opCode = 'EQ'
 
-    //       newConditions.push({
-    //         id: uid(),
-    //         join: 'AND',
-    //         fieldKey: 'http_res_code',
-    //         dataType: 'NUMBER',
-    //         operator: opCode,
-    //         values: [String(dashboardFilters.httpResCode)],
-    //       })
-    //     }
+          newConditions.push({
+            id: uid(),
+            join: 'AND',
+            fieldKey: 'http_res_code',
+            dataType: 'NUMBER',
+            operator: opCode,
+            values: [String(dashboardFilters.httpResCode)],
+          })
+        }
 
-    //     if (newConditions.length > 0) {
-    //       // 첫 번째 조건은 무조건 AND
-    //       newConditions[0].join = 'AND'
-    //       setConditions(newConditions)
-    //     }
-    //   }
+        if (newConditions.length > 0) {
+          // 첫 번째 조건은 무조건 AND
+          newConditions[0].join = 'AND'
+          setConditions(newConditions)
+        }
+      }
 
-    //   // 이상치 정보 출력
-    //   if (anomalyContext) {
-    //     console.log('📊 이상치 정보:', anomalyContext)
-    //   }
+      // 이상치 정보 출력
+      if (anomalyContext) {
+        console.log('📊 이상치 정보:', anomalyContext)
+      }
 
-    //   // 자동 검색 실행
-    //   setTimeout(() => {
-    //     onClickSearch()
-    //   }, 100)
+      // 자동 검색 실행
+      setTimeout(() => {
+        onClickSearch()
+      }, 100)
 
-    //   // location.state 초기화 (뒤로가기 시 재실행 방지)
-    //   window.history.replaceState({}, document.title)
+      // location.state 초기화 (뒤로가기 시 재실행 방지)
+      window.history.replaceState({}, document.title)
 
-    //   return // ⭐ 프리셋 로직 실행 안함
-    // }
+      return // ⭐ 프리셋 로직 실행 안함
+    }
     // ⭐ 대시보드 이상치 클릭 처리 추가
     if (location.state?.autoFill) {
       const {
