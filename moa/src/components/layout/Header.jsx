@@ -116,7 +116,7 @@ const Header = () => {
           </Link>
         </div>
 
-        <nav className='hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-6 3xl:gap-8 4xl:gap-10 text-[13px] lg:text-[13.5px] xl:text-[14px] 2xl:text-[15px] 3xl:text-[16px] 4xl:text-[18px] font-medium shrink-0'>
+        <nav className='hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-10 3xl:gap-8 4xl:gap-10 text-[13px] lg:text-[13.5px] xl:text-[14px] 2xl:text-[15px] 3xl:text-[16px] 4xl:text-[18px] font-medium shrink-0'>
           {navItems.map((item) => {
             const active = location.pathname === item.to
             return (
@@ -147,7 +147,7 @@ const Header = () => {
                 type='button'
                 onClick={() => handleProtectedNavClick(item.to)}
                 className={[
-                  'transition-colors whitespace-nowrap',
+                  'transition-colors whitespace-nowrap select-none',
                   active
                     ? 'text-(--color-blue,#1c4fd7) font-semibold'
                     : 'text-gray-700 hover:text-gray-900',

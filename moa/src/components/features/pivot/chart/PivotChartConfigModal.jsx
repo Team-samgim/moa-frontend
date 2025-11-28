@@ -5,6 +5,11 @@ import { useInfiniteDistinctValues } from '@/hooks/queries/usePivot'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
 import { allowScroll, preventScroll } from '@/utils/modal'
+import groupedColumnImg from '/src/assets/images/grouped-column.webp'
+import stackedColumnImg from '/src/assets/images/stacked-column.webp'
+import groupedBarImg from '/src/assets/images/grouped-bar.webp'
+import stackedBarImg from '/src/assets/images/stacked-bar.webp'
+import pieImg from '/src/assets/images/pie.webp'
 
 const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
   const column = usePivotStore((s) => s.column)
@@ -224,16 +229,28 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
     {
       key: 'groupedColumn',
       label: '그룹 세로 막대',
-      image: '/src/assets/images/grouped-column.webp',
+      image: groupedColumnImg,
     },
     {
       key: 'stackedColumn',
       label: '누적 세로 막대',
-      image: '/src/assets/images/stacked-column.webp',
+      image: stackedColumnImg,
     },
-    { key: 'groupedBar', label: '그룹 가로 막대', image: '/src/assets/images/grouped-bar.webp' },
-    { key: 'stackedBar', label: '누적 가로 막대', image: '/src/assets/images/stacked-bar.webp' },
-    { key: 'multiplePie', label: '멀티 파이 차트', image: '/src/assets/images/pie.webp' },
+    {
+      key: 'groupedBar',
+      label: '그룹 가로 막대',
+      image: groupedBarImg,
+    },
+    {
+      key: 'stackedBar',
+      label: '누적 가로 막대',
+      image: stackedBarImg,
+    },
+    {
+      key: 'multiplePie',
+      label: '멀티 파이 차트',
+      image: pieImg,
+    },
   ]
 
   // 적용 버튼 핸들러: 실제 store에 저장
@@ -289,7 +306,7 @@ const PivotChartConfigModal = ({ layer, time, filters, onClose, onApply }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30'>
-      <div className='w-full max-w-5xl h-[60vh] rounded-xl bg-white shadow-xl flex flex-col'>
+      <div className='w-full max-w-5xl h-[88vh] 4xl:h-[60vh] rounded-xl bg-white shadow-xl flex flex-col'>
         {/* 헤더 */}
         <div className='flex items-center justify-between border-b border-gray-200 px-6 py-4'>
           <h2 className='text-lg font-semibold text-gray-900'>차트 설정</h2>
