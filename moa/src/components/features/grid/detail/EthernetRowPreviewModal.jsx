@@ -1,3 +1,37 @@
+/**
+ * EthernetRowPreviewModal
+ *
+ * Ethernet Flow 상세 분석 모달 컴포넌트.
+ * 단일 Ethernet 트래픽 흐름(rowKey 기반)을 요청하여 요약/품질/세션/위치 정보를
+ * 탭 구조로 상세하게 시각화하는 기능을 제공한다.
+ *
+ * 주요 구성:
+ * - Summary 탭:
+ *   네트워크 기본 정보, MAC/IP/Port, 프로토콜, CRC 에러 여부, 트래픽 통계, 시간 정보 등을 표시.
+ *
+ * - Errors 탭:
+ *   CRC 에러 상세 분석(총 에러, 요청/응답 에러, 에러 길이), 원인 가능성, 패킷 사이즈 통계,
+ *   카운터 집합을 제공.
+ *
+ * - Session 탭:
+ *   만료 여부, 타임스탬프 상세, 프로토콜 스택 정보(L2/L3/L4/L7), 애플리케이션 정보 등을 포함.
+ *
+ * - Geo 탭:
+ *   EnhancedGeoMap을 활용해 요청/응답 위치 정보(국가/대륙/지역)를 지도 기반으로 표시.
+ *
+ * 특징:
+ * - ESC로 닫기, Body 스크롤 잠금, 포커스 관리, Fade/Scale 등장 트랜지션 처리.
+ * - MAC/IP/Port/Proto/CRC 등 다양한 필드가 null/undefined여도 안전하게 렌더링하도록 구성.
+ * - CRC 에러 및 품질 관련 정보는 시각적으로 강조하여 문제 지점을 빠르게 파악할 수 있도록 설계.
+ *
+ * props:
+ * - open (boolean): 모달 열림 여부
+ * - onClose (function): 닫기 이벤트 핸들러
+ * - rowKey (string): Ethernet 세부 데이터를 조회하기 위한 식별자
+ *
+ * AUTHOR : 방대혁
+ */
+
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import useEthernetMetrics from '@/hooks/detail/useEthernetMetrics'

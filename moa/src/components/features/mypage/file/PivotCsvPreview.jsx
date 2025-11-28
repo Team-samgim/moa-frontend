@@ -1,7 +1,34 @@
+/**
+ * PivotCsvPreview
+ *
+ * 내보낸 PIVOT CSV 파일의 내용을 테이블 형태로 미리보기로 제공하는 컴포넌트.
+ *
+ * 구조 특징:
+ * - export된 pivot CSV는 일반적으로 다음 형태를 가짐:
+ *   1) 첫 번째 행: 메트릭(alias) 라인
+ *   2) 이후 데이터 행들
+ *   3) 컬럼 구조: ["#", rowFieldName, rowFieldValue, ...pivotColumnValues]
+ *
+ * 기능:
+ * - useExportPreview 훅으로 CSV 일부를 가져와 렌더링
+ * - 첫 row를 aliasRow로 분리하여 2단 헤더 구성
+ * - 비어 있음 / 오류 / 로딩 상태를 명확히 표시
+ *
+ * Props:
+ * - fileId: 서버에 저장된 export 파일 식별자
+ * - pivotConfig: 피벗 설정(열 필드 이름 등 표시용)
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { memo, useMemo } from 'react'
 import { useExportPreview } from '@/hooks/queries/useFiles'
 
 const PivotCsvPreview = ({ fileId, pivotConfig }) => {
+  /**
+   * fileId로 서버에서 CSV preview를 가져온다.
+   * - limit: 최대 500행까지 미리보기
+   */
   const { data, isLoading, error } = useExportPreview({
     fileId,
     limit: 500,
@@ -10,14 +37,19 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
 
   const columns = data?.columns || []
   const rows = data?.rows || []
-
   const hasData = columns.length > 0 && rows.length > 0
 
-  // CSV 구조: 앞 3개("#", rowFieldName, rowFieldValue) + 나머지(피벗 컬럼들)
+  /**
+   * CSV 형식:
+   * metaCols: ["#", rowFieldName, rowFieldValue]
+   * valueCols: pivot 컬럼들
+   */
   const metaCols = useMemo(() => columns.slice(0, 3), [columns])
   const valueCols = useMemo(() => columns.slice(3), [columns])
 
-  // 첫 행은 metric alias ("개수: dst_ip" 같은거)
+  /**
+   * 첫 번째 row는 value alias들이 들어있는 메타 행
+   */
   const aliasRow = hasData ? rows[0] : null
   const dataRows = hasData ? rows.slice(1) : []
 
@@ -27,6 +59,7 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
     <div>
       <div className='px-4 py-3 text-[16px] font-semibold text-gray-800'>피벗 미리보기</div>
 
+      {/* 로딩 상태 */}
       {isLoading && (
         <div className='px-4 py-12 text-center'>
           <div className='inline-flex items-center gap-2 text-blue-600'>
@@ -36,10 +69,10 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
         </div>
       )}
 
+      {/* 오류 상태 */}
       {!isLoading && error && (
         <div className='px-4 py-12 text-center'>
           <div className='text-gray-400'>
-            <div className='text-4xl mb-3'>⚠️</div>
             <p className='text-sm font-medium text-red-500'>
               피벗 미리보기를 불러오는 중 오류가 발생했습니다.
             </p>
@@ -47,15 +80,16 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
         </div>
       )}
 
+      {/* 데이터 없음 */}
       {!isLoading && !error && !hasData && (
         <div className='px-4 py-12 text-center'>
           <div className='text-gray-400'>
-            <div className='text-4xl mb-3'>📊</div>
             <p className='text-sm font-medium text-gray-600'>데이터가 없습니다.</p>
           </div>
         </div>
       )}
 
+      {/* 데이터 테이블 렌더링 */}
       {!isLoading && !error && hasData && (
         <div className='rounded-lg border overflow-hidden border-gray-300 shadow-sm'>
           <div className='overflow-x-auto w-full'>
@@ -65,11 +99,12 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                   className='bg-gray-50 text-gray-700 text-left align-bottom sticky top-0 z-10'
                   style={{ boxShadow: 'inset 0 -1px 0 0 #e5e7eb' }}
                 >
-                  {/* 1줄째 헤더: 컬럼 이름들 */}
+                  {/* 첫 번째 헤더: 컬럼 이름(메타 3개 + pivot 컬럼들) */}
                   <tr
                     className='border-b border-gray-200'
                     style={{ boxShadow: 'inset 0 -1px 0 0 #e5e7eb' }}
                   >
+                    {/* metaCols: "#", rowFieldName, rowFieldValue */}
                     {metaCols.map((col, idx) => (
                       <th
                         key={col}
@@ -83,6 +118,7 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                       </th>
                     ))}
 
+                    {/* pivot columns */}
                     {valueCols.map((col) => (
                       <th
                         key={col}
@@ -93,7 +129,7 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                     ))}
                   </tr>
 
-                  {/* 2줄째 헤더: metric alias */}
+                  {/* 두 번째 헤더: metric alias row */}
                   <tr
                     className='border-b border-gray-200'
                     style={{ boxShadow: 'inset 0 -1px 0 0 #e5e7eb' }}
@@ -109,13 +145,14 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                   </tr>
                 </thead>
 
+                {/* 데이터 바디 */}
                 <tbody className='bg-white'>
                   {dataRows.map((row, rowIndex) => (
                     <tr
                       key={rowIndex}
                       className='border-b border-gray-200 text-gray-800 hover:bg-blue-50/30 transition-colors duration-150'
                     >
-                      {/* meta: "#", rowFieldName, rowFieldValue */}
+                      {/* metaCols */}
                       {metaCols.map((col) => (
                         <td
                           key={col}
@@ -125,7 +162,7 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
                         </td>
                       ))}
 
-                      {/* 값 셀들 */}
+                      {/* pivot values */}
                       {valueCols.map((col) => (
                         <td
                           key={col}
@@ -141,7 +178,7 @@ const PivotCsvPreview = ({ fileId, pivotConfig }) => {
             </div>
           </div>
 
-          {/* 필요하면 요약 텍스트 추가 가능 */}
+          {/* footer: pivot의 column 기준 값 */}
           {columnFieldName && (
             <div className='border-t border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-600'>
               열 기준 필드: <span className='font-medium'>{columnFieldName}</span>

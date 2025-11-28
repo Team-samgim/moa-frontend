@@ -1,6 +1,19 @@
+/**
+ * NotificationDropdown
+ *
+ * 알림 센터 드롭다운 컴포넌트.
+ * - 알림 목록 조회 (무한 스크롤)
+ * - 읽음 처리
+ * - 외부 클릭 시 닫힘
+ * - 열릴 때마다 refetch로 최신 상태 유지
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { useEffect, useRef } from 'react'
 import useNotificationList from '@/hooks/notification/useNotificationList'
 
+// 시간 포맷터
 const formatTime = (ts) => {
   if (!ts) return ''
   const d = new Date(ts)
@@ -15,6 +28,7 @@ const formatTime = (ts) => {
 const NotificationDropdown = ({ open, onClose }) => {
   const panelRef = useRef(null)
 
+  // 알림 비동기 데이터 훅
   const {
     notifications,
     hasNextPage,
@@ -26,14 +40,18 @@ const NotificationDropdown = ({ open, onClose }) => {
     markAsRead,
   } = useNotificationList()
 
-  // 열릴 때마다 최신 데이터 한번 리프레시
+  /**
+   * 드롭다운 열릴 때마다 최신 알림 다시 요청
+   */
   useEffect(() => {
     if (open) {
       refetch()
     }
   }, [open, refetch])
 
-  // 바깥 클릭 시 닫기
+  /**
+   * 드롭다운 외부 클릭 → 닫힘 처리
+   */
   useEffect(() => {
     if (!open) return
 
@@ -47,7 +65,9 @@ const NotificationDropdown = ({ open, onClose }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open, onClose])
 
-  // 무한 스크롤
+  /**
+   * 리스트 하단 근처 스크롤 시 → 다음 페이지 로드
+   */
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
     const nearBottom = scrollTop + clientHeight >= scrollHeight - 40
@@ -57,16 +77,18 @@ const NotificationDropdown = ({ open, onClose }) => {
     }
   }
 
+  /**
+   * 알림 클릭 → 읽음 처리 + 필요 시 이동 로직 추가 가능
+   */
   const handleItemClick = (item) => {
-    // 읽음 처리
     if (!item.isRead) {
       markAsRead(item.id)
     }
 
-    // TODO: 해당 알림에 연결된 검색/상세 페이지로 이동시키고 싶으면 여기서 처리
-    // navigate(`/search?rowKey=${item.raw.row_key}`) 같은 느낌으로
+    // TODO: 알림 연결 페이지 이동 가능
+    // navigate(`/search?rowKey=${item.raw.row_key}`)
 
-    // 알림창 닫고 싶으면 주석 해제
+    // 드롭다운 닫고 싶으면:
     // onClose?.()
   }
 
@@ -82,7 +104,6 @@ const NotificationDropdown = ({ open, onClose }) => {
         <div className='flex items-center gap-2'>
           <div className='text-[13px] font-semibold text-gray-800'>알림 센터</div>
         </div>
-        {/* 전체 읽음 처리 추가할거면 여기에 버튼 */}
       </div>
 
       {/* 리스트 영역 */}
@@ -106,13 +127,14 @@ const NotificationDropdown = ({ open, onClose }) => {
               onClick={() => handleItemClick(n)}
             >
               <div className='flex items-start gap-2'>
-                {/* 읽음 여부 점 */}
+                {/* 읽음 여부 표시 점 */}
                 <span
                   className={[
                     'mt-1 w-2 h-2 rounded-full flex-shrink-0',
                     !n.isRead ? 'bg-[var(--color-blue,#1c4fd7)]' : 'bg-gray-300',
                   ].join(' ')}
                 />
+
                 <div className='flex-1 min-w-0'>
                   <div
                     className={[
@@ -122,6 +144,7 @@ const NotificationDropdown = ({ open, onClose }) => {
                   >
                     {n.title}
                   </div>
+
                   <div className='mt-1 text-[12px] text-gray-500 line-clamp-2'>{n.content}</div>
                   <div className='mt-1 text-[11px] text-gray-400'>{formatTime(n.createdAt)}</div>
                 </div>
@@ -130,6 +153,7 @@ const NotificationDropdown = ({ open, onClose }) => {
           ))}
         </ul>
 
+        {/* 로딩 / 마지막 페이지 */}
         {isFetchingNextPage && (
           <div className='py-3 text-center text-[12px] text-gray-400'>불러오는 중...</div>
         )}

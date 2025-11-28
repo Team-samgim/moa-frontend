@@ -1,3 +1,23 @@
+/**
+ * formatter utilities
+ *
+ * 목적:
+ * - 숫자/바이트/속도/비율/시간(ns, ms) 등을 사람이 읽기 좋은 형식으로 변환
+ * - trimZeros() 로 소수점 끝 0 제거
+ * - pickFormatterByField() 로 필드명 패턴 기반 포맷터 선택
+ *
+ * 제공 함수:
+ * - fmt.number(n)
+ * - fmt.bytes(b)
+ * - fmt.bps(v)
+ * - fmt.percent(p)
+ * - fmt.durationNs(ns)
+ * - fmt.durationMs(ms)
+ * - pickFormatterByField(field): 자동 포맷터 선택
+ *
+ * AUTHOR: 방대혁
+ */
+
 // 소수점 0 제거: 1.00 -> 1, 1.20 -> 1.2
 const trimZeros = (s) =>
   String(s)
@@ -84,9 +104,6 @@ export const fmt = {
   },
 }
 
-// ⚠️ 필요시 예외 컬럼(포트/ID/seq/ack 등) 블랙리스트 추가 가능
-// const NEVER_FORMAT_AS_UNIT = [/(_port$)/, /(.*_id$)/i, /^(seq|ack)$/i];
-
 export function pickFormatterByField(field) {
   const f = String(field).toLowerCase()
   // if (NEVER_FORMAT_AS_UNIT.some(re => re.test(f))) return fmt.number;
@@ -99,6 +116,3 @@ export function pickFormatterByField(field) {
   if (/_pct$|_percent$|_ratio$/.test(f)) return fmt.percent
   return fmt.number
 }
-
-// CommonJS 호환이 필요하면 아래 줄도 추가하세요.
-// module.exports = { fmt, pickFormatterByField };

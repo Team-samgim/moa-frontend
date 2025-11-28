@@ -1,3 +1,26 @@
+/**
+ * Aggregation Utilities (fmtAggCell5)
+ *
+ * 목적:
+ * - 집계(aggregates) 결과를 그리드 하단 5줄 형태의 표로 변환하는 유틸리티
+ * - 숫자/문자열 타입별로 다른 방식으로 결과값을 포맷 → DataGrid 하단 집계 패널에서 사용
+ *
+ * 구조:
+ * 1) count
+ * 2) distinct / sum
+ * 3) top1 / avg
+ * 4) top2 / min
+ * 5) top3 / max
+ *
+ * 주요 함수:
+ * - cut: 문자열 길이 제한 후 말줄임
+ * - fmtNum: 숫자 포맷팅
+ * - readTop: top1~top3 값을 안전하게 파싱
+ * - fmtAggCell5: 실제 5줄 집계 테이블 생성
+ *
+ * AUTHOR: 방대혁
+ */
+
 export const cut = (s, max = 18) => {
   const t = String(s ?? '')
   return t.length > max ? t.slice(0, max) + '…' : t
@@ -35,7 +58,7 @@ const readTop = (agg, k = 3) => {
  * - 문자열/IP/MAC : 1)개수  2)고유값  3)Top1(개수)  4)Top2(개수)  5)Top3(개수)
  * - 숫자          : 1)개수  2)합계    3)평균       4)최소       5)최대
  * - 날짜          : '-' (의미 없음 표시)
- * 첫 번째 열(라벨)은 한 번만 "집계"가 아니라 각 줄 의미를 명확히 표기
+ * 첫 번째 열(라벨)은 각 줄 의미 명확히 표기
  */
 export const fmtAggCell5 = (columns, aggregates) => {
   const rows = [

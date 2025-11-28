@@ -1,3 +1,42 @@
+/**
+ * ChartConditionModal
+ *
+ * 저장된 Pivot/Chart 설정을 기반으로
+ * "차트 생성 시 사용된 조건"을 조회-only 형태로 보여주는 모달 컴포넌트.
+ * 실제 설정 변경 기능은 포함하지 않으며, 읽기 전용 정보 제공 목적의 UI이다.
+ *
+ * 주요 기능:
+ * 1) Column / Row 피벗 축 정보 표시
+ * 2) Value(집계 지표) 표시
+ * 3) 차트 타입 표시 (변경 불가)
+ * 4) Column/Row 모드(TOP-N 또는 직접 선택) 출력
+ * 5) 직접 선택 모드인 경우 선택 항목 목록 표시
+ *
+ * Props:
+ * - open: boolean — 모달 개폐 여부
+ * - onClose: function — 닫기 이벤트 핸들러
+ * - config: object — chartConfig/pivotConfig를 포함한 전체 설정 객체
+ *
+ * config 구조:
+ * {
+ *   chart: {
+ *     colField, rowField, metric, colMode, rowMode,
+ *     colTopN, rowTopN, colSelectedItems, rowSelectedItems, chartType
+ *   },
+ *   pivot: {
+ *     config: {
+ *       columns, rows, values
+ *     }
+ *   }
+ * }
+ *
+ * fallback 규칙:
+ * - chart 설정이 있으면 chart 우선
+ * - chart 설정 없으면 pivot 설정(fallback) 사용
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { memo } from 'react'
 
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
@@ -6,6 +45,7 @@ import RowIcon from '@/assets/icons/row.svg?react'
 import ValueIcon from '@/assets/icons/value.svg?react'
 import { TOKENS } from '@/constants/tokens'
 
+// 선택 가능한 차트 타입 목록
 const chartTypeOptions = [
   { key: 'groupedColumn', label: '그룹 세로 막대' },
   { key: 'stackedColumn', label: '누적 세로 막대' },
@@ -18,19 +58,21 @@ const chartTypeOptions = [
 ]
 
 const ChartConditionModal = ({ open, onClose, config }) => {
+  // 닫혀 있으면 렌더링하지 않음
   if (!open) return null
 
-  // 저장된 chart/pivot 설정 추출
+  // chart → pivot 순으로 설정 읽기
   const chartCfg = config?.chart || config?.chartConfig || {}
   const pivotCfg = config?.pivot?.config || config?.pivotConfig || {}
 
-  // Column / Row / Metric 값 추출 (chart 우선, pivot fallback)
+  // Column(열) 필드 추출
   const colField =
     chartCfg.colField ||
     pivotCfg.column?.field ||
     (Array.isArray(pivotCfg.columns) && pivotCfg.columns[0]) ||
     null
 
+  // Row(행) 필드 추출 (string 또는 {field} 둘 다 대응)
   const rowField =
     chartCfg.rowField ||
     (Array.isArray(pivotCfg.rows) && pivotCfg.rows.length > 0
@@ -39,22 +81,28 @@ const ChartConditionModal = ({ open, onClose, config }) => {
         : pivotCfg.rows[0]?.field
       : null)
 
+  // Metric(집계 지표)
   const metric =
     chartCfg.metric ||
     (Array.isArray(pivotCfg.values) && pivotCfg.values.length > 0 ? pivotCfg.values[0] : null)
 
+  // Metric 표시 라벨
   const metricLabel =
     metric?.alias || (metric?.field ? `${(metric?.agg || '').toUpperCase()}: ${metric.field}` : '')
 
+  // Column/Row 모드 및 옵션
   const colMode = chartCfg.colMode || 'topN'
   const rowMode = chartCfg.rowMode || 'topN'
   const colTopN = chartCfg.colTopN ?? 5
   const rowTopN = chartCfg.rowTopN ?? 5
+
   const colSelectedItems = chartCfg.colSelectedItems || []
   const rowSelectedItems = chartCfg.rowSelectedItems || []
 
+  // 차트 타입
   const chartType = chartCfg.chartType || 'groupedColumn'
 
+  // 뱃지 공통 스타일
   const badgeBase =
     'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium'
 
@@ -79,7 +127,7 @@ const ChartConditionModal = ({ open, onClose, config }) => {
 
         {/* 본문 */}
         <div className='flex flex-1 flex-col gap-4 overflow-auto px-6 py-5 lg:flex-row'>
-          {/* 왼쪽: Column / Row */}
+          {/* 왼쪽: Column / Row 정보 영역 */}
           <section className='flex flex-1 flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4'>
             {/* Column */}
             <div>
@@ -95,6 +143,7 @@ const ChartConditionModal = ({ open, onClose, config }) => {
                 {colField || <span className='text-gray-400'>설정된 열 필드가 없습니다.</span>}
               </div>
 
+              {/* Column 모드/상태 */}
               <div className='mt-2 flex flex-wrap gap-2 text-xs'>
                 <span className={`${badgeBase} border-gray-200 bg-white text-gray-700`}>
                   모드:{' '}
@@ -110,6 +159,7 @@ const ChartConditionModal = ({ open, onClose, config }) => {
                 )}
               </div>
 
+              {/* Column 직접 선택 항목 */}
               {colMode === 'manual' && colSelectedItems.length > 0 && (
                 <div className='mt-2 max-h-32 overflow-auto rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-800'>
                   {colSelectedItems.map((v) => (
@@ -136,6 +186,7 @@ const ChartConditionModal = ({ open, onClose, config }) => {
                 {rowField || <span className='text-gray-400'>설정된 행 필드가 없습니다.</span>}
               </div>
 
+              {/* Row 모드/상태 */}
               <div className='mt-2 flex flex-wrap gap-2 text-xs'>
                 <span className={`${badgeBase} border-gray-200 bg-white text-gray-700`}>
                   모드:{' '}
@@ -144,13 +195,14 @@ const ChartConditionModal = ({ open, onClose, config }) => {
                   </span>
                 </span>
 
-                {rowMode === 'manual' && (
+                {rowMode === 'manual' && rowSelectedItems.length > 0 && (
                   <span className={`${badgeBase} border-blue-200 bg-blue-50 text-blue-700`}>
                     선택 항목 {rowSelectedItems.length}개
                   </span>
                 )}
               </div>
 
+              {/* Row 직접 선택 항목 */}
               {rowMode === 'manual' && rowSelectedItems.length > 0 && (
                 <div className='mt-2 max-h-32 overflow-auto rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-800'>
                   {rowSelectedItems.map((v) => (
@@ -189,7 +241,7 @@ const ChartConditionModal = ({ open, onClose, config }) => {
               </div>
             </div>
 
-            {/* 차트 타입 */}
+            {/* Chart 타입 */}
             <div className='mt-4 border-t border-gray-200 pt-4'>
               <div className='mb-1 text-sm font-semibold text-gray-900'>4. 차트 타입</div>
               <p className='text-xs text-gray-500'>

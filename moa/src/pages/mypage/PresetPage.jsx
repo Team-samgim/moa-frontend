@@ -1,3 +1,24 @@
+/**
+ * PresetPage
+ *
+ * 목적:
+ * - 사용자가 저장한 검색/피벗 프리셋을 조회·정렬·관리하는 페이지
+ *
+ * 주요 기능:
+ * - 프리셋 목록 조회(useMyPresets)
+ * - 즐겨찾기 토글(useToggleFavoritePreset)
+ * - 프리셋 삭제(useDeletePreset)
+ * - 프리셋 정렬: 즐겨찾기 우선 → 최신순 → 이름순
+ * - 프리셋 적용 시 SEARCH 또는 PIVOT 화면으로 이동
+ *
+ * 특징:
+ * - 탭 전환 시 페이지 초기화
+ * - normalizePresetConfig로 과거 구버전 프리셋 구조 호환
+ * - 페이지네이션 적용
+ *
+ * AUTHOR: 방대혁
+ */
+
 // PresetPage.jsx
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -144,9 +165,7 @@ const PresetPage = () => {
         <table className='min-w-[900px] w-full table-fixed border-separate border-spacing-y-3 border-spacing-x-0'>
           <thead>
             <tr className='bg-linear-to-r from-gray-50 to-blue-50/30 text-left text-[13px] text-gray-700'>
-              <th
-                className={['w-16', CLASSES.TH, 'first:rounded-l-lg font-semibold'].join(' ')}
-              ></th>
+              <th className={['w-16', CLASSES.TH, 'first:rounded-l-lg font-semibold'].join(' ')} />
               <th className={cx(CLASSES.TH, 'font-semibold')}>프리셋 이름</th>
               <th className={cx(CLASSES.TH, 'font-semibold')}>조회 계층</th>
               <th className={cx(CLASSES.TH, 'font-semibold')}>생성일</th>

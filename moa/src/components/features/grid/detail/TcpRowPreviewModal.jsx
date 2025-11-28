@@ -1,3 +1,57 @@
+/**
+ * TcpRowPreviewModal
+ *
+ * TCP 세션 단건 분석 모달 컴포넌트.
+ * rowKey 기반으로 TCP 품질, 트래픽, RTT/RTO, 플래그, 세션 타임스탬프,
+ * 재전송·손실·지연·순서오류·중복ACK·PDU 분석 등
+ * 네트워크 저층 분석에 필요한 모든 정보를 탭 구조로 제공한다.
+ *
+ * 주요 기능:
+ *
+ * 1) 요약(Summary)
+ *    - Source/Destination MAC, IP, Port
+ *    - App, Protocol, SNI 등 식별자 표시
+ *    - 처리량(Mbps), 총 데이터, 패킷 수
+ *    - 품질 등급/품질 점수 표시
+ *    - 진단(diagnostics) 메시지 제공
+ *    - 세션 시작/종료 시각 및 지속 시간
+ *
+ * 2) 품질 분석(Quality)
+ *    - 재전송율, 손실률, 순서오류율, 체크섬 오류율
+ *    - RTT, RTO 값 및 변화량
+ *    - PDU(Protocol Data Unit) 분석
+ *    - Window Full, Zero Window 등 TCP 윈도우 상태
+ *    - 재전송 상세 (req/res/len/rate)
+ *
+ * 3) 세션 정보(Session)
+ *    - expired / expiredByTimeout 여부
+ *    - 세션 타임라인(tsFirst, tsLast, tsExpired)
+ *    - 세션 duration(durSec) 및 샘플링 타임스탬프
+ *    - TCP Flags(SYN, ACK, FIN 등)
+ *
+ * 4) 위치 정보(Geo)
+ *    - EnhancedGeoMap 기반 요청/응답 국가 및 지역 정보
+ *    - 센서 디바이스 정보(sensorDeviceName)
+ *
+ * 5) 상세 통계(Advanced)
+ *    - 품질 카운터 quality.*
+ *    - dupAckCnt, lostCnt, csumCnt, oooCnt 등 상세 네트워크 오류
+ *    - 요청/응답 방향 각각의 패킷 단위 통계
+ *
+ * UI/UX 기능:
+ * - ESC 닫기
+ * - 바디 스크롤 잠금 처리
+ * - 오픈 시 포커스 이동
+ * - 페이드/스케일 인 애니메이션
+ *
+ * props:
+ * - open: boolean — 모달 열림 여부
+ * - onClose: function — 닫기 콜백
+ * - rowKey: string — 조회할 TCP 세션 rowKey
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import useTcpMetrics from '@/hooks/detail/useTcpMetrics'

@@ -1,3 +1,24 @@
+/**
+ * EnhancedUriTimelineChart
+ *
+ * HTTP URI 기반의 워터폴 타임라인 차트 컴포넌트.
+ * 요청·응답 패킷 전달 시각과 전송 지연을 기반으로 전체 HTTP 통신 흐름을 시각화한다.
+ *
+ * 주요 기능:
+ * - 요청 패킷 전송(reqPktFirst → reqPktLast) 구간 렌더링
+ * - 요청 전송 지연(reqDelayTransfer) 시각화
+ * - 서버 처리 시간(responseTime, TTFB) 단계 표시
+ * - 응답 패킷 전송(resPktFirst → resPktLast) 구간 렌더링
+ * - 응답 전송 지연(resDelayTransfer) 강조 표시
+ * - 각 단계에 대해 시작/종료/소요 시간 및 비율을 Tooltip으로 제공
+ * - 지연 구간은 사선 패턴과 강조 스타일로 별도 표현
+ *
+ * props:
+ * - timing: HTTP URI 상세 분석(raw) 데이터 객체
+ *
+ * AUTHOR : 방대혁
+ */
+
 import { memo, useEffect, useRef } from 'react'
 import useEcharts from '@/hooks/detail/useEcharts'
 

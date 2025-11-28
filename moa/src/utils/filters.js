@@ -1,3 +1,21 @@
+/**
+ * Filter Utility (Grid ActiveFilters → SearchDTO 변환)
+ *
+ * 목적:
+ * - ag-Grid 기반 activeFilters 구조를 API SearchDTO.conditions 규격으로 변환
+ * - UI의 조건식(contains, between, startsWith 등)을 서버 표준 연산자(EQ, LIKE 등)로 매핑
+ * - 컬럼 타입(string/number/date/ip/mac)에 따라 value 타입 보정(숫자 캐스팅 등)
+ *
+ * 구성 요소:
+ * - TYPE_TO_DATATYPE     : 프론트 필터 타입 → 서버 데이터타입 매핑
+ * - mapConditionOp       : UI 연산자 → SearchDTO 연산자 매핑
+ * - coerceNumber         : 숫자 필드 안전 변환기
+ * - buildConditionsFromActiveFilters
+ *   → activeFilters + colTypes 입력 → [{ join, field, op, values, dataType }] 리스트 생성
+ *
+ * AUTHOR: 방대혁
+ */
+
 // src/utils/filters.js
 export const TYPE_TO_DATATYPE = {
   string: 'TEXT',

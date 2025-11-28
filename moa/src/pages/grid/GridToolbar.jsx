@@ -1,3 +1,22 @@
+/**
+ * GridToolbar
+ *
+ * 기능:
+ * - 그리드 필터 초기화 버튼
+ * - 피벗 모드 전환 버튼(onPivot)
+ * - 현재 표시된 컬럼/필터/정렬/기본스펙을 기반으로 CSV 내보내기
+ *
+ * 주요 동작:
+ * - AG Grid API에서 표시 컬럼 목록을 수집
+ * - 정렬 상태(sortModel)와 activeFilters, baseSpec을 포함해 서버에 export 요청
+ * - exportGrid API 호출 후 presigned URL을 받아 브라우저에서 다운로드
+ *
+ * 사용처:
+ * - 모든 Grid 화면 상단의 공통 툴바
+ *
+ * AUTHOR: 방대혁
+ */
+
 import React from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { exportGrid } from '@/api/grid'
@@ -66,30 +85,26 @@ const GridToolbar = ({
 
   return (
     <div className='mb-4 flex items-center justify-between font-sans w-full'>
-      {/* <div className='rounded-md text-xs bg-[#CDE2FA] px-4.5 py-2 border text-[#003674] border-[#D1D1D6] font-semibold'>
-        {currentLayer}
-      </div> */}
-
       {onPivot && (
         <button
           className='
-        flex items-center gap-3 rounded-full px-4 py-1.5 justify-between
-        font-medium text-gray-700 text-[13px]
-        relative overflow-hidden
-        transition-all
-        hover:scale-[1.02]
-        active:scale-[0.98]
-        shadow-[0_0_4px_3px_rgba(150,175,76,0.25)]
-        bg-[#DFE9C3]
-      '
+            flex items-center gap-3 rounded-full px-4 py-1.5 justify-between
+            font-medium text-gray-700 text-[13px]
+            relative overflow-hidden
+            transition-all
+            hover:scale-[1.02]
+            active:scale-[0.98]
+            shadow-[0_0_4px_3px_rgba(150,175,76,0.25)]
+            bg-[#DFE9C3]
+          '
           onClick={onPivot}
         >
           <span>피벗 모드</span>
           <div
             className='
-          flex items-center justify-center w-5.5 h-5.5 rounded-full
-          bg-[#B9CF77] shadow-[0_0_10px_0_#A0BC4A]
-        '
+              flex items-center justify-center w-5.5 h-5.5 rounded-full
+              bg-[#B9CF77] shadow-[0_0_10px_0_#A0BC4A]
+            '
           >
             <GoPivotIcon className='w-3.5 h-3.5 text-gray-700' />
           </div>

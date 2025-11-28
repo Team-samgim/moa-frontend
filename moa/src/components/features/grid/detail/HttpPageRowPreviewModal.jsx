@@ -1,3 +1,58 @@
+/**
+ * HttpPageRowPreviewModal
+ *
+ * HTTP Page 단일 분석 모달 컴포넌트.
+ * rowKey를 기반으로 페이지 흐름 전체를 조회하여 클라이언트–서버–트래픽–타이밍–위치 정보를
+ * 탭 구조로 상세하게 시각화한다.
+ *
+ * 주요 기능:
+ * 1) Summary
+ *    - IP/Port/MAC, Host, Method, Status, Browser/OS 등 핵심 식별 정보
+ *    - 페이지 로딩시간, 총 데이터, URI 수, 세션 수, TCP 품질 등 핵심 지표
+ *    - 요청/응답 HTTP 메타데이터, 세션/트래픽 통계, 캡처 시간 표시
+ *
+ * 2) Client
+ *    - User-Agent 기반 브라우저/OS/엔진/디바이스 정보
+ *    - 클라이언트 체감 시간(TTFB, 전송/수신 시간)
+ *    - 요청 트래픽량(HTTP Len, Packet Len)
+ *
+ * 3) Server
+ *    - 서버 IP/Port/Protocol/App 정보
+ *    - 서버 처리 시간(TTFB, 앱 응답, 응답 전송)
+ *    - 응답 트래픽량 및 TCP 품질
+ *
+ * 4) Timing
+ *    - EnhancedTimelineChart로 전체 페이지 시간 흐름 시각화
+ *    - Gap 영역 강조 및 delaySummary 기반 주요 지연 구간 분석
+ *    - 타임스탬프 상세(tsFirst, Begin/Init/App/End)
+ *    - TCP 연결/요청 생성 시간 통계
+ *
+ * 5) Status/Method
+ *    - 전체 페이지 내 HTTP Method 카운트
+ *    - 현재 요청의 HTTP 상태 코드 및 구문 표시
+ *
+ * 6) Performance
+ *    - TCP 품질(점수, 에러율, 세션/패킷 비율)
+ *    - Mbps / PPS 대역폭·패킷 속도
+ *    - 전체/요청/응답 트래픽 바이트 통계
+ *
+ * 7) Geo
+ *    - EnhancedGeoMap을 통한 요청/응답 출발지·도착지 위치 시각화
+ *    - 국가/대륙/지역(Primary/Sub1/Sub2) 기반 지리 정보 표기
+ *
+ * UI 특징:
+ * - ESC 닫기, Body 스크롤 잠금, 포커스 이동, 등장 트랜지션 적용
+ * - 각 값은 emptyValue로 안전하게 렌더링
+ * - 시간·데이터·트래픽 단위는 일관된 형식(formatMs, prettyBytes)으로 처리
+ *
+ * props:
+ * - open (boolean): 모달 표시 여부
+ * - onClose (function): 모달 닫기 핸들러
+ * - rowKey (string): 상세 데이터를 조회하기 위한 식별 값
+ *
+ * AUTHOR : 방대혁
+ */
+
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import EnhancedTimelineChart from '@/components/features/grid/detail/EnhancedTimelineChart'

@@ -1,3 +1,23 @@
+/**
+ * EnhancedGeoMap 컴포넌트
+ *
+ * 기능:
+ * - ECharts 기반 세계 지도 시각화
+ * - 요청/응답 국가 좌표 기반 선(Flow) 시각화
+ * - 출발·도착지 마커 및 상세정보 Tooltip 제공
+ * - 동일 위치일 경우 루프 애니메이션 처리
+ * - 세계 지도 GeoJSON 동적 로딩 및 Error 처리
+ * - 반응형 크기 조절(resize)
+ *
+ * 주요 매개변수:
+ * - countryReq: 요청 국가
+ * - countryRes: 응답 국가
+ * - srcIp: 요청 IP
+ * - dstIp: 응답 IP
+ * - env: 국가 및 국내 지역 정보(env.*)
+ *
+ * AUTHOR : 방대혁
+ */
 import { useEffect, useRef } from 'react'
 import { COUNTRY_COORDS } from '@/constants/countryCoords'
 import useEcharts from '@/hooks/detail/useEcharts'

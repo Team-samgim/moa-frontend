@@ -1,3 +1,30 @@
+/**
+ * ConditionPanel
+ *
+ * 조건 기반 필터 패널 UI 컴포넌트.
+ * 컬럼 타입(fieldType)에 따라 가능한 연산자를 제공하고,
+ * AND / OR 논리 연산으로 여러 조건을 조합할 수 있다.
+ *
+ * 기능:
+ * 1) 조건 목록 렌더링 및 값 입력
+ * 2) 논리 연산자(AND/OR) 선택
+ * 3) 조건 추가/삭제
+ * 4) 날짜 타입 between 처리(val1/val2)
+ * 5) 내장형(embedded) 또는 팝업형 UI 지원
+ *
+ * Props:
+ * - fieldType: string | number | date 등 필드 타입
+ * - onClose: 닫기 이벤트(팝업일 때)
+ * - conditions: 조건 배열 [{ op, val, val1, val2 }]
+ * - logicOps: AND/OR 배열
+ * - setConditions: 조건 setter
+ * - setLogicOps: 논리연산자 setter
+ * - inputRefs: 입력 Ref 객체
+ * - onApply: 적용 버튼 핸들러
+ * - embedded: true면 내장형 패널로 표시
+ *
+ * AUTHOR: 방대혁
+ */
 import { OPERATOR_OPTIONS } from '@/constants/filterOperators'
 
 const ConditionPanel = ({

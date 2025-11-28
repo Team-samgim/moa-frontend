@@ -1,3 +1,18 @@
+/**
+ * 공통 포맷터 유틸 모음
+ *
+ * 목적:
+ * - 숫자/날짜/시간/바이트 크기 등 UI에서 반복 사용되는 공통 포맷 변환 제공
+ *
+ * 포함 기능:
+ * - prettyBytes(n)       : 바이트 단위를 KB/MB/GB/TB 로 변환
+ * - emptyValue(v, txt)   : 값이 비었을 때 fallback 텍스트 반환
+ * - formatTimestamp(sec) : epoch(sec) → 한국시간 문자열
+ * - formatMs(ms)         : ms → ms/us/s 포맷 문자열
+ *
+ * AUTHOR: 방대혁
+ */
+
 // 바이트 포맷터
 export const prettyBytes = (n = 0) => {
   if (n === 0) return '0 B'

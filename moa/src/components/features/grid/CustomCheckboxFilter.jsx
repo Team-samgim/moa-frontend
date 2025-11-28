@@ -1,3 +1,45 @@
+/**
+ * CustomCheckboxFilter
+ *
+ * AG Grid에서 사용하는 커스텀 필터 컴포넌트.
+ * 체크박스 기반 필터와 조건 기반 필터 두 가지 방식을 제공한다.
+ *
+ * 기능 구성:
+ * 1) 체크박스 모드
+ *    - useFilterData 훅을 사용해 값 목록 조회
+ *    - 검색어 입력 및 debounce 처리
+ *    - 무한 스크롤 기반 추가 로딩(loadMore)
+ *    - 선택된 값 목록(selected) 기반 필터 적용
+ *
+ * 2) 조건 모드
+ *    - ConditionPanel을 통한 조건 기반 필터링
+ *    - AND/OR 논리 연산 조합
+ *    - 문자열, 숫자, 날짜 타입에 맞는 입력 처리
+ *
+ * 3) 필터 UI 회복 및 상태 동기화
+ *    - activeFilters 기반 값 복원(restoreSelected)
+ *    - 필터 메뉴 열림 이벤트 구독 후 reloadAll 수행
+ *
+ * 4) Grid 연동
+ *    - props.context.updateFilter로 필터 상태 저장
+ *    - refreshInfiniteCache를 통한 그리드 데이터 재로딩
+ *
+ * Props:
+ * - props.colDef.field: 컬럼 필드명
+ * - props.colDef.filterParams: 필터 설정(layer, type, pageLimit 등)
+ * - props.context: AG Grid filter context
+ *
+ * 내부 State:
+ * - selected: 체크박스 모드의 선택된 값 배열
+ * - showConditionMode: 조건 모드 활성화 여부
+ *
+ * Hooks:
+ * - useFilterData: 값 목록 조회/검색/무한스크롤/리로드 처리
+ * - useConditionState: 조건 모드의 조건, 연산자, 입력 참조 관리
+ *
+ * AUTHOR: 방대혁
+ */
+
 import React, { useEffect, useState } from 'react'
 import ConditionPanel from '@/components/features/grid/ConditionPanel'
 import ValueList from '@/components/features/grid/ValueList'
