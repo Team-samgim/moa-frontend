@@ -80,8 +80,7 @@ const PresetPage = () => {
     async (p) => {
       try {
         await favMut.mutateAsync({ presetId: p.presetId, favorite: !p.favorite })
-      } catch (e) {
-        console.error(e)
+      } catch {
         alert('즐겨찾기 변경 중 오류가 발생했습니다.')
       }
     },
@@ -93,8 +92,7 @@ const PresetPage = () => {
       if (!confirm('삭제하시겠습니까?')) return
       try {
         await delMut.mutateAsync(p.presetId)
-      } catch (e) {
-        console.error(e)
+      } catch {
         alert('삭제 중 오류가 발생했습니다.')
       }
     },
