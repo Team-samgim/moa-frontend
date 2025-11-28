@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import React, { useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 

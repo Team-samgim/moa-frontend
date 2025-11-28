@@ -1,10 +1,13 @@
+/**
+ * 작성자: 정소영
+ */
 import { useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
 
 // 간단한 className join 유틸
 const cx = (...parts) => parts.filter(Boolean).join(' ')
 
-// ⭐ PageLoadTimeTrend 포함 기본 위젯 목록
+// PageLoadTimeTrend 포함 기본 위젯 목록
 const DEFAULT_WIDGETS = [
   {
     id: 'pageLoadTimeTrend',

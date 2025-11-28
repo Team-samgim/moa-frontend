@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import { useDashboardStore } from '@/stores/dashboardStore'
 
 const PRESETS = [

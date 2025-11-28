@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import { createContext, useContext } from 'react'
 
 // 드래그 핸들 Context

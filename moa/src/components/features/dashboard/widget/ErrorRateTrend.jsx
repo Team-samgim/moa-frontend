@@ -1,4 +1,6 @@
-// src/components/features/dashboard/widget/ErrorRateTrend.jsx
+/**
+ * 작성자: 정소영
+ */
 import React, { useMemo, useRef, useEffect, useState } from 'react'
 import { BarChart, LineChart } from 'echarts/charts'
 import {
@@ -41,17 +43,17 @@ const ErrorRateTrend = ({ onClose }) => {
   const [chartPoints, setChartPoints] = useState([]) // ⭐ 차트에 표시할 포인트
   const [isInitialized, setIsInitialized] = useState(false) // ⭐ DB 데이터 로드 완료
 
-  // ✅ 1. DB에서 초기 데이터 로드
+  // 1. DB에서 초기 데이터 로드
   const { data: dbData, isLoading, error } = useDashboardAggregated()
 
-  // ✅ 2. SSE 실시간 데이터
+  // 2. SSE 실시간 데이터
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
 
-  // ✅ 3. 초기 DB 데이터 로드
+  // 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.errorRateTrend && !isInitialized) {
-      // ⭐ DB 데이터에서 최근 1시간 데이터만 필터링
+      // DB 데이터에서 최근 1시간 데이터만 필터링
       const now = Date.now()
       const cutoff = now - WINDOW_MS
 
@@ -72,7 +74,7 @@ const ErrorRateTrend = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
+  // 4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
   useEffect(() => {
     if (!isInitialized) return
 
@@ -98,17 +100,17 @@ const ErrorRateTrend = ({ onClose }) => {
     return () => clearInterval(interval)
   }, [isInitialized])
 
-  // ✅ 5. SSE 연결되면 실시간 데이터 추가
+  // 5. SSE 연결되면 실시간 데이터 추가
   useEffect(() => {
     if (!isConnected || !isInitialized) {
-      return // 👈 SSE 연결 안 됐거나 초기화 안 됐으면 리턴
+      return // SSE 연결 안 됐거나 초기화 안 됐으면 리턴
     }
 
     if (realtimeData.length === 0) {
-      return // 👈 실시간 데이터 없으면 리턴
+      return // 실시간 데이터 없으면 리턴
     }
 
-    // ⚠️ SSE 데이터는 개별 이벤트만 포함하므로 시간 윈도우별로 집계 필요
+    // SSE 데이터는 개별 이벤트만 포함하므로 시간 윈도우별로 집계 필요
     // 시간 윈도우: 5초 단위로 그룹화
     const WINDOW_SEC = 5
     const groupedData = new Map()
@@ -161,7 +163,7 @@ const ErrorRateTrend = ({ onClose }) => {
       })
       .filter((p) => p !== null)
 
-    // ⭐ 기존 차트 포인트와 병합 (중복 제거)
+    // 기존 차트 포인트와 병합 (중복 제거)
     setChartPoints((prev) => {
       const existingTimestamps = new Set(prev.map((p) => p.timestamp))
       const uniqueNewPoints = newPoints.filter((p) => !existingTimestamps.has(p.timestamp))
@@ -176,18 +178,18 @@ const ErrorRateTrend = ({ onClose }) => {
       const cutoff = now - WINDOW_MS
       const timeFiltered = combined.filter((p) => new Date(p.timestamp).getTime() >= cutoff)
 
-      // ⭐ 추가로 MAX_POINTS 제한 (메모리 보호)
+      // 추가로 MAX_POINTS 제한 (메모리 보호)
       const result = timeFiltered.slice(-MAX_POINTS)
 
       return result
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  // ⭐ 화면에 실제로 보여줄 슬라이딩 윈도우 데이터 (최근 WINDOW_MS 구간)
+  // 화면에 실제로 보여줄 슬라이딩 윈도우 데이터 (최근 WINDOW_MS 구간)
   const visiblePoints = useMemo(() => {
     if (chartPoints.length === 0) return []
 
-    // ⭐ 현재 시간 기준으로 필터링 (집계 시점과 표시 시점 차이 대응)
+    // 현재 시간 기준으로 필터링 (집계 시점과 표시 시점 차이 대응)
     const now = Date.now()
     const cutoff = now - WINDOW_MS
 
@@ -334,7 +336,7 @@ const ErrorRateTrend = ({ onClose }) => {
   let content
 
   if (isLoading && chartPoints.length === 0) {
-    // ✅ 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
+    // 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
     content = (
       <div className='flex h-52 items-center justify-center text-sm text-gray-400'>
         <div className='text-center'>
@@ -357,7 +359,7 @@ const ErrorRateTrend = ({ onClose }) => {
       </div>
     )
   } else {
-    // ✅ 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
+    // 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
     content = (
       <ReactECharts
         ref={chartRef}

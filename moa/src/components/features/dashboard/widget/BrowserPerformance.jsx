@@ -1,4 +1,6 @@
-// src/components/features/dashboard/widget/BrowserPerformance.jsx
+/**
+ * 작성자: 정소영
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { GraphChart } from 'echarts/charts'
 import {

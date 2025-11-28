@@ -1,4 +1,6 @@
-// httpStatusCodeDistribution.jsx
+/**
+ * 작성자: 정소영
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { PieChart } from 'echarts/charts'
 import {
@@ -40,31 +42,31 @@ const HttpStatusDonut = ({ onClose }) => {
   const [statusDataPoints, setStatusDataPoints] = useState([]) // ⭐ 시간별 상태코드 데이터 포인트
   const [isInitialized, setIsInitialized] = useState(false) // ⭐ DB 데이터 로드 완료
 
-  // ✅ 1. DB에서 초기 데이터 로드
+  // 1. DB에서 초기 데이터 로드
   const { data: dbData, isLoading, error } = useDashboardAggregated()
 
-  // ✅ 2. SSE 실시간 데이터
+  // 2. SSE 실시간 데이터
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
 
-  // ✅ 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
+  // 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
   useEffect(() => {
     if (!isLoading && dbData?.httpStatusCodeDistribution && !isInitialized) {
       const list = dbData.httpStatusCodeDistribution
 
-      // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
+      // 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = list.flatMap((item) => {
         const count = Math.min(item.count ?? 1, 100) // 최대 100개로 제한
         const statusGroup = item.statusGroup
 
-        // ✅ 백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
+        // 백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
         const baseTimestamp = item.timestamp ? new Date(item.timestamp).getTime() : now
 
         return Array(count)
           .fill(null)
           .map((_, idx) => ({
-            // ✅ 실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
+            // 실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
             timestamp: baseTimestamp + idx,
             statusGroup: statusGroup,
           }))
@@ -74,7 +76,7 @@ const HttpStatusDonut = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
+  // 4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
   useEffect(() => {
     if (!isInitialized) return
 
@@ -100,7 +102,7 @@ const HttpStatusDonut = ({ onClose }) => {
     return () => clearInterval(interval)
   }, [isInitialized])
 
-  // ✅ 5. SSE 연결되면 실시간 데이터 추가
+  // 5. SSE 연결되면 실시간 데이터 추가
   useEffect(() => {
     if (!isConnected || !isInitialized) {
       return // 👈 SSE 연결 안 됐거나 초기화 안 됐으면 리턴
@@ -129,7 +131,7 @@ const HttpStatusDonut = ({ onClose }) => {
           }
 
           return {
-            // ✅ 실제 timestamp 사용
+            // 실제 timestamp 사용
             timestamp: new Date(item.tsServer || new Date()).getTime(),
             statusGroup: statusGroup,
           }
@@ -139,7 +141,7 @@ const HttpStatusDonut = ({ onClose }) => {
       // 기존 데이터와 병합
       const combined = [...prev, ...newPoints]
 
-      // ⭐ 1시간 이내 데이터만 유지 (슬라이딩 윈도우)
+      // 1시간 이내 데이터만 유지 (슬라이딩 윈도우)
       const now = Date.now()
       const cutoff = now - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
@@ -183,7 +185,7 @@ const HttpStatusDonut = ({ onClose }) => {
     return result
   }, [statusDataPoints])
 
-  // ✅ 7. 차트 옵션 생성
+  // 7. 차트 옵션 생성
   const { option, total } = useMemo(() => {
     if (!chartData) {
       return { option: {}, total: 0, successRate: 0 }
@@ -322,7 +324,7 @@ const HttpStatusDonut = ({ onClose }) => {
       </div>
     )
   } else {
-    // ✅ 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
+    // 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
     content = (
       <ReactECharts
         ref={chartRef}

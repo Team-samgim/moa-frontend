@@ -1,4 +1,6 @@
-// TopDomains.jsx
+/**
+ * 작성자: 정소영
+ */
 import React, { useState, useEffect, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import WidgetCard from '@/components/features/dashboard/WidgetCard'
@@ -8,33 +10,33 @@ import { useDashboardStore } from '@/stores/dashboardStore'
 const WINDOW_MS = 60 * 60 * 1000 // 1시간 슬라이딩 윈도우
 
 const TopDomains = ({ onClose }) => {
-  const [uriDataPoints, setUriDataPoints] = useState([]) // ⭐ 시간별 URI 데이터 포인트
-  const [isInitialized, setIsInitialized] = useState(false) // ⭐ DB 데이터 로드 완료
+  const [uriDataPoints, setUriDataPoints] = useState([]) // 시간별 URI 데이터 포인트
+  const [isInitialized, setIsInitialized] = useState(false) // DB 데이터 로드 완료
 
-  // ✅ 1. DB에서 초기 데이터 로드
+  // 1. DB에서 초기 데이터 로드
   const { data: dbData, isLoading, error } = useDashboardAggregated()
 
-  // ✅ 2. SSE 실시간 데이터
+  //  2. SSE 실시간 데이터
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
 
-  // ✅ 3. 초기 DB 데이터 로드 - 실제 timestamp 사용
+  //  3. 초기 DB 데이터 로드 - 실제 timestamp 사용
   useEffect(() => {
     if (!isLoading && dbData?.topDomains && !isInitialized) {
-      // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
+      // 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.topDomains.flatMap((item) => {
         const count = Math.min(item.requestCount ?? 1, 100) // 최대 100개로 제한
         const uri = item.httpUri || 'Unknown'
         const avgTime = item.avgResponseTime ?? 0
 
-        // ✅ 백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
+        //  백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
         const baseTimestamp = item.timestamp ? new Date(item.timestamp).getTime() : now
 
         return Array(count)
           .fill(null)
           .map((_, idx) => ({
-            // ✅ 실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
+            //  실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
             timestamp: baseTimestamp + idx,
             httpUri: uri,
             responseTime: avgTime, // DB는 평균값만 있으므로 그대로 사용
@@ -46,7 +48,7 @@ const TopDomains = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
+  //  4. 주기적으로 슬라이딩 윈도우 적용 (1분마다 체크)
   useEffect(() => {
     if (!isInitialized) return
 
@@ -72,7 +74,7 @@ const TopDomains = ({ onClose }) => {
     return () => clearInterval(interval)
   }, [isInitialized])
 
-  // ✅ 5. SSE 연결되면 실시간 데이터 추가
+  //  5. SSE 연결되면 실시간 데이터 추가
   useEffect(() => {
     if (!isConnected || !isInitialized) {
       return // 👈 SSE 연결 안 됐거나 초기화 안 됐으면 리턴
@@ -95,7 +97,7 @@ const TopDomains = ({ onClose }) => {
           if (responseTime <= 0) return null
 
           return {
-            // ✅ 실제 timestamp 사용
+            //  실제 timestamp 사용
             timestamp: new Date(item.tsServer || new Date()).getTime(),
             httpUri: uri,
             responseTime: responseTime,
@@ -106,7 +108,7 @@ const TopDomains = ({ onClose }) => {
       // 기존 데이터와 병합
       const combined = [...prev, ...newPoints]
 
-      // ⭐ 1시간 이내 데이터만 유지 (시간 기반 슬라이딩 윈도우)
+      // 1시간 이내 데이터만 유지 (시간 기반 슬라이딩 윈도우)
       const now = Date.now()
       const cutoff = now - WINDOW_MS
       const filtered = combined.filter((p) => p.timestamp >= cutoff)
@@ -115,9 +117,9 @@ const TopDomains = ({ onClose }) => {
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  // ✅ 6. URI별로 집계된 데이터 계산 및 Top 10 추출 (슬라이딩 윈도우 적용된 데이터만 사용)
+  //  6. URI별로 집계된 데이터 계산 및 Top 10 추출 (슬라이딩 윈도우 적용된 데이터만 사용)
   const { top10, maxTime } = useMemo(() => {
-    // ⭐ 현재 시간 기준으로 1시간 이내 데이터만 필터링
+    // 현재 시간 기준으로 1시간 이내 데이터만 필터링
     const now = Date.now()
     const cutoff = now - WINDOW_MS
     const filteredPoints = uriDataPoints.filter((p) => p.timestamp >= cutoff)
@@ -160,7 +162,7 @@ const TopDomains = ({ onClose }) => {
     return { top10: sorted, maxTime: max }
   }, [uriDataPoints])
 
-  // ✅ 데이터 소스 표시
+  //  데이터 소스 표시
   const dataSource = isConnected ? '실시간' : 'DB'
   const totalCount = uriDataPoints.length
 
