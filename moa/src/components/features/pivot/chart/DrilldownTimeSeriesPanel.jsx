@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 드릴다운 시계열 데이터를 라인 차트로 표시하는 패널 컴포넌트
+
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import {

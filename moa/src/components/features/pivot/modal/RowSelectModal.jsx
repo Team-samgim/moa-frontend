@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블의 행(Row) 필드를 다중 선택하고 순서를 조정하는 모달 컴포넌트
+
 import { useState, useMemo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import {

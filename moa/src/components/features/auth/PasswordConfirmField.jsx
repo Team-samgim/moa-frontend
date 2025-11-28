@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 비밀번호 확인 입력 필드 컴포넌트
+
 import { useState } from 'react'
 import EyeIcon from '@/assets/icons/eye.svg?react'
 import MsgRow from '@/components/_common/MsgRow'

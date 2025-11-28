@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { useMutation } from '@tanstack/react-query'
 import { checkIdDuplicate, loginApi, signup } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'

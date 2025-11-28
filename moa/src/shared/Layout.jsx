@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { Outlet, useLocation } from 'react-router-dom'
 import GradientBackground from '@/components/landing/GradientBackground'
 import Footer from '@/components/layout/Footer'

@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블에서 무한 스크롤 트리거 역할을 하는 행 컴포넌트
+
 import React, { useEffect, useRef } from 'react'
 import { useRowGroupItemsInfinite } from '@/hooks/queries/usePivot'
 

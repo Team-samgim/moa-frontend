@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'
 

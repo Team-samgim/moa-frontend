@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// ColorRing을 사용한 로딩 스피너 컴포넌트
+
 import { ColorRing } from 'react-loader-spinner'
 
 const LoadingSpinner = ({

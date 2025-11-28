@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 import js from '@eslint/js'
 import tanstackQuery from '@tanstack/eslint-plugin-query'
 import { defineConfig, globalIgnores } from 'eslint/config'

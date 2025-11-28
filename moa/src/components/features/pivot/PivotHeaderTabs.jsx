@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블 헤더와 검색 화면으로 돌아가기 버튼을 포함하는 컴포넌트
+
 import { Link } from 'react-router-dom'
 import GoBackIcon from '@/assets/icons/go-back.svg?react'
 import { userNavigations } from '@/constants/navigations'

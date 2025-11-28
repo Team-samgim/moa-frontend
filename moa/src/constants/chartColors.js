@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 export const PIVOT_SERIES_COLORS = [
   '#3877BE',
   '#FDC973',

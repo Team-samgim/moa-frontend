@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { useState } from 'react'
 import { useCheckIdDuplicate } from '@/hooks/queries/useAuth'
 import { isValidId } from '@/utils/validators'

@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { uid, fixEpochRange, inferPresetKey } from '@/utils/misc'
 
 // 저장된 프리셋(config) → SearchPage가 기대하는 payload 형태로 변환

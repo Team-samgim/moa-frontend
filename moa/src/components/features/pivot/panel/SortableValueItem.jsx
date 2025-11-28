@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 정렬 가능한 값(Value) 항목 컴포넌트
+
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import SideKickIcon from '@/assets/icons/side-kick.svg?react'

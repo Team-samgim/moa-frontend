@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 비밀번호 입력 및 유효성 검사를 표시하는 필드 컴포넌트
+
 import { useState } from 'react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import EyeIcon from '@/assets/icons/eye.svg?react'

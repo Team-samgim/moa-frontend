@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 아이디/이메일 입력 및 중복 확인 기능을 제공하는 필드 컴포넌트
+
 import MsgRow from '@/components/_common/MsgRow'
 
 const IdEmailField = ({

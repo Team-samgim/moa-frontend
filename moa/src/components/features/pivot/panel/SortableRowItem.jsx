@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 정렬 가능한 행(Row) 항목 컴포넌트
+
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import FilterIcon from '@/assets/icons/filter.svg?react'

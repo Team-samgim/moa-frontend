@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { buildConditionsFromActiveFilters } from '@/utils/filters'
 
 function guessFieldType(def) {
