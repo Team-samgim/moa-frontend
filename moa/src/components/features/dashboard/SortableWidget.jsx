@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'

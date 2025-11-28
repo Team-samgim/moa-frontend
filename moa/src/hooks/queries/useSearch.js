@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { searchMetaApi, executeSearchApi } from '@/api/search'
 

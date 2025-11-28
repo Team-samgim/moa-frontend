@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import axiosInstance from './axios'
 
 // 메타 정보 조회 API (http_page 레이어 등 필드 조회)

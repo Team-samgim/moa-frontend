@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import React, { useMemo, useRef, useEffect, useState } from 'react'
 import { LineChart } from 'echarts/charts'
 import {

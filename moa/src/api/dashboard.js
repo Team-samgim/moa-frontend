@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import axiosInstance from './axios'
 
 // 대시보드 통합 호출: 모든 위젯 데이터 한 번에

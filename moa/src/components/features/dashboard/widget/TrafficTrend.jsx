@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, ScatterChart } from 'echarts/charts'
@@ -155,7 +158,7 @@ const TrafficTrend = ({ onClose }) => {
         const point = visiblePoints.find((p) => new Date(p.t).getTime() === timestamp)
 
         if (point) {
-          console.log('✅ 매칭된 포인트 찾음:', point)
+          console.log('매칭된 포인트 찾음:', point)
           handleAnomalyClick(point)
         } else {
           console.log('❌ 매칭된 포인트 못 찾음')
@@ -168,7 +171,7 @@ const TrafficTrend = ({ onClose }) => {
   // ⭐ 차트 준비 완료 핸들러
   const handleChartReady = useCallback(
     (chartInstance) => {
-      console.log('✅ 차트 준비 완료! 클릭 이벤트 등록')
+      console.log('차트 준비 완료! 클릭 이벤트 등록')
       chartInstance.on('click', handleChartClick)
     },
     [handleChartClick],
@@ -308,7 +311,7 @@ const TrafficTrend = ({ onClose }) => {
               thresholds: thresholdSettings,
             },
           })
-          console.log('✅ 알림이 DB에 저장되었습니다')
+          console.log('알림이 DB에 저장되었습니다')
         } catch (error) {
           console.error('❌ 알림 저장 실패:', error)
         }
@@ -333,7 +336,7 @@ const TrafficTrend = ({ onClose }) => {
     setThresholdSettings(newSettings)
     notifiedAnomaliesRef.current.clear()
     setLastCheckedTime(null)
-    console.log('✅ 새로운 임계값 설정:', newSettings)
+    console.log('새로운 임계값 설정:', newSettings)
     setIsSettingsOpen(false)
   }
 

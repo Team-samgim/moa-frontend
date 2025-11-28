@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import * as echarts from 'echarts'
 import world from 'echarts-countries-js/echarts-countries-js/world.js'
@@ -7,14 +10,14 @@ import WidgetCard from '@/components/features/dashboard/WidgetCard'
 import { useDashboardAggregated } from '@/hooks/queries/useDashboard'
 import { useDashboardStore } from '@/stores/dashboardStore'
 
-// ✅ 세계 지도 GeoJSON 등록 (중복 등록 방지)
+// 세계 지도 GeoJSON 등록 (중복 등록 방지)
 if (!echarts.getMap('world')) {
   echarts.registerMap('world', world)
 }
 
 const WINDOW_MS = 60 * 60 * 1000 // 1시간 슬라이딩 윈도우
 
-// ✅ 국가명 매핑 (SSE 데이터의 국가명을 지도 국가명으로 변환)
+// 국가명 매핑 (SSE 데이터의 국가명을 지도 국가명으로 변환)
 const COUNTRY_NAME_MAP = {
   'South Korea': 'South Korea',
   Korea: 'South Korea',
@@ -26,32 +29,32 @@ const COUNTRY_NAME_MAP = {
 
 const GeoTrafficDistribution = ({ onClose }) => {
   const chartRef = useRef(null)
-  const [trafficDataPoints, setTrafficDataPoints] = useState([]) // ⭐ 시간별 트래픽 데이터 포인트
-  const [isInitialized, setIsInitialized] = useState(false) // ⭐ DB 데이터 로드 완료
+  const [trafficDataPoints, setTrafficDataPoints] = useState([]) // 시간별 트래픽 데이터 포인트
+  const [isInitialized, setIsInitialized] = useState(false) // DB 데이터 로드 완료
 
-  // ✅ 1. DB에서 초기 데이터 로드
+  // 1. DB에서 초기 데이터 로드
   const { data: dbData, isLoading, error } = useDashboardAggregated()
 
-  // ✅ 2. SSE 실시간 데이터
+  // 2. SSE 실시간 데이터
   const realtimeData = useDashboardStore((state) => state.realtimeData)
   const isConnected = useDashboardStore((state) => state.isWebSocketConnected)
 
-  // ✅ 3. 초기 DB 데이터 로드
+  // 3. 초기 DB 데이터 로드
   useEffect(() => {
     if (!isLoading && dbData?.trafficByCountry && !isInitialized) {
-      // ⭐ 실제 timestamp 사용 (백엔드에서 제공)
+      // 실제 timestamp 사용 (백엔드에서 제공)
       const now = Date.now()
       const points = dbData.trafficByCountry.flatMap((item) => {
         // 요청 건수만큼 포인트 생성
         const count = Math.min(item.requestCount ?? 1, 100)
 
-        // ✅ 백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
+        // 백엔드에서 timestamp가 오면 사용, 없으면 현재 시간
         const baseTimestamp = item.timestamp ? new Date(item.timestamp).getTime() : now
 
         return Array(count)
           .fill(null)
           .map((_, idx) => ({
-            // ✅ 실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
+            // 실제 timestamp 사용 (같은 시간대 데이터는 약간의 오프셋만 추가)
             timestamp: baseTimestamp + idx,
             country: normalizeCountryName(item.country),
             responseTime: item.avgResponseTime ?? 0,
@@ -63,7 +66,7 @@ const GeoTrafficDistribution = ({ onClose }) => {
     }
   }, [dbData, isLoading, isInitialized])
 
-  // ✅ 4. SSE 연결되면 실시간 데이터 추가
+  // 4. SSE 연결되면 실시간 데이터 추가
   useEffect(() => {
     if (!isConnected || !isInitialized) {
       return
@@ -102,7 +105,7 @@ const GeoTrafficDistribution = ({ onClose }) => {
           const responseTime = item.tsPage || item.responseTime || item.avgResponseTime || 0
 
           return {
-            // ✅ 실제 timestamp 사용
+            // 실제 timestamp 사용
             timestamp: new Date(item.tsServer || new Date()).getTime(),
             country,
             responseTime,
@@ -113,13 +116,13 @@ const GeoTrafficDistribution = ({ onClose }) => {
       // 기존 데이터와 병합
       const combined = [...prev, ...newPoints]
 
-      // ⭐ 1시간 이내 데이터만 유지 (슬라이딩 윈도우)
+      // 1시간 이내 데이터만 유지 (슬라이딩 윈도우)
       const cutoff = Date.now() - WINDOW_MS
       return combined.filter((p) => p.timestamp >= cutoff)
     })
   }, [realtimeData, isConnected, isInitialized])
 
-  // ✅ 5. 국가별로 집계된 데이터 계산
+  // 5. 국가별로 집계된 데이터 계산
   const { mapped, unknown, maxValue } = useMemo(() => {
     if (trafficDataPoints.length === 0) {
       return { mapped: [], unknown: null, maxValue: 0 }
@@ -172,7 +175,7 @@ const GeoTrafficDistribution = ({ onClose }) => {
     }
   }, [trafficDataPoints])
 
-  // ✅ 6. 차트 옵션 생성
+  // 6. 차트 옵션 생성
   const option = useMemo(() => {
     if (mapped.length === 0) return {}
 
@@ -238,7 +241,7 @@ const GeoTrafficDistribution = ({ onClose }) => {
     }
   }, [mapped, maxValue])
 
-  // ✅ 7. Top 5 국가 리스트
+  // 7. Top 5 국가 리스트
   const topCountries = useMemo(() => {
     return [...mapped].sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 5)
   }, [mapped])
@@ -261,14 +264,14 @@ const GeoTrafficDistribution = ({ onClose }) => {
     }
   }, [])
 
-  // ✅ 데이터 소스 표시
+  // 데이터 소스 표시
   const dataSource = isConnected ? '실시간' : 'DB'
   const totalTraffic = trafficDataPoints.length
 
   let content
 
   if (isLoading && trafficDataPoints.length === 0) {
-    // ✅ 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
+    // 처음에 DB에서 아직 아무 데이터도 안 들어온 상태일 때만 로딩 표시
     content = (
       <div className='flex h-72 items-center justify-center text-sm text-gray-400'>
         <div className='text-center'>
@@ -284,14 +287,14 @@ const GeoTrafficDistribution = ({ onClose }) => {
       </div>
     )
   } else if (trafficDataPoints.length === 0) {
-    // ✅ 요청은 끝났는데도 데이터가 없을 때
+    // 요청은 끝났는데도 데이터가 없을 때
     content = (
       <div className='flex h-72 items-center justify-center text-sm text-gray-400'>
         표시할 국가별 트래픽 데이터가 없습니다.
       </div>
     )
   } else {
-    // ✅ 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
+    // 데이터가 한 번이라도 들어오면, 이후 refetch로 isLoading이 true가 돼도 차트는 그대로 유지
     content = (
       <div className='grid h-80 grid-cols-3 gap-4'>
         {/* 왼쪽: 세계 지도 */}
@@ -363,7 +366,7 @@ GeoTrafficDistribution.propTypes = {
 
 export default GeoTrafficDistribution
 
-// ✅ 국가명 정규화 (지도 국가명과 일치시키기)
+// 국가명 정규화 (지도 국가명과 일치시키기)
 function normalizeCountryName(countryName) {
   if (!countryName || countryName === 'Unknown') return 'Unknown'
 

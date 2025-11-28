@@ -1,5 +1,6 @@
-// src/stores/dashboardStore.js
-
+/**
+ * 작성자: 정소영
+ */
 import { create } from 'zustand'
 
 export const useDashboardStore = create((set, get) => ({

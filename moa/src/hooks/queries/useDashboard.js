@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import { useQuery } from '@tanstack/react-query'
 import { fetchDashboardApi } from '@/api/dashboard'
 import { useDashboardStore } from '@/stores/dashboardStore'

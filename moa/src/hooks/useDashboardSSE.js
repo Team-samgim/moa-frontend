@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import { useEffect } from 'react'
 import { sseService } from '@/hooks/services/sseService'
 import { useDashboardStore } from '@/stores/dashboardStore'

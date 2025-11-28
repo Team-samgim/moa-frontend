@@ -1,3 +1,6 @@
+/**
+ * 작성자: 정소영
+ */
 import toast from 'react-hot-toast'
 
 export const showTrafficAnomalyToast = ({ time, anomalies }) => {
