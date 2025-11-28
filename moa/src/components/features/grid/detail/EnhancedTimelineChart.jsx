@@ -1,3 +1,21 @@
+/**
+ * EnhancedTimelineChart 컴포넌트
+ *
+ * 기능:
+ * - HTTP 페이지 로딩 시간(timing)을 단계별로 시각화하는 수평 타임라인 차트
+ * - TCP 핸드셰이크, 요청 생성, 요청 전송, 서버 처리(TTFB), 애플리케이션 처리, 응답 수신, 응답 완료 등 구간 표현
+ * - delaySummary 정보를 기반으로 주요 지연 구간 표시
+ * - gap(지연 불일치) 정보를 표시하여 네트워크 · 서버 병목 분석 지원
+ * - 마우스 오버 시 각 구간의 상세 시간(avg/min/max/sum) 표시
+ * - 창 크기 변경 시 반응형 리사이징 지원
+ *
+ * props:
+ * - timing: 백엔드에서 전달된 페이지 timing 데이터(raw)
+ * - delaySummary: 주요 지연 구간 요약 정보
+ *
+ * AUTHOR : 방대혁
+ */
+
 import { useEffect, useRef } from 'react'
 import useEcharts from '@/hooks/detail/useEcharts'
 import { formatMs } from '@/utils/httpPageFormat'

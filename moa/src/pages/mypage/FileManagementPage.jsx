@@ -1,3 +1,24 @@
+/**
+ * FileManagementPage
+ *
+ * 목적:
+ * - 내보내기(Grid/Pivot/Chart)로 생성된 파일들을 조회·다운로드·삭제할 수 있는 관리 페이지
+ *
+ * 주요 기능:
+ * - FileTabs로 GRID / PIVOT / CHART 파일 유형 전환
+ * - useExportFiles 훅으로 서버에서 파일 목록 불러오기 (페이지네이션 지원)
+ * - FileRow 컴포넌트에서 다운로드 / 삭제 버튼 제공
+ * - Pagination 컴포넌트로 페이지 이동
+ * - 검색·정렬은 없으며 단순 조회 중심
+ *
+ * 특징:
+ * - 테이블 스타일을 border-spacing으로 카드를 띄운 듯한 UI 구성
+ * - 로딩/빈 상태 UI 제공
+ * - refetch를 onDeleted로 넘겨 삭제 후 자동 갱신되도록 처리
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { useCallback, useState } from 'react'
 import Pagination from '@/components/features/mypage/common/Pagination'
 import FileRow from '@/components/features/mypage/file/FileRow'

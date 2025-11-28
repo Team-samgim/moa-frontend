@@ -1,3 +1,12 @@
+/**
+ * COUNTRY_COORDS
+ *
+ * 국가명 → [longitude, latitude] 매핑 정보
+ * 지도 중심 이동 및 국가 선택 시 좌표 설정에 사용
+ *
+ * AUTHOR: 방대혁
+ */
+
 export const COUNTRY_COORDS = {
   'South Korea': [127.7669, 37.5665],
   'United States of America': [-95.7129, 37.0902],
@@ -54,5 +63,6 @@ export const COUNTRY_COORDS = {
   Vietnam: [105.8342, 21.0278],
   Tunisia: [10.1815, 36.8065],
 
+  // 기본 좌표 (한국)
   default: [127.7669, 37.5665],
 }

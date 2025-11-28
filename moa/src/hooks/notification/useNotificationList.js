@@ -1,3 +1,16 @@
+/**
+ * Notification Hooks
+ *
+ * 알림(Notifications) 관련 React Query 기반 훅 모음.
+ * - 무한 스크롤 목록(useNotificationInfinite)
+ * - 안 읽은 알림 개수(useUnreadNotificationCount)
+ * - 단건 읽음 처리(useMarkNotificationRead)
+ * - 전체 읽음 처리(useMarkAllNotificationsRead)
+ * - NotificationDropdown 전용 통합 훅(useNotificationList)
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchNotifications,
@@ -6,10 +19,22 @@ import {
   fetchUnreadCount,
 } from '@/api/notification'
 
+/** 캐싱 Key 정의 */
 const NOTIFICATION_LIST_KEY = ['notifications', 'list']
 const UNREAD_COUNT_KEY = ['notifications', 'unreadCount']
 
-// 무한스크롤 목록
+/**
+ * useNotificationInfinite
+ *
+ * 무한스크롤 기반 알림 목록 조회 훅.
+ * - pageParam을 nextCursor로 이어받는 구조
+ * - TanStack Query의 useInfiniteQuery 사용
+ *
+ * @param {number} size - 페이지 당 아이템 수
+ * @returns useInfiniteQuery 결과
+ *
+ * AUTHOR: 방대혁
+ */
 export function useNotificationInfinite(size = 20) {
   return useInfiniteQuery({
     queryKey: NOTIFICATION_LIST_KEY,
@@ -19,55 +44,66 @@ export function useNotificationInfinite(size = 20) {
   })
 }
 
-// 안 읽은 개수 - 캐시 설정 조정
+/**
+ * useUnreadNotificationCount
+ *
+ * 안 읽은 알림 개수 조회 훅.
+ * - staleTime: 5초
+ * - refetchInterval: 30초
+ * - 포커스/마운트 시에도 refetch
+ *
+ * @returns useQuery 결과
+ *
+ * AUTHOR: 방대혁
+ */
 export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: UNREAD_COUNT_KEY,
     queryFn: async () => {
       const count = await fetchUnreadCount()
-      console.log('📊 [useUnreadNotificationCount] Fetched count:', count, typeof count)
       return count
     },
-    staleTime: 5 * 1000, // 5초로 줄임
-    gcTime: 10 * 1000, // 10초 (구 cacheTime)
-    refetchInterval: 30 * 1000,
-    refetchOnMount: true, // 마운트 시 항상 refetch
-    refetchOnWindowFocus: true, // 포커스 시 refetch
+    staleTime: 5000,
+    gcTime: 10000,
+    refetchInterval: 30000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 }
 
-// 단건 읽음 처리
+/**
+ * useMarkNotificationRead
+ *
+ * 단일 알림 읽음 처리 훅.
+ * - Optimistic Update 적용
+ * - 실패 시 롤백
+ *
+ * @returns useMutation 결과
+ *
+ * AUTHOR: 방대혁
+ */
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: markNotificationRead,
-    onMutate: async (notificationId) => {
-      // Optimistic update 전에 진행 중인 refetch 취소
+
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: UNREAD_COUNT_KEY })
 
-      // 현재 값 백업
       const previousCount = queryClient.getQueryData(UNREAD_COUNT_KEY)
 
-      console.log('🔄 [markAsRead] Starting optimistic update:', {
-        notificationId,
-        previousCount,
-      })
-
-      // Optimistic update
+      // 낙관적 업데이트
       queryClient.setQueryData(UNREAD_COUNT_KEY, (old) => {
         const current = old ?? 0
-        const newCount = current > 0 ? current - 1 : 0
-        console.log('📉 [markAsRead] Count:', current, '→', newCount)
-        return newCount
+        return current > 0 ? current - 1 : 0
       })
 
       return { previousCount }
     },
-    onSuccess: (_, notificationId) => {
-      console.log('✅ [markAsRead] Success:', notificationId)
 
-      // 리스트 캐시 업데이트
+    onSuccess: (_, notificationId) => {
+      // 목록 캐시 업데이트
       queryClient.setQueryData(NOTIFICATION_LIST_KEY, (oldData) => {
         if (!oldData) return oldData
         return {
@@ -85,13 +121,11 @@ export function useMarkNotificationRead() {
         }
       })
 
-      // 서버와 동기화
       queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
     },
-    onError: (error, notificationId, context) => {
-      console.error('❌ [markAsRead] Error:', error)
 
-      // Optimistic update 롤백
+    onError: (_, __, context) => {
+      // 롤백
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(UNREAD_COUNT_KEY, context.previousCount)
       }
@@ -99,27 +133,31 @@ export function useMarkNotificationRead() {
   })
 }
 
-// 전체 읽음 처리
+/**
+ * useMarkAllNotificationsRead
+ *
+ * 전체 알림 읽음 처리 훅.
+ * - Optimistic Update + invalidateQueries
+ *
+ * @returns useMutation 결과
+ *
+ * AUTHOR: 방대혁
+ */
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: markAllNotificationsRead,
+
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: UNREAD_COUNT_KEY })
-
       const previousCount = queryClient.getQueryData(UNREAD_COUNT_KEY)
 
-      console.log('🔄 [markAllAsRead] Starting optimistic update')
-
-      // Optimistic update
       queryClient.setQueryData(UNREAD_COUNT_KEY, 0)
-
       return { previousCount }
     },
-    onSuccess: () => {
-      console.log('✅ [markAllAsRead] Success')
 
+    onSuccess: () => {
       queryClient.setQueryData(NOTIFICATION_LIST_KEY, (oldData) => {
         if (!oldData) return oldData
         return {
@@ -132,12 +170,10 @@ export function useMarkAllNotificationsRead() {
         }
       })
 
-      // 서버와 동기화
       queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
     },
-    onError: (error, _, context) => {
-      console.error('❌ [markAllAsRead] Error:', error)
 
+    onError: (_, __, context) => {
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(UNREAD_COUNT_KEY, context.previousCount)
       }
@@ -146,7 +182,19 @@ export function useMarkAllNotificationsRead() {
 }
 
 /**
- * 🔔 NotificationDropdown 전용 래퍼 훅
+ * useNotificationList
+ *
+ * NotificationDropdown 전용 통합 훅.
+ *
+ * 포함 기능:
+ * - 무한스크롤 목록
+ * - 단건 읽음 처리
+ * - unreadCount 제공
+ *
+ * @param {number} pageSize
+ * @returns Object
+ *
+ * AUTHOR: 방대혁
  */
 export function useNotificationList(pageSize = 20) {
   const infiniteQuery = useNotificationInfinite(pageSize)
@@ -155,9 +203,7 @@ export function useNotificationList(pageSize = 20) {
   const notifications = infiniteQuery.data?.pages.flatMap((page) => page.items) ?? []
   const unreadCount = infiniteQuery.data?.pages[0]?.unreadCount ?? 0
 
-  const markAsRead = (id) => {
-    mutateMarkRead(id)
-  }
+  const markAsRead = (id) => mutateMarkRead(id)
 
   return {
     notifications,

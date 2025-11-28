@@ -1,3 +1,36 @@
+/**
+ * FileRow
+ *
+ * 마이페이지의 "내보낸 파일 목록" 테이블에서 각 파일(row)을 렌더링하는 컴포넌트.
+ * 파일 정보, 타입(GRID, PIVOT, CHART)에 따라 준비된 미리보기 UI와 조건 모달을 함께 제공한다.
+ *
+ * 주요 구성:
+ * 1) 테이블 요약 행
+ *    - 파일명, 레이어, 생성일, 다운로드/삭제 버튼, 확장(토글) 버튼
+ *
+ * 2) 확장 영역(토글 오픈 시)
+ *    - GRID: CSV 미리보기 + 검색 조건 보기 버튼
+ *    - PIVOT: Pivot CSV 미리보기 + 피벗 조건 보기 버튼
+ *    - CHART: 이미지 미리보기 + 차트 조건 보기 버튼
+ *
+ * 3) 조건 모달
+ *    - GRID → QueryModal
+ *    - PIVOT → PivotConditionModal
+ *    - CHART → ChartConditionModal
+ *
+ * Props:
+ * - idx: 행 번호(표시용)
+ * - item: 서버에서 전달된 파일 메타데이터와 config
+ * - onDeleted: 삭제 후 부모 컴포넌트에 갱신 요청 콜백
+ *
+ * 기타 특징:
+ * - normalizePresetConfig로 OLD/NEW config 구조를 통합 처리
+ * - Hover, open 상태에 따라 border/배경/animation 효과 적용
+ * - useDownloadExport, useDeleteExport로 다운로드/삭제 핸들링
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -20,24 +53,29 @@ import { toSearchSpecFromConfig } from '@/utils/searchSpec'
 
 const FileRow = ({ idx, item, onDeleted }) => {
   const navigate = useNavigate()
+
+  // 확장/hover/모달 상태 관리
   const [open, setOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const [queryOpen, setQueryOpen] = useState(false) // GRID 검색 조건 모달
-  const [pivotOpen, setPivotOpen] = useState(false) // PIVOT 피벗 조건 모달
-  const [chartOpen, setChartOpen] = useState(false) // CHART 차트 조건 모달
+  const [queryOpen, setQueryOpen] = useState(false)
+  const [pivotOpen, setPivotOpen] = useState(false)
+  const [chartOpen, setChartOpen] = useState(false)
 
+  // 파일 다운로드/삭제 API 훅
   const downloadMut = useDownloadExport()
   const deleteMut = useDeleteExport()
 
+  // config normalize (old/new 하위 구조 호환)
   const rawConfig = item.config || null
   const config = rawConfig ? normalizePresetConfig(rawConfig) : null
 
   const isChart = item.type === 'CHART'
   const rowBg = open ? 'bg-gradient-to-r from-blue-50/50 to-blue-50/30' : 'bg-white'
 
+  // Pivot config fallback
   const pivotConfig = rawConfig?.pivot?.config || rawConfig?.pivotConfig || null
 
-  // 조회 계층 표시용 레이어 (GRID/PIVOT/CHART 모두 커버)
+  // 표시용 레이어 (GRID/PIVOT/CHART 공통, 가능한 모든 위치에서 fallback)
   const displayLayer =
     item.layer ||
     config?.layer ||
@@ -48,6 +86,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
     rawConfig?.pivot?.config?.layer ||
     null
 
+  // 셀 박스 공통 클래스
   const cellBoxCls = cx(
     CLASSES.TD,
     rowBg,
@@ -57,6 +96,9 @@ const FileRow = ({ idx, item, onDeleted }) => {
     open && 'first:rounded-bl-none last:rounded-br-none',
   )
 
+  /**
+   * 저장된 검색/피벗 조건을 기반으로 Search/Pivot 페이지로 이동.
+   */
   const handleApply = useCallback(
     (rawCfg) => {
       if (!rawCfg) {
@@ -77,6 +119,9 @@ const FileRow = ({ idx, item, onDeleted }) => {
     [item.type, navigate],
   )
 
+  /**
+   * 삭제 처리
+   */
   const onDelete = useCallback(async () => {
     if (!confirm('삭제하시겠습니까?')) return
     try {
@@ -90,6 +135,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
 
   return (
     <>
+      {/* 요약 테이블 행 */}
       <tr
         className={cx(
           rowBg,
@@ -102,12 +148,14 @@ const FileRow = ({ idx, item, onDeleted }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        {/* INDEX 번호 */}
         <td className={cx(cellBoxCls, 'w-16 text-center')}>
           <span className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700 text-sm font-medium'>
             {idx}
           </span>
         </td>
 
+        {/* 파일명 */}
         <td className={cellBoxCls}>
           <div className='flex items-center gap-2'>
             <span className='font-semibold text-gray-800 truncate' title={item.fileName}>
@@ -116,14 +164,18 @@ const FileRow = ({ idx, item, onDeleted }) => {
           </div>
         </td>
 
+        {/* 레이어 */}
         <td className={cellBoxCls}>
           <LayerCell layer={displayLayer} />
         </td>
 
+        {/* 생성일 */}
         <td className={cx(cellBoxCls, 'text-gray-600 text-sm')}>{fmtDate(item.createdAt)}</td>
 
+        {/* 다운로드 / 삭제 / 확장 토글 */}
         <td className={cellBoxCls}>
           <div className='flex items-center justify-between'>
+            {/* 다운로드 / 삭제 */}
             <div className='inline-flex items-center gap-2'>
               <button
                 onClick={() => downloadMut.mutate(item.fileId)}
@@ -136,6 +188,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
               >
                 {downloadMut.isPending ? '다운로드 중…' : '다운로드'}
               </button>
+
               <button
                 onClick={onDelete}
                 aria-label='삭제'
@@ -153,6 +206,8 @@ const FileRow = ({ idx, item, onDeleted }) => {
                 />
               </button>
             </div>
+
+            {/* 확장/축소 버튼 */}
             <div className='pl-3 ml-3 border-l border-gray-200'>
               <button
                 onClick={() => setOpen((v) => !v)}
@@ -180,6 +235,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
         </td>
       </tr>
 
+      {/* 확장 영역 */}
       <tr className='bg-transparent'>
         <td colSpan={5} className='pt-0'>
           <div
@@ -190,15 +246,14 @@ const FileRow = ({ idx, item, onDeleted }) => {
             )}
           >
             <div className='p-6 bg-linear-to-b from-blue-50/30 to-white'>
+              {/* 파일 타입별 미리보기 */}
               {item.type === 'GRID' && <CsvPreview fileId={item.fileId} />}
-
               {item.type === 'PIVOT' && (
                 <PivotCsvPreview fileId={item.fileId} pivotConfig={pivotConfig} />
               )}
-
               {isChart && <ChartPreview fileId={item.fileId} />}
 
-              {/* GRID: 검색 조건 보기 버튼 */}
+              {/* 조건 보기 버튼(GRID/PIVOT/CHART 공통) */}
               {config && item.type === 'GRID' && (
                 <div className='mt-4 flex justify-end'>
                   <button
@@ -210,7 +265,6 @@ const FileRow = ({ idx, item, onDeleted }) => {
                 </div>
               )}
 
-              {/* PIVOT: 피벗 조건 보기 버튼 */}
               {config && item.type === 'PIVOT' && (
                 <div className='mt-4 flex justify-end'>
                   <button
@@ -222,7 +276,6 @@ const FileRow = ({ idx, item, onDeleted }) => {
                 </div>
               )}
 
-              {/* CHART: 차트 조건 보기 버튼 */}
               {config && item.type === 'CHART' && (
                 <div className='mt-4 flex justify-end'>
                   <button
@@ -238,7 +291,7 @@ const FileRow = ({ idx, item, onDeleted }) => {
         </td>
       </tr>
 
-      {/* GRID: 검색 조건 모달 */}
+      {/* 조건 모달 */}
       {item.type === 'GRID' && (
         <QueryModal
           open={queryOpen}
@@ -248,7 +301,6 @@ const FileRow = ({ idx, item, onDeleted }) => {
         />
       )}
 
-      {/* PIVOT: 피벗 조건 모달 */}
       {item.type === 'PIVOT' && (
         <PivotConditionModal
           open={pivotOpen}
@@ -258,7 +310,6 @@ const FileRow = ({ idx, item, onDeleted }) => {
         />
       )}
 
-      {/* CHART: 차트 조건 모달 */}
       {item.type === 'CHART' && (
         <ChartConditionModal
           open={chartOpen}

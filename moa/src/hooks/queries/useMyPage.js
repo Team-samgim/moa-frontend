@@ -1,3 +1,16 @@
+/**
+ * MyPage Hooks
+ *
+ * - 통계 조회(useMyStats)
+ * - 프로필 조회(useMyProfile)
+ * - 프리셋 목록 조회(useMyPresets)
+ * - 프리셋 즐겨찾기 토글(useToggleFavoritePreset)
+ * - 프리셋 이름 변경(useRenamePreset)
+ * - 프리셋 삭제(useDeletePreset)
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchMyProfile,
@@ -19,7 +32,11 @@ export function useMyStats() {
 
 /* ===== 프로필 ===== */
 export function useMyProfile() {
-  return useQuery({ queryKey: ['me'], queryFn: fetchMyProfile, staleTime: 60_000 })
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: fetchMyProfile,
+    staleTime: 60_000,
+  })
 }
 
 /* ===== 프리셋 ===== */

@@ -1,3 +1,23 @@
+/**
+ * MyPage
+ *
+ * 목적:
+ * - 로그인한 사용자의 프로필, 통계, 퀵 액션(프로필 수정, 프리셋, 파일 관리)을 제공하는 페이지
+ *
+ * 주요 기능:
+ * - useMyProfile / useMyStats 로 사용자 정보 및 통계 조회
+ * - QuickCard 로 주요 기능 진입 카드 제공
+ * - 프로필 섹션은 패턴/그라데이션 기반의 Hero 스타일 UI
+ * - fadeInUp 애니메이션 및 hover 인터랙션 포함
+ *
+ * 구성 요소:
+ * - QuickCard: Hover 애니메이션 + 아이콘 글로우 효과
+ * - StatBadge: 숫자+라벨 UI
+ * - Hero Section: 사용자 이름/이메일 + 통계 배지
+ *
+ * AUTHOR: 방대혁
+ */
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import calculator from '@/assets/images/calculator.webp'
@@ -119,7 +139,7 @@ const MyPage = () => {
       `}</style>
 
       <div className='w-6xl 4xl:w-8xl px-5 pt-8'>
-        {/* 헤더 섹션 - hero-gradient-bg 스타일 적용 */}
+        {/* 헤더 섹션 */}
         <section
           className='mx-auto w-6xl 4xl:w-7xl rounded-3xl px-10 py-10 shadow-xl relative overflow-hidden'
           style={{
@@ -131,23 +151,12 @@ const MyPage = () => {
               radial-gradient(circle at 85% 82%, rgba(129, 199, 255, 0.8), transparent 60%),
               linear-gradient(135deg, #e7f2ff, #9fc3ff)
             `,
-            backgroundSize: `
-              120% 120%,
-              120% 120%,
-              120% 120%,
-              120% 120%,
-              100% 100%
-            `,
-            backgroundPosition: `
-              0% 0%,
-              100% 0%,
-              0% 100%,
-              100% 100%,
-              50% 50%
-            `,
+            backgroundSize: '120% 120%,120% 120%,120% 120%,120% 120%,100% 100%',
+            backgroundPosition: '0% 0%,100% 0%,0% 100%,100% 100%,50% 50%',
             backgroundRepeat: 'no-repeat',
           }}
         >
+          {/* 패턴 */}
           <div className='absolute inset-0 opacity-[0.08]'>
             <div className='absolute top-[-10%] right-[-5%] w-[600px]'>
               <svg viewBox='0 0 200 200' className='w-full h-full'>
@@ -179,6 +188,7 @@ const MyPage = () => {
             </div>
           </div>
 
+          {/* 사용자 정보 + 통계 */}
           <div className='relative z-10 flex items-center justify-between'>
             <div className='flex-1'>
               <div className='flex items-center gap-5 mb-4'>
@@ -197,7 +207,7 @@ const MyPage = () => {
               </p>
             </div>
 
-            {/* 통계 배지들 */}
+            {/* 통계 */}
             <div className='flex gap-6'>
               <StatBadge label='저장된 프리셋' value={totalPresets} delay={0.2} />
               <StatBadge label='생성한 문서' value={totalExports} delay={0.3} />
@@ -206,7 +216,7 @@ const MyPage = () => {
           </div>
         </section>
 
-        {/* 퀵 액션 카드들 */}
+        {/* 퀵 액션 카드 */}
         <section className='mt-13 w-full'>
           <div className='mx-auto w-6xl 4xl:w-7xl grid grid-cols-3 gap-6 items-stretch'>
             <QuickCard

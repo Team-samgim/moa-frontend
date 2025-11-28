@@ -1,4 +1,46 @@
-// AggregatesGrid.jsx
+/**
+ * AggregatesGrid.jsx
+ *
+ * 컬럼별 집계 결과를 카드 형태로 표시하는 UI 컴포넌트.
+ * DataGrid의 컬럼 메타 정보와 서버에서 전달된 aggregates 객체를 조합해
+ * 각 컬럼에 대한 통계값을 사용자에게 시각적으로 제공한다.
+ *
+ * 주요 기능:
+ * 1) 컬럼 필터링
+ *    - __rowNo / No / 날짜 컬럼은 제외
+ *    - 나머지 실제 데이터 컬럼만 집계 대상으로 사용
+ *
+ * 2) 컬럼별 자동 타입 판별
+ *    - 컬럼 정의(type, filterParams.type) 기반 기본 타입 판단
+ *    - aggregates에 sum/avg/min/max가 존재하면 숫자 타입으로 보정
+ *
+ * 3) 숫자 타입 집계 표시
+ *    - 개수(count)
+ *    - 합계(sum)
+ *    - 평균(avg, 소수점 2자리)
+ *    - 최소(min) / 최대(max)
+ *
+ * 4) 문자열·IP·MAC 등 비숫자 타입 집계 표시
+ *    - 개수(count)
+ *    - 고유값(distinct)
+ *    - Top1~Top3 (top 배열 또는 top1/top2/top3)
+ *    - 값은 cut() 유틸리티로 길이 제한
+ *
+ * 5) 그리드 UI 구성
+ *    - 5열 카드 기반 레이아웃
+ *    - 스크롤 가능한 컨테이너
+ *    - headerName(또는 labelKo, field) 기반 컬럼명 표시
+ *    - dt/dd 구조의 메트릭 리스트
+ *
+ * props:
+ * - columns: DataGrid 컬럼 배열
+ * - aggregates: { [field]: { count, sum, avg, min, max, distinct, top... } }
+ *
+ * 반환:
+ * - 최소 1개의 컬럼에 집계 데이터가 있을 때만 렌더링
+ *
+ * AUTHOR: 방대혁
+ */
 import React, { useMemo } from 'react'
 import { cut } from '@/utils/aggFormat' // 이미 있는 util 재사용
 

@@ -1,3 +1,56 @@
+/**
+ * HttpUriRowPreviewModal
+ *
+ * HTTP URI 단건 상세 분석 모달 컴포넌트.
+ * rowKey를 기반으로 HTTP 요청/응답, 타이밍, 트래픽, TCP 품질, 위치 정보 등을
+ * 탭 구조로 분리하여 시각적으로 분석할 수 있도록 구성한다.
+ *
+ * 주요 기능:
+ * 1) 요약(Summary)
+ *    - IP/Port/MAC, Host, Method, Status 등 핵심 정보 표시
+ *    - 응답 시간, 트래픽 크기, 패킷 수, Mbps, TCP 품질 등의 주요 지표 제공
+ *    - 네트워크 지연(reqDelayTransfer, resDelayTransfer) 여부 판단
+ *
+ * 2) 시간 분석(Timing)
+ *    - EnhancedUriTimelineChart를 이용한 전체 워터폴 타임라인 시각화
+ *    - 요청/서버 처리/응답 전송 단계별 시간 분석
+ *    - 타임스탬프 상세(tsFirst, reqPktFirst/Last, resPktFirst/Last)
+ *    - 응답 처리 시간(resProcessFirst, resProcessPush) 표시
+ *
+ * 3) HTTP 요청(Request)
+ *    - 요청 메소드, URI, 버전, Host, Referer 등 메타데이터
+ *    - User-Agent 및 브라우저/OS/엔진/디바이스 정보 분석
+ *    - 요청 트래픽(헤더/본문/총 크기, 패킷 수, 요청 횟수)
+ *
+ * 4) HTTP 응답(Response)
+ *    - HTTP 상태 코드 및 상태 구문
+ *    - Content-Type, Location 등 응답 메타데이터
+ *    - 응답 트래픽(헤더/본문/총 크기, 패킷 수, 응답 횟수)
+ *
+ * 5) 성능 / TCP 품질(Performance)
+ *    - RTT(Round Trip Time), RTO(Retransmission Timeout)
+ *    - 재전송, 패킷 손실, 순서 오류 등 TCP 에러 분석
+ *    - Mbps, PPS 관련 대역폭 및 패킷 속도 메트릭
+ *    - 요청/응답/전체 트래픽 상세 통계
+ *
+ * 6) 위치 정보(Geo)
+ *    - EnhancedGeoMap을 이용한 요청/응답 IP 기반 지리 정보 시각화
+ *    - 국가, 대륙, 국내 행정단계(Primary/Sub1/Sub2) 표시
+ *
+ * UI 특징:
+ * - ESC 닫기, 포커스 이동, 모달 진입 애니메이션 적용
+ * - Body 스크롤 잠금 처리
+ * - Chip/Badge/LV 등 공통 컴포넌트를 이용한 일관된 UI
+ * - 데이터 존재 여부를 검증하며 안전한 렌더링 처리
+ *
+ * props:
+ * - open (boolean): 모달 표시 여부
+ * - onClose (function): 모달 닫기 핸들러
+ * - rowKey (string): 상세 데이터를 조회하기 위한 식별값
+ *
+ * AUTHOR : 방대혁
+ */
+
 import { memo, useEffect, useRef, useState } from 'react'
 import EnhancedGeoMap from '@/components/features/grid/detail/EnhancedGeoMap'
 import EnhancedUriTimelineChart from '@/components/features/grid/detail/EnhancedUriTimelineChart'

@@ -1,3 +1,30 @@
+/**
+ * SearchPage
+ *
+ * 목적:
+ * - 검색 기반 그리드 조회 기능의 핵심 페이지
+ * - 조건 검색 → 대용량 결과 그리드 렌더 → 필터/정렬 → 피벗 이동 → 프리셋 저장/불러오기 전부 처리
+ *
+ * 주요 기능:
+ * 1) 검색 조건 UI 구성 (Layer, 시간, 필드 선택, 조건/연산자 조합)
+ * 2) buildSearchPayload + fetchGridBySearchSpec 로 실제 검색
+ * 3) 결과 그리드 렌더링 + 무한스크롤 + 원본 숫자 표시 옵션
+ * 4) GridToolbar의 CSV 내보내기, 필터 리셋, 피벗 이동 지원
+ * 5) 프리셋 저장 및 불러오기 (SearchPresetModal)
+ * 6) 대시보드 이상치 클릭(autoFill) 시 자동 조건 주입 및 검색
+ * 7) presetBridgeStore → 프리셋 적용 브리지 처리
+ * 8) Grid → Pivot 이동 시 initFromGrid(store) 호출
+ *
+ * 특징:
+ * - 상태량 많음(레이어, 조건, 뷰키, 시간, 필터, 그리드 상태 등)
+ * - skipLayerResetRef 로 프리셋/대시보드 주입 시 초기화 방지
+ * - viewKeys 자동 동기화
+ * - AggregatesPanel 로 집계 쿼리 연동
+ * - 각 레이어별 상세 모달(TCP/HTTP_PAGE/ETHERNET/HTTP_URI)
+ *
+ * AUTHOR: 방대혁, 정소영
+ */
+
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
@@ -394,19 +421,16 @@ const SearchPage = () => {
     [onClickSearch],
   )
 
-  /** ⭐ 프리셋 주입(브리지 우선, 없으면 라우트 state) + 대시보드 이상치 클릭 처리 */
+  /** 프리셋 주입(브리지 우선, 없으면 라우트 state) + 대시보드 이상치 클릭 처리 */
   useEffect(() => {
-    // ⭐ 1. 대시보드 이상치 클릭 처리 (우선순위 최상위)
+    // 1. 대시보드 이상치 클릭 처리 (우선순위 최상위)
     if (location.state?.autoFill) {
       const {
         layer: targetLayer,
         timeRange,
         viewKeys: targetViewKeys,
         dashboardFilters,
-        anomalyContext,
       } = location.state
-
-      console.log('🔍 대시보드에서 이상치 클릭:', location.state)
 
       // 레이어 설정
       if (targetLayer) {
@@ -541,11 +565,6 @@ const SearchPage = () => {
         }
       }
 
-      // 이상치 정보 출력
-      if (anomalyContext) {
-        console.log('📊 이상치 정보:', anomalyContext)
-      }
-
       // 자동 검색 실행
       setTimeout(() => {
         onClickSearch()
@@ -554,7 +573,7 @@ const SearchPage = () => {
       // location.state 초기화 (뒤로가기 시 재실행 방지)
       window.history.replaceState({}, document.title)
 
-      return // ⭐ 프리셋 로직 실행 안함
+      return // 프리셋 로직 실행 안함
     }
     // ⭐ 대시보드 이상치 클릭 처리 추가
     if (location.state?.autoFill) {
@@ -648,7 +667,7 @@ const SearchPage = () => {
       return
     }
 
-    // ⭐ 2. 기존 프리셋 로직 (autoFill이 없을 때만 실행)
+    // 2. 기존 프리셋 로직 (autoFill이 없을 때만 실행)
     const fromStore = usePresetBridgeStore.getState().takeSearchSpec?.()
     const fromRoute = location.state?.preset
     const raw = fromStore || fromRoute
@@ -755,7 +774,6 @@ const SearchPage = () => {
       alert(`프리셋 저장 완료! (ID: ${data?.presetId})`)
     },
     onError: (e) => {
-      console.error(e)
       alert(`프리셋 저장 실패: ${e?.response?.status ?? e?.message ?? ''}`)
     },
   })
