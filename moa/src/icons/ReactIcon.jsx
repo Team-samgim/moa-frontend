@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import PropTypes from './types'
 import ReactSvg from '@/assets/react.svg?react'
 

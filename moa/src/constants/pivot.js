@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 export const LAYER_OPTIONS = ['HTTP_PAGE', 'HTTP_URI', 'TCP', 'Ethernet']
 
 export const TIME_PRESETS = [

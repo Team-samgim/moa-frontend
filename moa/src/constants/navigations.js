@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 const loggedOutNavigations = {
   LANDING: '/',
   LOGIN: '/login',

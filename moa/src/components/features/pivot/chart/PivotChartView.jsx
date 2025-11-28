@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 차트를 렌더링하고 이미지 다운로드 기능을 제공하는 뷰 컴포넌트
+
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import html2canvas from 'html2canvas-pro'

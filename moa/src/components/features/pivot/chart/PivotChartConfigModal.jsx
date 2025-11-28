@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 차트의 축, 지표, 차트 타입을 설정하는 모달 컴포넌트
+
 import { useEffect, useMemo, useState } from 'react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'

@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 const ORBIT_RADIUS = 260
 
 const getPathByVariant = (variant, size = 'base') => {

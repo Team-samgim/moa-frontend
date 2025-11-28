@@ -1,4 +1,4 @@
-// hooks/pivot/usePivotFieldModals.js
+// 작성자: 최이서
 import { useCallback } from 'react'
 import { usePivotModalStore } from '@/stores/pivotModalStore'
 

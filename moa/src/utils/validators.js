@@ -1,3 +1,4 @@
+// 작성자: 최이서
 const ID_REGEX = /^[a-z0-9]{5,20}$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PW_HAS_LETTER_AND_NUMBER = /^(?=.*[A-Za-z])(?=.*\d)/

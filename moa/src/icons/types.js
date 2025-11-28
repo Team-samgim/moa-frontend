@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import PropTypes from 'prop-types'
 
 export const IconPropTypes = {

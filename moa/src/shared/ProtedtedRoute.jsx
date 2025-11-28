@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 

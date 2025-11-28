@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블 결과를 가상화 및 무한 스크롤로 렌더링하는 테이블 컴포넌트
+
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
   flexRender,

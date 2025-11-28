@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 데이터를 히트맵 테이블 형식으로 표시하는 모달 컴포넌트
+
 import { useEffect, useMemo } from 'react'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
 import { usePivotHeatmapTable } from '@/hooks/queries/useCharts'

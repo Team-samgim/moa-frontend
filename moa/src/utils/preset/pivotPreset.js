@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { usePivotStore } from '@/stores/pivotStore'
 
 export function buildPivotPresetConfigFromStore() {

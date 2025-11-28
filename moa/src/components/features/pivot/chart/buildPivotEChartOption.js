@@ -1,6 +1,9 @@
+// 작성자: 최이서
+// 피벗 차트의 ECharts 옵션을 생성하는 유틸리티 함수
+
 import { PIVOT_SERIES_COLORS } from '@/constants/chartColors'
 
-// 숫자를 사람이 읽기 쉬운 형식으로 변환
+// 휴먼 리더블
 function formatNumber(value) {
   if (value === 0) return '0'
 

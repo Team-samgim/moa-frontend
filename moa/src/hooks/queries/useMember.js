@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { useQuery } from '@tanstack/react-query'
 import { getMe } from '@/api/member'
 import { useAuthStore } from '@/stores/authStore'

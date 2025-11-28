@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 import { Link } from 'react-router-dom'
 import logo from '@/assets/images/moa.webp'
 import { userNavigations } from '@/constants/navigations'

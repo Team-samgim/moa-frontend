@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 import { useCallback } from 'react'
 import { usePivotChartStore } from '@/stores/pivotChartStore'
 import { usePivotStore } from '@/stores/pivotStore'

@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 필드 선택 모달들의 공통 레이아웃을 제공하는 쉘 컴포넌트
+
 import { useEffect } from 'react'
 import { allowScroll, preventScroll } from '@/utils/modal'
 

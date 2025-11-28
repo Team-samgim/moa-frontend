@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { create } from 'zustand'
 
 export const useAuthStore = create((set, get) => ({

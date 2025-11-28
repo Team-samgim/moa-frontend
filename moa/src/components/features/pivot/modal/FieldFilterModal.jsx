@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 필드의 고유 값을 필터링하고 TOP-N 설정을 제공하는 모달 컴포넌트
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import CheckIcon from '@/assets/icons/check-msg.svg?react'
 import { useInfiniteDistinctValues } from '@/hooks/queries/usePivot'

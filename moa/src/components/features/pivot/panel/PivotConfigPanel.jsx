@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블의 조회 계층과 기간을 설정하는 패널 컴포넌트
+
 import { useEffect, useState, useMemo, useRef } from 'react'
 import ArrowDownIcon from '@/assets/icons/arrow-down.svg?react'
 import ResetIcon from '@/assets/icons/reset.svg?react'

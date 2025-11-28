@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import { useMemo } from 'react'
 
 export const useStickyGroup = (virtualRows, rows) => {

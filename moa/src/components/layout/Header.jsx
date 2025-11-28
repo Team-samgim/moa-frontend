@@ -1,3 +1,5 @@
+// 작성자: 최이서
+
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import bell from '@/assets/icons/bell.svg'

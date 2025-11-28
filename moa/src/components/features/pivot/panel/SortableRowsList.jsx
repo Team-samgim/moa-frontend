@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 행(Row) 목록을 드래그 앤 드롭으로 정렬할 수 있는 리스트 컴포넌트
+
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import SortableRowItem from './SortableRowItem'

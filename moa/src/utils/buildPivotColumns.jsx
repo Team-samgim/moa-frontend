@@ -1,3 +1,4 @@
+// 작성자: 최이서
 import ArrowDownIcon from '@/assets/icons/arrow-down-bold.svg?react'
 import ArrowRightIcon from '@/assets/icons/arrow-right.svg?react'
 import SortAscIcon from '@/assets/icons/asc.svg?react'

@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 저장된 피벗 프리셋을 조회하고 불러오는 모달 컴포넌트
+
 import { useCallback, useMemo, useState } from 'react'
 import Pagination from '@/components/features/mypage/common/Pagination'
 import { CLASSES } from '@/constants/tokens'

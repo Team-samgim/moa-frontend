@@ -1,3 +1,6 @@
+// 작성자: 최이서
+// 피벗 테이블의 열(Column) 필드를 선택하는 모달 컴포넌트
+
 import { useState, useMemo } from 'react'
 import PivotFieldModalShell from './PivotFieldModalShell'
 import { usePivotFields } from '@/hooks/queries/usePivot'
